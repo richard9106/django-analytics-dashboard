@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analytics Dashboard</title>
+  <link rel="stylesheet" href="/static/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">Django Portfolio Project</p>
+      <h1>Revenue Dashboard</h1>
+      <p>Server-rendered analytics for sales, customers, products, and operational health.</p>
+      <a class="admin-link" href="/admin/">Open Django admin</a>
+    </section>
+    <section class="metrics">
+      <article><span>Total revenue</span><strong>${{ total_revenue }}</strong></article>
+      <article><span>Customers</span><strong>{{ customer_count }}</strong></article>
+      <article><span>Active products</span><strong>{{ active_product_count }}</strong></article>
+      <article><span>Events</span><strong>{{ event_count }}</strong></article>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>Revenue by segment</h2>
+        <canvas id="segmentChart"></canvas>
+      </article>
+      <article class="panel">
+        <h2>Recent events</h2>
+        {% for event in recent_events %}
+          <div class="event {{ event.level }}"><span>{{ event.level }}</span>{{ event.title }}</div>
+        {% empty %}
+          <p>No events yet.</p>
+        {% endfor %}
+      </article>
+    </section>
+    <section class="panel">
+      <h2>Recent sales</h2>
+      <table>
+        <thead><tr><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
+        <tbody>
+          {% for sale in recent_sales %}
+            <tr><td>{{ sale.customer.name }}</td><td>{{ sale.product.name }}</td><td>{{ sale.quantity }}</td><td>${{ sale.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="4">Run seed_demo_data to create sample sales.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    new Chart(document.getElementById('segmentChart'), {
+      type: 'bar',
+      data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [{ label: 'Revenue', data: {{ chart_values|safe }}, backgroundColor: '#2563eb' }]
+      }
+    });
+  </script>
+</body>
+</html>
