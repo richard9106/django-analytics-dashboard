@@ -13,7 +13,13 @@
       <p class="eyebrow">Django Portfolio Project</p>
       <h1>Revenue Dashboard</h1>
       <p>Server-rendered analytics for sales, customers, products, and operational health.</p>
-      <a class="admin-link" href="/admin/">Open Django admin</a>
+      <div class="hero-actions">
+        <a class="admin-link" href="/admin/">Open Django admin</a>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="admin-link secondary" type="submit">Sign out</button>
+        </form>
+      </div>
     </section>
     <section class="metrics">
       <article><span>Total revenue</span><strong>${{ total_revenue }}</strong></article>
