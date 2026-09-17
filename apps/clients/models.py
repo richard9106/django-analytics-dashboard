@@ -18,6 +18,7 @@ class Client(models.Model):
     primary_therapist = models.ForeignKey(
         "practices.TherapistProfile",
         on_delete=models.SET_NULL,
+        blank=True,
         null=True,
         related_name="primary_clients",
     )
@@ -34,10 +35,10 @@ class Client(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.ACTIVE
     )
-    ensurance_provider = models.CharField(max_length=140, blank=True)
-    ensurance_member_id = models.CharField(max_length=80, blank=True)
-    emergyency_contact_name = models.CharField(max_length=120, blank=True)
-    emergyency_contact_phone = models.CharField(max_length=20, blank=True)
+    insurance_provider = models.CharField(max_length=140, blank=True)
+    insurance_member_id = models.CharField(max_length=80, blank=True)
+    emergency_contact_name = models.CharField(max_length=120, blank=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True)
     address_line1 = models.CharField(max_length=140, blank=True)
     address_line2 = models.CharField(max_length=140, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
