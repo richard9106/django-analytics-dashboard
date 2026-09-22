@@ -4,63 +4,156 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NuviaMy Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-  <main class="shell">
-    <section class="hero">
-      <p class="eyebrow">NuviaMy Practice Workspace</p>
-      <h1>Practice Dashboard</h1>
-      <p>Secure practice management for clients, appointments, clinical notes, and billing workflows.</p>
-      <div class="hero-actions">
-        <a class="admin-link" href="/admin/">Open Django admin</a>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}
-          <button class="admin-link secondary" type="submit">Sign out</button>
-        </form>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+            <path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>NuviaMy</span>
+      </a>
+
+      <nav class="nav-list">
+        <a class="nav-item active" href="#"><span>⌂</span>Overview</a>
+        <a class="nav-item" href="#"><span>◷</span>Appointments</a>
+        <a class="nav-item" href="#"><span>◉</span>Clients</a>
+        <a class="nav-item" href="#"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="#"><span>□</span>Billing</a>
+        <a class="nav-item" href="#"><span>▣</span>Documents</a>
+      </nav>
+
+      <div class="sidebar-card">
+        <strong>HIPAA-aware build</strong>
+        <p>Practice-scoped models, tests, and secure defaults are active.</p>
       </div>
-    </section>
-    <section class="metrics">
-      <article><span>Total revenue</span><strong>${{ total_revenue }}</strong></article>
-      <article><span>Customers</span><strong>{{ customer_count }}</strong></article>
-      <article><span>Active products</span><strong>{{ active_product_count }}</strong></article>
-      <article><span>Events</span><strong>{{ event_count }}</strong></article>
-    </section>
-    <section class="grid">
-      <article class="panel">
-        <h2>Revenue by segment</h2>
-        <canvas id="segmentChart"></canvas>
-      </article>
-      <article class="panel">
-        <h2>Recent events</h2>
-        {% for event in recent_events %}
-          <div class="event {{ event.level }}"><span>{{ event.level }}</span>{{ event.title }}</div>
-        {% empty %}
-          <p>No events yet.</p>
-        {% endfor %}
-      </article>
-    </section>
-    <section class="panel">
-      <h2>Recent sales</h2>
-      <table>
-        <thead><tr><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
-        <tbody>
-          {% for sale in recent_sales %}
-            <tr><td>{{ sale.customer.name }}</td><td>{{ sale.product.name }}</td><td>{{ sale.quantity }}</td><td>${{ sale.total }}</td></tr>
-          {% empty %}
-            <tr><td colspan="4">Run seed_demo_data to create sample sales.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </section>
-  </main>
+    </aside>
+
+    <main class="app-main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Practice Workspace</p>
+          <h1>Practice Dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="btn btn-secondary" href="/admin/">Admin</a>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="btn btn-primary" type="submit">Sign out</button>
+          </form>
+        </div>
+      </header>
+
+      <section class="welcome-panel">
+        <div>
+          <span class="eyebrow">NuviaMy SaaS</span>
+          <h2>Everything your practice needs, <span class="serif">without the clinical clutter.</span></h2>
+          <p>Manage clients, appointments, notes, billing workflows, documents, telehealth metadata, and portal access from a calm Django workspace.</p>
+        </div>
+        <a class="btn btn-soft" href="#today">Review today</a>
+      </section>
+
+      <section class="stats" aria-label="Practice metrics">
+        <article class="stat-card">
+          <span>Monthly revenue</span>
+          <strong>${{ total_revenue }}</strong>
+          <small>Seed/demo billing signal</small>
+        </article>
+        <article class="stat-card">
+          <span>Clients</span>
+          <strong>{{ customer_count }}</strong>
+          <small>Active records in workspace</small>
+        </article>
+        <article class="stat-card">
+          <span>Care plans</span>
+          <strong>{{ active_product_count }}</strong>
+          <small>Services/products modeled</small>
+        </article>
+        <article class="stat-card">
+          <span>Operational events</span>
+          <strong>{{ event_count }}</strong>
+          <small>Recent system activity</small>
+        </article>
+      </section>
+
+      <section class="content-grid" id="today">
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Revenue by client segment</h2>
+              <p>Demo analytics remain available while NuviaMy domain UI is built out.</p>
+            </div>
+            <span class="badge brand">Live ORM</span>
+          </div>
+          <canvas id="segmentChart" aria-label="Revenue by client segment chart"></canvas>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head compact">
+            <div>
+              <h2>Care operations</h2>
+              <p>Recent practice events.</p>
+            </div>
+          </div>
+          <div class="event-list">
+            {% for event in recent_events %}
+              <div class="event {{ event.level }}"><span>{{ event.level }}</span>{{ event.title }}</div>
+            {% empty %}
+              <p class="empty-state">No events yet.</p>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Recent billing activity</h2>
+            <p>Temporary demo data until billing screens are connected to invoices and payments.</p>
+          </div>
+          <span class="badge success">Ready for billing UI</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Client</th><th>Service</th><th>Qty</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for sale in recent_sales %}
+                <tr><td>{{ sale.customer.name }}</td><td>{{ sale.product.name }}</td><td>{{ sale.quantity }}</td><td>${{ sale.total }}</td></tr>
+              {% empty %}
+                <tr><td colspan="4">Run seed_demo_data to create sample billing activity.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
   <script>
     new Chart(document.getElementById('segmentChart'), {
       type: 'bar',
       data: {
         labels: {{ chart_labels|safe }},
-        datasets: [{ label: 'Revenue', data: {{ chart_values|safe }}, backgroundColor: '#0e317c' }]
+        datasets: [{
+          label: 'Revenue',
+          data: {{ chart_values|safe }},
+          backgroundColor: '#7052D9',
+          borderRadius: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } }, x: { grid: { display: false } } }
       }
     });
   </script>

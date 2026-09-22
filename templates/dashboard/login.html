@@ -4,14 +4,37 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign in | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body class="login-page">
   <main class="login-shell">
+    <section class="login-brand-panel" aria-label="NuviaMy overview">
+      <a class="brand brand-large" href="{% url 'login' %}" aria-label="NuviaMy sign in">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+            <path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>NuviaMy</span>
+      </a>
+      <p class="eyebrow">Therapy Practice SaaS</p>
+      <h1>Calm software for serious care.</h1>
+      <p>Securely manage clients, appointments, clinical notes, billing, documents, telehealth, and portal access from one Django-powered workspace.</p>
+      <div class="trust-list">
+        <span>Practice-scoped data</span>
+        <span>HIPAA-aware architecture</span>
+        <span>Accessible UI system</span>
+      </div>
+    </section>
+
     <section class="login-card">
-      <p class="eyebrow">NuviaMy</p>
-      <h1>Sign in to your dashboard</h1>
-      <p class="login-copy">Access revenue, customer, product, and operational metrics from a protected Django view.</p>
+      <p class="eyebrow">Welcome back</p>
+      <h2>Sign in to your dashboard</h2>
+      <p class="login-copy">Access your protected NuviaMy practice workspace.</p>
 
       {% if form.errors %}
         <p class="form-error">Your username and password did not match. Please try again.</p>
@@ -30,7 +53,7 @@
         <button type="submit">Sign in</button>
       </form>
 
-      <a class="admin-note" href="/admin/">Need admin tools?</a>
+      <a class="admin-note" href="/admin/">Use Django admin instead</a>
     </section>
   </main>
 </body>
