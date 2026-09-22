@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create your practice | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="signup-page">
+  <main class="signup-shell">
+    <section class="signup-intro">
+      <a class="brand brand-large" href="{% url 'login' %}" aria-label="NuviaMy">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+            <path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>NuviaMy</span>
+      </a>
+      <p class="eyebrow">Start your workspace</p>
+      <h1>Create your therapy practice account.</h1>
+      <p>NuviaMy creates your practice, owner account, therapist profile, and secure workspace in one guided flow.</p>
+      <div class="trust-list dark">
+        <span>Solo or clinic-ready</span>
+        <span>Practice-scoped data</span>
+        <span>Built for clinical workflows</span>
+      </div>
+    </section>
+
+    <section class="signup-card">
+      <form method="post" class="signup-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="form-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <fieldset>
+          <legend>Practice details</legend>
+          <div class="field-grid two">
+            <div class="field">
+              <label for="id_practice_name">Practice name</label>
+              {{ form.practice_name }}
+              {{ form.practice_name.errors }}
+            </div>
+            <div class="field">
+              <label for="id_practice_type">Practice type</label>
+              {{ form.practice_type }}
+              {{ form.practice_type.errors }}
+            </div>
+            <div class="field">
+              <label for="id_practice_email">Practice email</label>
+              {{ form.practice_email }}
+              {{ form.practice_email.errors }}
+            </div>
+            <div class="field">
+              <label for="id_practice_phone">Practice phone</label>
+              {{ form.practice_phone }}
+              {{ form.practice_phone.errors }}
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Owner account</legend>
+          <div class="field-grid two">
+            <div class="field">
+              <label for="id_first_name">First name</label>
+              {{ form.first_name }}
+              {{ form.first_name.errors }}
+            </div>
+            <div class="field">
+              <label for="id_last_name">Last name</label>
+              {{ form.last_name }}
+              {{ form.last_name.errors }}
+            </div>
+            <div class="field">
+              <label for="id_username">Username</label>
+              {{ form.username }}
+              {{ form.username.errors }}
+            </div>
+            <div class="field">
+              <label for="id_email">Email</label>
+              {{ form.email }}
+              {{ form.email.errors }}
+            </div>
+            <div class="field">
+              <label for="id_password1">Password</label>
+              {{ form.password1 }}
+              {{ form.password1.errors }}
+            </div>
+            <div class="field">
+              <label for="id_password2">Confirm password</label>
+              {{ form.password2 }}
+              {{ form.password2.errors }}
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Therapist license</legend>
+          <div class="field-grid two">
+            <div class="field">
+              <label for="id_license_number">License number</label>
+              {{ form.license_number }}
+              {{ form.license_number.errors }}
+            </div>
+            <div class="field">
+              <label for="id_license_state">License state</label>
+              {{ form.license_state }}
+              {{ form.license_state.errors }}
+            </div>
+            <div class="field full">
+              <label for="id_specialty">Specialty</label>
+              {{ form.specialty }}
+              {{ form.specialty.errors }}
+            </div>
+          </div>
+        </fieldset>
+
+        <button class="btn btn-primary signup-submit" type="submit">Create practice workspace</button>
+        <p class="signup-footnote">Already have an account? <a href="{% url 'login' %}">Sign in</a>.</p>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

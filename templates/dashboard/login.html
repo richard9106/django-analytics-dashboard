@@ -53,7 +53,9 @@
         <button type="submit">Sign in</button>
       </form>
 
-      <a class="admin-note" href="/admin/">Use Django admin instead</a>
+      <div class="login-links">
+        <a class="admin-note" href="{% url 'signup' %}">Create a practice account</a>
+      </div>
     </section>
   </main>
 </body>

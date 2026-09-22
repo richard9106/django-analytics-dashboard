@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from apps.accounts.models import UserProfile
 from apps.practices.models import Practice, TherapistProfile
@@ -29,3 +30,66 @@ class UserProfileModelTests(TestCase):
 
         profile.full_clean()
         self.assertEqual(str(profile), "practiceadmin - Practice Admin")
+
+
+class PracticeSignupViewTests(TestCase):
+    def valid_payload(self, **overrides):
+        data = {
+            "practice_name": "NuviaMy Wellness",
+            "practice_type": Practice.PracticeType.SOLO,
+            "practice_email": "hello@nuviamy.test",
+            "practice_phone": "555-0100",
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "username": "drsmith",
+            "email": "drsmith@example.com",
+            "password1": "StrongPass123!",
+            "password2": "StrongPass123!",
+            "license_number": "ABC123",
+            "license_state": "CA",
+            "specialty": "Trauma-informed care",
+        }
+        data.update(overrides)
+        return data
+
+    def test_signup_page_loads(self):
+        response = self.client.get(reverse("signup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Create your therapy practice account")
+
+    def test_signup_creates_practice_user_therapist_and_owner_profile(self):
+        response = self.client.post(reverse("signup"), data=self.valid_payload())
+
+        self.assertRedirects(response, reverse("dashboard"))
+        user = get_user_model().objects.get(username="drsmith")
+        practice = Practice.objects.get(name="NuviaMy Wellness")
+        therapist = TherapistProfile.objects.get(user=user)
+        profile = UserProfile.objects.get(user=user)
+        self.assertEqual(therapist.practice, practice)
+        self.assertEqual(profile.practice, practice)
+        self.assertEqual(profile.role, UserProfile.Role.OWNER)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), user.id)
+
+    def test_signup_rejects_duplicate_username(self):
+        get_user_model().objects.create_user(username="drsmith")
+
+        response = self.client.post(reverse("signup"), data=self.valid_payload())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "A user with this username already exists")
+
+    def test_signup_rejects_license_duplicate_in_same_state(self):
+        practice = Practice.objects.create(name="Existing Practice")
+        user = get_user_model().objects.create_user(username="existing")
+        TherapistProfile.objects.create(
+            user=user,
+            practice=practice,
+            license_number="ABC123",
+            license_state="CA",
+        )
+
+        response = self.client.post(reverse("signup"), data=self.valid_payload())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "A therapist profile with this license already exists")

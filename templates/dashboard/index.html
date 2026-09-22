@@ -45,7 +45,9 @@
           <h1>Practice Dashboard</h1>
         </div>
         <div class="topbar-actions">
-          <a class="btn btn-secondary" href="/admin/">Admin</a>
+          {% if request.user.is_staff %}
+            <a class="btn btn-secondary" href="/admin/">Admin</a>
+          {% endif %}
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button class="btn btn-primary" type="submit">Sign out</button>
@@ -55,11 +57,10 @@
 
       <section class="welcome-panel">
         <div>
-          <span class="eyebrow">NuviaMy SaaS</span>
-          <h2>Everything your practice needs, <span class="serif">without the clinical clutter.</span></h2>
-          <p>Manage clients, appointments, notes, billing workflows, documents, telehealth metadata, and portal access from a calm Django workspace.</p>
+          <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
+          <p>{{ dashboard_date_label }}</p>
         </div>
-        <a class="btn btn-soft" href="#today">Review today</a>
+        <a class="btn btn-primary" href="#today">+ New appointment</a>
       </section>
 
       <section class="stats" aria-label="Practice metrics">
@@ -69,17 +70,17 @@
           <small>Seed/demo billing signal</small>
         </article>
         <article class="stat-card">
-          <span>Clients</span>
+          <span>Active patients</span>
           <strong>{{ customer_count }}</strong>
           <small>Active records in workspace</small>
         </article>
         <article class="stat-card">
-          <span>Care plans</span>
+          <span>Active services</span>
           <strong>{{ active_product_count }}</strong>
           <small>Services/products modeled</small>
         </article>
         <article class="stat-card">
-          <span>Operational events</span>
+          <span>Pending tasks</span>
           <strong>{{ event_count }}</strong>
           <small>Recent system activity</small>
         </article>

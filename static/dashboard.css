@@ -126,6 +126,29 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .login-form button:hover { background: var(--brand-700); }
 .form-error { background: var(--danger-bg); color: var(--danger); border-radius: 14px; padding: 12px 14px; }
 .admin-note { display: inline-flex; margin-top: 18px; color: var(--brand-700); font-weight: 800; }
+.login-links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+
+.signup-page { min-height: 100vh; background: radial-gradient(circle at 12% 10%, rgba(204, 251, 245, .95), transparent 28%), linear-gradient(135deg, var(--slate-50), #fff); }
+.signup-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0; display: grid; grid-template-columns: .82fr 1.18fr; gap: 28px; align-items: start; }
+.signup-intro { position: sticky; top: 28px; padding: 28px; border-radius: 28px; background: linear-gradient(145deg, var(--slate-900), var(--brand-700)); color: #fff; box-shadow: var(--shadow-2); }
+.signup-intro .eyebrow { margin-top: 42px; background: rgba(255,255,255,.12); color: #fff; }
+.signup-intro h1 { font-size: clamp(38px, 5vw, 58px); line-height: 1.05; letter-spacing: -.05em; margin-bottom: 18px; }
+.signup-intro p { color: rgba(255,255,255,.78); font-size: 17px; }
+.trust-list.dark span { border-color: rgba(255,255,255,.18); color: rgba(255,255,255,.88); }
+.signup-card { padding: 28px; background: #fff; border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow-2); }
+.signup-form { display: grid; gap: 24px; }
+.signup-form fieldset { border: 0; padding: 0; margin: 0; }
+.signup-form legend { font-size: 20px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 14px; color: var(--slate-800); }
+.field-grid { display: grid; gap: 14px; }
+.field-grid.two { grid-template-columns: repeat(2, 1fr); }
+.field.full { grid-column: 1 / -1; }
+.field label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 800; color: var(--slate-800); }
+.field input, .field select { width: 100%; min-height: 46px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 14px; background: #fff; color: var(--slate-800); }
+.field input:focus, .field select:focus { outline: 3px solid rgba(112, 82, 217, .22); outline-offset: 2px; border-color: var(--brand-600); }
+.field .errorlist { margin: 7px 0 0; padding: 0; list-style: none; color: var(--danger); font-size: 13px; font-weight: 700; }
+.signup-submit { width: 100%; min-height: 52px; }
+.signup-footnote { margin: 0; text-align: center; color: var(--slate-500); }
+.signup-footnote a { color: var(--brand-700); font-weight: 800; }
 
 @media (max-width: 1024px) {
   .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
@@ -153,6 +176,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .login-shell { width: min(calc(100% - 24px), 1120px); padding: 24px 0; }
   .login-brand-panel h1 { font-size: 40px; }
   .login-card { padding: 24px; }
+  .signup-shell { width: min(calc(100% - 24px), 1180px); grid-template-columns: 1fr; }
+  .signup-intro { position: static; }
+  .field-grid.two { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
