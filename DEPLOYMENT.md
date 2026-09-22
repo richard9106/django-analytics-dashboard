@@ -2,6 +2,8 @@
 
 Production runs on a VPS with Docker Compose for Django and PostgreSQL. Nginx stays installed on the host and proxies traffic to Gunicorn on `127.0.0.1:8000`.
 
+Production domain: `nuviamy.com`.
+
 ## VPS Setup
 
 Clone the repository on the VPS and create a production `.env` file in the project root:
@@ -9,8 +11,8 @@ Clone the repository on the VPS and create a production `.env` file in the proje
 ```env
 DJANGO_SECRET_KEY=change-me-to-a-long-random-secret
 DJANGO_DEBUG=false
-DJANGO_ALLOWED_HOSTS=YOUR_SERVER_IP
-DJANGO_CSRF_TRUSTED_ORIGINS=http://YOUR_SERVER_IP
+DJANGO_ALLOWED_HOSTS=nuviamy.com,www.nuviamy.com,YOUR_SERVER_IP
+DJANGO_CSRF_TRUSTED_ORIGINS=https://nuviamy.com,https://www.nuviamy.com,http://YOUR_SERVER_IP
 
 POSTGRES_DB=dashboard
 POSTGRES_USER=dashboard_user
@@ -30,12 +32,12 @@ docker compose exec web python manage.py createsuperuser
 
 ## Nginx
 
-Use the server IP as `server_name` until a domain is available:
+Use the production domain as `server_name`:
 
 ```nginx
 server {
     listen 80;
-    server_name YOUR_SERVER_IP;
+    server_name nuviamy.com www.nuviamy.com;
 
     location / {
         proxy_pass http://127.0.0.1:8000;

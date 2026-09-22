@@ -1,10 +1,10 @@
-# Nuvia
+# NuviaMy
 
-Nuvia is a Django-based therapy practice management SaaS for solo therapists, psychologists, and multi-provider clinics. The project is built as a realistic portfolio application focused on secure client management, scheduling, clinical workflows, billing visibility, and a basic client portal.
+NuviaMy is a Django-based therapy practice management SaaS for solo therapists, psychologists, and multi-provider clinics. The project is built as a realistic portfolio application focused on secure client management, scheduling, clinical workflows, billing visibility, and a basic client portal.
 
 ## Product Vision
 
-Nuvia helps mental health professionals manage their practice from one calm, secure workspace:
+NuviaMy helps mental health professionals manage their practice from one calm, secure workspace:
 
 - Manage solo practices and multi-therapist clinics.
 - Track clients, appointments, sessions, notes, invoices, and payments.
@@ -18,7 +18,7 @@ This project is educational and portfolio-focused. It is designed with HIPAA-awa
 - `accounts`: users, roles, authentication, and permissions.
 - `practices`: solo practices, clinics, therapists, and practice settings.
 - `clients`: client records, contact details, status, emergency contacts, and insurance metadata.
-- `scheduling`: appointments, session status, availability, cancellations, and no-shows.
+- `appointments`: appointments, session status, calendar sync metadata, cancellations, and no-shows.
 - `clinical`: session notes, progress notes, and clinical documentation workflows.
 - `billing`: invoices, payments, balances, and future payment provider integration.
 - `portal`: client-facing dashboard for sessions, billing, and requested information.
@@ -37,10 +37,11 @@ The first implementation phase focuses on the foundation:
 - Protected therapist dashboard.
 - Basic client portal.
 - Tests for authentication and practice-level data isolation.
+- Production domain target: `nuviamy.com`.
 
 ## Security And Compliance Direction
 
-Nuvia should be built with healthcare-grade habits from the beginning:
+NuviaMy should be built with healthcare-grade habits from the beginning:
 
 - Every sensitive object belongs to a `Practice`.
 - Users must only access data from their own practice.
@@ -52,11 +53,11 @@ Nuvia should be built with healthcare-grade habits from the beginning:
 
 ## Design System
 
-Nuvia uses a calm, modern, human visual language for mental health professionals. The design system is based on `nuvia_brand_ui_system.html`.
+NuviaMy uses a calm, modern, human visual language for mental health professionals. The design system is based on `nuvia_brand_ui_system.html`.
 
 ### Brand
 
-- Product name: `Nuvia`
+- Product name: `NuviaMy`
 - Tone: calm, professional, modern, human, and trustworthy.
 - Avoid visual clichés such as medical crosses, literal brains, or overly clinical hospital styling.
 
