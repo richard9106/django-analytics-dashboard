@@ -22,7 +22,10 @@ This project is educational and portfolio-focused. It is designed with HIPAA-awa
 - `clinical`: session notes, progress notes, and clinical documentation workflows.
 - `billing`: invoices, payments, balances, and future payment provider integration.
 - `portal`: client-facing dashboard for sessions, billing, and requested information.
+- `documents`: consent forms, intake files, insurance documents, and client uploads.
+- `audit`: HIPAA-aware audit trail for sensitive actions.
 - `telehealth`: video session links and telehealth provider metadata.
+- `notifications`: appointment, billing, portal, and workflow notifications.
 - `dashboard`: therapist and practice overview screens.
 
 ## MVP Scope

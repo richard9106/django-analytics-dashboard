@@ -25,6 +25,13 @@ INSTALLED_APPS = [
     'apps.clients',
     'apps.appointments',
     'apps.clinical',
+    'apps.accounts',
+    'apps.billing',
+    'apps.portal',
+    'apps.documents',
+    'apps.audit',
+    'apps.telehealth',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
