@@ -27,8 +27,9 @@
         <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
         <a class="nav-item active" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
         <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
-        <a class="nav-item" href="#"><span>□</span>Billing</a>
+        <a class="nav-item" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
         <a class="nav-item" href="#"><span>▣</span>Documents</a>
+        <details class="sidebar-settings"><summary class="nav-item"><span>⚙</span>Settings</summary><a class="nav-item subitem" href="{% url 'settings:package_templates' %}">Session packages</a></details>
       </nav>
 
       <div class="sidebar-card">
@@ -48,7 +49,6 @@
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">
             <a href="#">Profile settings</a>
-            <a href="#">Practice settings</a>
             {% if request.user.is_staff %}
               <a href="/admin/">Admin</a>
             {% endif %}
@@ -70,7 +70,7 @@
       <section class="panel clients-panel">
         <div class="panel-head">
           <div>
-            <h2>{{ practice.name|default:"Practice" }} clients</h2>
+            <h2>My patients</h2>
             <p>Manage demographics, contact details, status, and therapist assignment.</p>
           </div>
           <span class="badge brand">{{ clients|length }} clients</span>
@@ -93,7 +93,11 @@
                   <div><dt>Therapist</dt><dd>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}Unassigned{% endif %}</dd></div>
                   <div><dt>Insurance</dt><dd>{{ client.insurance_provider|default:"Not provided" }}</dd></div>
                 </dl>
-                <a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit client</a>
+                <div class="inline-actions">
+                  <a class="inline-link" href="{% url 'clinical:create' %}" data-modal-target="client-note-modal-{{ client.pk }}">Add note</a>
+                  <a class="inline-link" href="{% url 'billing:package_create' %}" data-modal-target="client-package-modal-{{ client.pk }}">Assign package</a>
+                  <a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit client</a>
+                </div>
               </div>
             </article>
           {% empty %}
@@ -186,6 +190,141 @@
       </dialog>
 
       {% for client in clients %}
+        <dialog class="modal-dialog" id="client-package-modal-{{ client.pk }}">
+          <div class="modal-card">
+            <div class="modal-head">
+              <div>
+                <p class="eyebrow">Assign Package</p>
+                <h2>{{ client }}</h2>
+              </div>
+              <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+            </div>
+
+            <form class="appointment-form" method="post" action="{% url 'billing:package_create' %}">
+              {% csrf_token %}
+              <div class="field-grid two">
+                <div class="field">
+                  <label for="client-package-client-{{ client.pk }}">Client</label>
+                  <select id="client-package-client-{{ client.pk }}" name="client" required>
+                    <option value="{{ client.pk }}" selected>{{ client }}</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-package-template-{{ client.pk }}">Package template</label>
+                  <select id="client-package-template-{{ client.pk }}" name="template" data-package-template-select>
+                    <option value="">Custom package</option>
+                    {% for template in billing_templates %}
+                      <option value="{{ template.pk }}" data-name="{{ template.name }}" data-sessions="{{ template.sessions_included }}" data-price="{{ template.price }}">{{ template.name }} - {{ template.sessions_included }} sessions - ${{ template.price }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-package-name-{{ client.pk }}">Name</label>
+                  <input id="client-package-name-{{ client.pk }}" name="name" value="Therapy session package" required>
+                </div>
+                <div class="field">
+                  <label for="client-package-sessions-{{ client.pk }}">Sessions purchased</label>
+                  <input id="client-package-sessions-{{ client.pk }}" name="sessions_purchased" type="number" min="1" value="4" required>
+                </div>
+                <div class="field">
+                  <label for="client-package-used-{{ client.pk }}">Sessions used</label>
+                  <input id="client-package-used-{{ client.pk }}" name="sessions_used" type="number" min="0" value="0" required>
+                </div>
+                <div class="field">
+                  <label for="client-package-price-{{ client.pk }}">Total price</label>
+                  <input id="client-package-price-{{ client.pk }}" name="total_price" type="number" step="0.01" min="0" required>
+                </div>
+                <div class="field">
+                  <label for="client-package-status-{{ client.pk }}">Status</label>
+                  <select id="client-package-status-{{ client.pk }}" name="status" required>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="expired">Expired</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-package-purchased-{{ client.pk }}">Purchased at</label>
+                  <input id="client-package-purchased-{{ client.pk }}" name="purchased_at" type="date" value="{{ billing_today|date:'Y-m-d' }}" required>
+                </div>
+                <div class="field">
+                  <label for="client-package-expires-{{ client.pk }}">Expires at</label>
+                  <input id="client-package-expires-{{ client.pk }}" name="expires_at" type="date">
+                </div>
+                <div class="field full">
+                  <label for="client-package-notes-{{ client.pk }}">Notes</label>
+                  <textarea id="client-package-notes-{{ client.pk }}" name="notes" rows="4"></textarea>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+                <button class="btn btn-primary" type="submit">Assign package</button>
+              </div>
+            </form>
+          </div>
+        </dialog>
+
+        <dialog class="modal-dialog" id="client-note-modal-{{ client.pk }}">
+          <div class="modal-card">
+            <div class="modal-head">
+              <div>
+                <p class="eyebrow">New Clinical Note</p>
+                <h2>{{ client }}</h2>
+              </div>
+              <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+            </div>
+
+            <form class="appointment-form" method="post" action="{% url 'clinical:create' %}">
+              {% csrf_token %}
+              <div class="field-grid two">
+                <div class="field">
+                  <label for="client-note-client-{{ client.pk }}">Client</label>
+                  <select id="client-note-client-{{ client.pk }}" name="client" required>
+                    <option value="{{ client.pk }}" selected>{{ client }}</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-note-therapist-{{ client.pk }}">Therapist</label>
+                  <select id="client-note-therapist-{{ client.pk }}" name="therapist" required>
+                    {% for therapist in client_therapists %}
+                      <option value="{{ therapist.pk }}" {% if client.primary_therapist_id == therapist.pk %}selected{% endif %}>{{ therapist }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-note-appointment-{{ client.pk }}">Appointment</label>
+                  <select id="client-note-appointment-{{ client.pk }}" name="appointment">
+                    <option value="">No appointment</option>
+                    {% for appointment in note_appointments %}
+                      {% if appointment.client_id == client.pk %}
+                        <option value="{{ appointment.pk }}">{{ appointment.starts_at|date:"M j g:i A" }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-note-type-{{ client.pk }}">Note type</label>
+                  <select id="client-note-type-{{ client.pk }}" name="note_type" required>
+                    <option value="progress_note">Progress Note</option>
+                    <option value="intake_note">Intake Note</option>
+                    <option value="treatment_plan">Treatment Plan</option>
+                    <option value="general_note">General Note</option>
+                  </select>
+                </div>
+                <div class="field full">
+                  <label for="client-note-content-{{ client.pk }}">Content</label>
+                  <textarea id="client-note-content-{{ client.pk }}" name="content" rows="8"></textarea>
+                </div>
+                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+                <button class="btn btn-primary" type="submit">Create note</button>
+              </div>
+            </form>
+          </div>
+        </dialog>
+
         <dialog class="modal-dialog" id="client-modal-{{ client.pk }}">
           <div class="modal-card">
             <div class="modal-head">
@@ -286,6 +425,16 @@
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-modal-close]');
       if (trigger) trigger.closest('dialog')?.close();
+    });
+    document.addEventListener('change', (event) => {
+      const select = event.target.closest('[data-package-template-select]');
+      if (!select) return;
+      const option = select.selectedOptions[0];
+      const form = select.closest('form');
+      if (!option?.dataset.name || !form) return;
+      form.elements.name.value = option.dataset.name;
+      form.elements.sessions_purchased.value = option.dataset.sessions;
+      form.elements.total_price.value = option.dataset.price;
     });
   </script>
 </body>

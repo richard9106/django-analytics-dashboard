@@ -2,9 +2,11 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from decimal import Decimal
 
 
 from apps.accounts.models import UserProfile
+from apps.billing.models import ServicePackage, SessionPackageTemplate
 from apps.clients.models import Client
 from apps.practices.models import Practice, TherapistProfile
 
@@ -128,23 +130,64 @@ class ClientViewTests(TestCase):
             username="otherdoc",
             practice_name="Other Practice",
         )
-        Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+        client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+        SessionPackageTemplate.objects.create(
+            practice=practice,
+            name="4 prepaid sessions",
+            sessions_included=4,
+            price=Decimal("520.00"),
+        )
         Client.objects.create(practice=other_practice, first_name="Hidden", last_name="Client")
 
         self.client.force_login(user)
         response = self.client.get(reverse("clients:list"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "My patients")
         self.assertContains(response, "Maya Johnson")
         self.assertContains(response, 'id="client-create-modal"')
+        self.assertContains(response, f'id="client-note-modal-{client.pk}"')
+        self.assertContains(response, f'id="client-package-modal-{client.pk}"')
+        self.assertContains(response, "Add note")
+        self.assertContains(response, "Assign package")
+        self.assertContains(response, "4 prepaid sessions")
         self.assertContains(response, reverse("clients:create"))
         self.assertContains(response, "Create client")
-        client = Client.objects.get(first_name="Maya")
         self.assertContains(response, reverse("clients:edit", args=[client.pk]))
         self.assertContains(response, f'id="client-modal-{client.pk}"')
         self.assertContains(response, "Save changes")
         self.assertContains(response, "Delete client")
         self.assertNotContains(response, "Hidden Client")
+
+    def test_client_page_can_assign_package_to_client(self):
+        user, practice, _therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+        template = SessionPackageTemplate.objects.create(
+            practice=practice,
+            name="4 prepaid sessions",
+            sessions_included=4,
+            price=Decimal("520.00"),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:package_create"), {
+            "client": client.pk,
+            "template": template.pk,
+            "name": template.name,
+            "sessions_purchased": template.sessions_included,
+            "sessions_used": 0,
+            "total_price": template.price,
+            "status": ServicePackage.Status.ACTIVE,
+            "purchased_at": "2026-09-23",
+            "expires_at": "",
+            "notes": "Assigned from client page.",
+        })
+
+        self.assertRedirects(response, reverse("billing:list"))
+        package = ServicePackage.objects.get()
+        self.assertEqual(package.client, client)
+        self.assertEqual(package.template, template)
+        self.assertEqual(package.sessions_remaining, 4)
 
     def test_client_create_saves_to_user_practice(self):
         user, practice, therapist = self.create_practice_user()

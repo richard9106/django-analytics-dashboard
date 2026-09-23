@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billing | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
+      <nav class="nav-list">
+        <a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
+        <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
+        <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item active" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
+        <a class="nav-item" href="#"><span>▣</span>Documents</a>
+        <details class="sidebar-settings"><summary class="nav-item"><span>⚙</span>Settings</summary><a class="nav-item subitem" href="{% url 'settings:package_templates' %}">Session packages</a></details>
+      </nav>
+      <div class="sidebar-card"><strong>Billing workspace</strong><p>Track invoices, payments, and prepaid session packages.</p></div>
+    </aside>
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions">
+          <a class="btn btn-primary" href="{% url 'billing:invoice_create' %}" data-modal-target="invoice-create-modal">+ New invoice</a>
+          <a class="btn btn-secondary" href="{% url 'billing:package_create' %}" data-modal-target="package-create-modal">+ Session package</a>
+          <a class="btn btn-soft" href="{% url 'clients:list' %}">My patients</a>
+        </div>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      </section>
+
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Billing</p><h1>Billing Workspace</h1></div></header>
+
+      <section class="billing-grid">
+        <article class="panel billing-panel">
+          <div class="panel-head"><div><h2>Invoices</h2><p>Bill individual sessions or prepaid packages.</p></div><span class="badge brand">{{ invoices|length }} invoices</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>For</th></tr></thead>
+              <tbody>
+                {% for invoice in invoices %}
+                  <tr><td><a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a></td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td></tr>
+                {% empty %}
+                  <tr><td colspan="5">No invoices yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel billing-panel">
+          <div class="panel-head"><div><h2>Session packages</h2><p>Track prepaid blocks like 3 or 4 sessions.</p></div><span class="badge success">{{ packages|length }} packages</span></div>
+          <div class="package-list">
+            {% for package in packages %}
+              <div class="package-card"><div><strong>{{ package.name }}</strong><p>{{ package.client }} · {{ package.sessions_used }} of {{ package.sessions_purchased }} used · {{ package.sessions_remaining }} remaining</p></div><span class="badge brand">{{ package.get_status_display }}</span><a class="inline-link" href="{% url 'billing:package_edit' package.pk %}" data-modal-target="package-modal-{{ package.pk }}">Edit package</a></div>
+            {% empty %}
+              <p class="empty-state">No session packages yet.</p>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+
+      <dialog class="modal-dialog" id="invoice-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Invoice</p><h2>Create invoice</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_create' submit_label='Create invoice' %}</div></dialog>
+      <dialog class="modal-dialog" id="package-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Package</p><h2>Create prepaid package</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/package_form.html' with action_url='billing:package_create' submit_label='Create package' %}</div></dialog>
+
+      {% for invoice in invoices %}
+        <dialog class="modal-dialog" id="invoice-modal-{{ invoice.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Invoice</p><h2>{{ invoice.invoice_number }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_edit' object=invoice submit_label='Save changes' %}</div></dialog>
+      {% endfor %}
+      {% for package in packages %}
+        <dialog class="modal-dialog" id="package-modal-{{ package.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Package</p><h2>{{ package.name }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/package_form.html' with action_url='billing:package_edit' object=package submit_label='Save changes' %}</div></dialog>
+      {% endfor %}
+    </main>
+  </div>
+  <script>
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
+    document.addEventListener('change', (event) => {
+      const select = event.target.closest('[data-package-template-select]');
+      if (!select) return;
+      const option = select.selectedOptions[0];
+      const form = select.closest('form');
+      if (!option?.dataset.name || !form) return;
+      form.elements.name.value = option.dataset.name;
+      form.elements.sessions_purchased.value = option.dataset.sessions;
+      form.elements.total_price.value = option.dataset.price;
+    });
+  </script>
+</body>
+</html>

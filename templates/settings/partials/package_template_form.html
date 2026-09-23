@@ -1,0 +1,11 @@
+<form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}">
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Name</label><input name="name" value="{{ object.name }}" required></div>
+    <div class="field"><label>Sessions included</label><input name="sessions_included" type="number" min="1" value="{{ object.sessions_included|default:4 }}" required></div>
+    <div class="field"><label>Price</label><input name="price" type="number" step="0.01" min="0" value="{{ object.price }}" required></div>
+    <div class="field checkbox-field"><label><input name="active" type="checkbox" {% if object.active or not object %}checked{% endif %}> Active</label></div>
+    <div class="field full"><label>Description</label><textarea name="description" rows="4">{{ object.description }}</textarea></div>
+  </div>
+  <div class="form-actions split-actions">{% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'settings:package_template_delete' object.pk %}">Delete template</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div></div>
+</form>

@@ -21,8 +21,9 @@
         <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
         <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
         <a class="nav-item active" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
-        <a class="nav-item" href="#"><span>□</span>Billing</a>
+        <a class="nav-item" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
         <a class="nav-item" href="#"><span>▣</span>Documents</a>
+        <details class="sidebar-settings"><summary class="nav-item"><span>⚙</span>Settings</summary><a class="nav-item subitem" href="{% url 'settings:package_templates' %}">Session packages</a></details>
       </nav>
       <div class="sidebar-card"><strong>Clinical documentation</strong><p>Notes are scoped by practice and can be locked when complete.</p></div>
     </aside>
@@ -34,7 +35,7 @@
           <a class="btn btn-secondary" href="{% url 'clients:create' %}">+ New client</a>
           <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
         </div>
-        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a><a href="#">Practice settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
       <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Notes</p><h1>Notes Workspace</h1></div></header>
@@ -71,7 +72,7 @@
               <div class="field"><label for="note-create-appointment">Appointment</label><select id="note-create-appointment" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}">{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
               <div class="field"><label for="note-create-type">Note type</label><select id="note-create-type" name="note_type" required><option value="progress_note">Progress Note</option><option value="intake_note">Intake Note</option><option value="treatment_plan">Treatment Plan</option><option value="general_note">General Note</option></select></div>
               <div class="field full"><label for="note-create-content">Content</label><textarea id="note-create-content" name="content" rows="8"></textarea></div>
-              <div class="field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
+              <div class="field checkbox-field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
             </div>
             <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create note</button></div>
           </form>
@@ -90,7 +91,7 @@
                 <div class="field"><label for="note-appointment-{{ note.pk }}">Appointment</label><select id="note-appointment-{{ note.pk }}" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}" {% if note.appointment_id == appointment.pk %}selected{% endif %}>{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
                 <div class="field"><label for="note-type-{{ note.pk }}">Note type</label><select id="note-type-{{ note.pk }}" name="note_type" required><option value="progress_note" {% if note.note_type == 'progress_note' %}selected{% endif %}>Progress Note</option><option value="intake_note" {% if note.note_type == 'intake_note' %}selected{% endif %}>Intake Note</option><option value="treatment_plan" {% if note.note_type == 'treatment_plan' %}selected{% endif %}>Treatment Plan</option><option value="general_note" {% if note.note_type == 'general_note' %}selected{% endif %}>General Note</option></select></div>
                 <div class="field full"><label for="note-content-{{ note.pk }}">Content</label><textarea id="note-content-{{ note.pk }}" name="content" rows="8">{{ note.content }}</textarea></div>
-                <div class="field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock note</label></div>
+                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock note</label></div>
               </div>
               <div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:delete' note.pk %}">Delete note</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
             </form>

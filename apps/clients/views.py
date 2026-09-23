@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from .forms import ClientForm
@@ -45,6 +46,9 @@ class ClientListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
         context['client_therapists'] = practice.therapists.select_related('user') if practice else []
+        context['note_appointments'] = practice.appointments.select_related('client', 'therapist__user') if practice else []
+        context['billing_templates'] = practice.session_package_templates.filter(active=True) if practice else []
+        context['billing_today'] = timezone.localdate()
         return context
 
 

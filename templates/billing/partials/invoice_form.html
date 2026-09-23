@@ -1,0 +1,18 @@
+<form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}">
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Client</label><select name="client" required>{% for client in billing_clients %}<option value="{{ client.pk }}" {% if object.client_id == client.pk %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Appointment</label><select name="appointment"><option value="">No appointment</option>{% for appointment in billing_appointments %}<option value="{{ appointment.pk }}" {% if object.appointment_id == appointment.pk %}selected{% endif %}>{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Package</label><select name="package"><option value="">No package</option>{% for package in billing_packages %}<option value="{{ package.pk }}" {% if object.package_id == package.pk %}selected{% endif %}>{{ package.name }} - {{ package.client }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Invoice number</label><input name="invoice_number" value="{{ object.invoice_number }}" placeholder="Auto-generated if blank"></div>
+    <div class="field"><label>Amount</label><input name="amount" type="number" step="0.01" min="0" value="{{ object.amount }}" required></div>
+    <div class="field"><label>Status</label><select name="status" required><option value="draft" {% if object.status == 'draft' %}selected{% endif %}>Draft</option><option value="sent" {% if object.status == 'sent' %}selected{% endif %}>Sent</option><option value="paid" {% if object.status == 'paid' %}selected{% endif %}>Paid</option><option value="overdue" {% if object.status == 'overdue' %}selected{% endif %}>Overdue</option><option value="void" {% if object.status == 'void' %}selected{% endif %}>Void</option></select></div>
+    <div class="field"><label>Due date</label><input name="due_date" type="date" value="{{ object.due_date|date:'Y-m-d' }}"></div>
+    <div class="field"><label>Paid at</label><input name="paid_at" type="datetime-local" value="{{ object.paid_at|date:'Y-m-d\TH:i' }}"></div>
+    <div class="field full"><label>Notes</label><textarea name="notes" rows="4">{{ object.notes }}</textarea></div>
+  </div>
+  <div class="form-actions split-actions">
+    {% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'billing:invoice_delete' object.pk %}">Delete invoice</button>{% endif %}
+    <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div>
+  </div>
+</form>

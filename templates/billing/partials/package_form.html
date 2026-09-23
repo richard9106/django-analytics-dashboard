@@ -1,0 +1,19 @@
+<form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}">
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Client</label><select name="client" required>{% for client in billing_clients %}<option value="{{ client.pk }}" {% if object.client_id == client.pk %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Package template</label><select name="template" data-package-template-select><option value="">Custom package</option>{% for template in billing_templates %}<option value="{{ template.pk }}" data-name="{{ template.name }}" data-sessions="{{ template.sessions_included }}" data-price="{{ template.price }}" {% if object.template_id == template.pk %}selected{% endif %}>{{ template.name }} - {{ template.sessions_included }} sessions - ${{ template.price }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Name</label><input name="name" value="{{ object.name|default:'Therapy session package' }}" required></div>
+    <div class="field"><label>Sessions purchased</label><input name="sessions_purchased" type="number" min="1" value="{{ object.sessions_purchased|default:4 }}" required></div>
+    <div class="field"><label>Sessions used</label><input name="sessions_used" type="number" min="0" value="{{ object.sessions_used|default:0 }}" required></div>
+    <div class="field"><label>Total price</label><input name="total_price" type="number" step="0.01" min="0" value="{{ object.total_price }}" required></div>
+    <div class="field"><label>Status</label><select name="status" required><option value="active" {% if object.status == 'active' %}selected{% endif %}>Active</option><option value="completed" {% if object.status == 'completed' %}selected{% endif %}>Completed</option><option value="expired" {% if object.status == 'expired' %}selected{% endif %}>Expired</option><option value="refunded" {% if object.status == 'refunded' %}selected{% endif %}>Refunded</option></select></div>
+    <div class="field"><label>Purchased at</label><input name="purchased_at" type="date" value="{{ object.purchased_at|date:'Y-m-d' }}" required></div>
+    <div class="field"><label>Expires at</label><input name="expires_at" type="date" value="{{ object.expires_at|date:'Y-m-d' }}"></div>
+    <div class="field full"><label>Notes</label><textarea name="notes" rows="4">{{ object.notes }}</textarea></div>
+  </div>
+  <div class="form-actions split-actions">
+    {% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'billing:package_delete' object.pk %}">Delete package</button>{% endif %}
+    <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div>
+  </div>
+</form>
