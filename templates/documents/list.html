@@ -28,7 +28,8 @@
             <article class="document-card">
               <div><strong>{{ document.title }}</strong><p>{{ document.client }} · {{ document.get_document_type_display }} · {{ document.created_at|date:"M j, Y" }}</p></div>
               <p>{{ document.original_filename|default:document.file.name }}</p>
-              <div class="inline-actions"><a class="inline-link" href="{% url 'documents:download' document.pk %}">Download</a><form method="post" action="{% url 'documents:delete' document.pk %}">{% csrf_token %}<button class="inline-button-danger" type="submit">Delete</button></form></div>
+              <p class="sync-meta">Google Drive: {{ document.get_external_sync_status_display }}{% if document.external_sync_error %} · {{ document.external_sync_error|truncatechars:80 }}{% endif %}</p>
+              <div class="inline-actions"><a class="inline-link" href="{% url 'documents:download' document.pk %}">Download</a>{% if document.external_file_url %}<a class="inline-link" href="{{ document.external_file_url }}" target="_blank" rel="noopener">Open in Drive</a>{% endif %}<form method="post" action="{% url 'documents:google_drive_export' document.pk %}">{% csrf_token %}<button class="inline-button" type="submit">Export to Google Drive</button></form><form method="post" action="{% url 'documents:delete' document.pk %}">{% csrf_token %}<button class="inline-button-danger" type="submit">Delete</button></form></div>
             </article>
           {% empty %}<p class="empty-state">No documents have been uploaded yet.</p>{% endfor %}
         </div>

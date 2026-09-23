@@ -14,6 +14,17 @@ class ClientDocument(models.Model):
         CLINICAL = "clinical", "Clinical Document"
         OTHER = "other", "Other"
 
+    class ExternalStorageProvider(models.TextChoices):
+        NONE = "none", "None"
+        GOOGLE_DRIVE = "google_drive", "Google Drive"
+
+    class SyncStatus(models.TextChoices):
+        NOT_SYNCED = "not_synced", "Not Synced"
+        PENDING = "pending", "Pending"
+        SYNCED = "synced", "Synced"
+        FAILED = "failed", "Failed"
+        DISABLED = "disabled", "Disabled"
+
     practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="documents")
     client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="documents")
     uploaded_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="uploaded_documents")
@@ -25,6 +36,12 @@ class ClientDocument(models.Model):
     file_size = models.PositiveIntegerField(default=0)
     visible_to_client = models.BooleanField(default=False)
     description = models.TextField(blank=True)
+    external_storage_provider = models.CharField(max_length=30, choices=ExternalStorageProvider.choices, default=ExternalStorageProvider.NONE)
+    external_file_id = models.CharField(max_length=255, blank=True)
+    external_file_url = models.URLField(blank=True)
+    external_synced_at = models.DateTimeField(null=True, blank=True)
+    external_sync_status = models.CharField(max_length=20, choices=SyncStatus.choices, default=SyncStatus.NOT_SYNCED)
+    external_sync_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

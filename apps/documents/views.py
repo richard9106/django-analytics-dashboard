@@ -10,6 +10,7 @@ from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_use
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .forms import ClientDocumentForm
+from .google_drive import export_document_to_google_drive
 from .models import ClientDocument
 
 
@@ -124,3 +125,24 @@ class DocumentDownloadView(LoginRequiredMixin, PracticeContextMixin, View):
             filename=document.original_filename or document.file.name.rsplit('/', 1)[-1],
             content_type=document.content_type or 'application/octet-stream',
         )
+
+
+class DocumentGoogleDriveExportView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, View):
+    def post(self, request, pk):
+        practice = self.get_practice()
+        document = get_object_or_404(ClientDocument, pk=pk, practice=practice)
+        export_document_to_google_drive(document)
+        document.refresh_from_db()
+        log_audit_event(
+            request,
+            AuditLog.Action.EXPORT,
+            'documents.ClientDocument',
+            document.pk,
+            practice=document.practice,
+            metadata={
+                'client_id': document.client_id,
+                'provider': 'google_drive',
+                'status': document.external_sync_status,
+            },
+        )
+        return redirect('documents:list')

@@ -4,12 +4,15 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 import tempfile
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 from apps.accounts.models import UserProfile
+from apps.audit.models import AuditLog
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
 from apps.portal.models import ClientPortalAccess
-from apps.practices.models import Practice, TherapistProfile
+from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
 
 class ClientDocumentModelTests(TestCase):
@@ -95,6 +98,8 @@ class ClientDocumentViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Visible consent")
         self.assertContains(response, 'id="document-create-modal"')
+        self.assertContains(response, "Export to Google Drive")
+        self.assertContains(response, "Google Drive: Not Synced")
         self.assertNotContains(response, "Hidden consent")
 
     def test_document_upload_saves_metadata(self):
@@ -189,3 +194,98 @@ class ClientDocumentViewTests(TestCase):
         response = self.client.get(reverse("documents:download", args=[document.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_google_drive_export_uploads_document_and_saves_metadata(self):
+        user, practice, _therapist, client = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            file_storage_enabled=True,
+            default_folder="NuviaMy Documents",
+            access_token="access-token",
+            refresh_token="refresh-token",
+        )
+        document = ClientDocument.objects.create(
+            practice=practice,
+            client=client,
+            title="Consent",
+            original_filename="consent.txt",
+            content_type="text/plain",
+            file=SimpleUploadedFile("consent.txt", b"signed", content_type="text/plain"),
+        )
+
+        self.client.force_login(user)
+        with patch("apps.documents.google_drive.google_api_request") as google_request, patch("apps.documents.google_drive.drive_request") as drive_request:
+            google_request.side_effect = [
+                {"files": []},
+                {"id": "drive-folder-123"},
+            ]
+            drive_request.return_value = {"id": "drive-file-123", "webViewLink": "https://drive.google.com/file/123"}
+            response = self.client.post(reverse("documents:google_drive_export", args=[document.pk]))
+
+        self.assertRedirects(response, reverse("documents:list"))
+        document.refresh_from_db()
+        self.assertEqual(document.external_storage_provider, ClientDocument.ExternalStorageProvider.GOOGLE_DRIVE)
+        self.assertEqual(document.external_sync_status, ClientDocument.SyncStatus.SYNCED)
+        self.assertEqual(document.external_file_id, "drive-file-123")
+        self.assertEqual(document.external_file_url, "https://drive.google.com/file/123")
+        self.assertEqual(drive_request.call_args.kwargs["method"], "POST")
+        log = AuditLog.objects.get(action=AuditLog.Action.EXPORT, object_type="documents.ClientDocument")
+        self.assertEqual(log.metadata["provider"], "google_drive")
+        self.assertEqual(log.metadata["status"], ClientDocument.SyncStatus.SYNCED)
+
+    def test_google_drive_export_is_scoped_to_user_practice(self):
+        user, _practice, _therapist, _client = self.create_practice_user()
+        _other_user, other_practice, _other_therapist, other_client = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        document = ClientDocument.objects.create(
+            practice=other_practice,
+            client=other_client,
+            title="Hidden consent",
+            file=SimpleUploadedFile("hidden.txt", b"hidden", content_type="text/plain"),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("documents:google_drive_export", args=[document.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_google_drive_export_restores_file_deleted_from_drive(self):
+        user, practice, _therapist, client = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            file_storage_enabled=True,
+            access_token="access-token",
+            refresh_token="refresh-token",
+        )
+        document = ClientDocument.objects.create(
+            practice=practice,
+            client=client,
+            title="Consent",
+            original_filename="consent.txt",
+            content_type="text/plain",
+            external_storage_provider=ClientDocument.ExternalStorageProvider.GOOGLE_DRIVE,
+            external_file_id="deleted-drive-file",
+            external_sync_status=ClientDocument.SyncStatus.SYNCED,
+            file=SimpleUploadedFile("consent.txt", b"signed", content_type="text/plain"),
+        )
+
+        self.client.force_login(user)
+        with patch("apps.documents.google_drive.drive_request") as drive_request:
+            drive_request.side_effect = [
+                HTTPError("https://drive.example/files/deleted-drive-file", 404, "Not Found", None, None),
+                {"id": "replacement-drive-file", "webViewLink": "https://drive.google.com/file/replacement"},
+            ]
+            response = self.client.post(reverse("documents:google_drive_export", args=[document.pk]))
+
+        self.assertRedirects(response, reverse("documents:list"))
+        document.refresh_from_db()
+        self.assertEqual(document.external_file_id, "replacement-drive-file")
+        self.assertEqual(document.external_sync_status, ClientDocument.SyncStatus.SYNCED)
+        self.assertEqual(drive_request.call_args_list[0].kwargs["method"], "PATCH")
+        self.assertEqual(drive_request.call_args_list[1].kwargs["method"], "POST")
