@@ -6,4 +6,5 @@ db.sqlite3
 .coverage
 htmlcov/
 staticfiles/
+media/
 graphify-out/
