@@ -116,6 +116,8 @@ h1, h2, h3, p { margin-top: 0; }
 .badge { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .badge.brand { background: var(--brand-50); color: var(--brand-700); }
 .badge.success { background: var(--success-bg); color: var(--success); }
+.badge.warning { background: #fff7ed; color: #c2410c; }
+.badge.danger { background: var(--danger-bg); color: var(--danger); }
 .appointment-list, .task-list { display: grid; gap: 12px; }
 .appointment-card { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px; border: 1px solid var(--slate-100); border-radius: 16px; background: linear-gradient(135deg, #fff, var(--slate-50)); }
 .appointment-card-mini { grid-template-columns: 76px minmax(0, 1fr); align-items: start; background: linear-gradient(135deg, rgba(112, 82, 217, .06), rgba(20, 184, 166, .06)); border-color: rgba(112, 82, 217, .14); }
@@ -125,6 +127,8 @@ h1, h2, h3, p { margin-top: 0; }
 .appointment-time span { color: var(--slate-500); font-size: 13px; font-weight: 700; }
 .appointment-body h3 { margin: 0 0 4px; font-size: 17px; letter-spacing: -.02em; }
 .appointment-body p { font-size: 14px; }
+.sync-meta { color: var(--slate-500); font-size: 12px !important; font-weight: 700; }
+.sync-panel { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--slate-200); border-radius: 14px; background: var(--slate-50); }
 .inline-link { display: inline-flex; margin-top: 8px; color: var(--brand-700); font-size: 13px; font-weight: 800; }
 .inline-actions { display: flex; gap: 14px; flex-wrap: wrap; }
 .calendar-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, .55fr); gap: 18px; align-items: start; }

@@ -2,9 +2,10 @@ import calendar
 from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
@@ -180,3 +181,10 @@ class AppointmentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
         except Exception:
             pass
         return super().form_valid(form)
+
+
+class AppointmentGoogleSyncView(LoginRequiredMixin, PracticeContextMixin, View):
+    def post(self, request, pk):
+        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        sync_appointment_to_google(appointment)
+        return redirect('appointments:list')

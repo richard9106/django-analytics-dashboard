@@ -97,6 +97,14 @@
             {% endfor %}
           </div>
 
+          {% if object.pk %}
+            <div class="sync-panel">
+              <strong>Google Calendar sync: {{ object.get_sync_status_display }}</strong>
+              {% if object.external_event_url %}<a class="inline-link" href="{{ object.external_event_url }}" target="_blank" rel="noopener">Open Google event</a>{% endif %}
+              {% if object.sync_error %}<p class="form-error">{{ object.sync_error }}</p>{% endif %}
+            </div>
+          {% endif %}
+
         </form>
 
         <div class="form-actions split-actions">
@@ -108,6 +116,7 @@
           {% endif %}
           <div class="form-actions">
             <a class="btn btn-secondary" href="{% url 'appointments:list' %}">Cancel</a>
+            {% if object.pk %}<button class="btn btn-soft" type="submit" form="appointment-form" formaction="{% url 'appointments:google_sync' object.pk %}">Sync to Google</button>{% endif %}
             <button class="btn btn-primary" type="submit" form="appointment-form">{{ submit_label }}</button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 from urllib.parse import quote
+from urllib.error import HTTPError
 
 from django.utils import timezone
 
@@ -67,7 +68,13 @@ def sync_appointment_to_google(appointment):
         payload = build_event_payload(appointment)
         if appointment.external_event_id:
             event_id = quote(appointment.external_event_id, safe='')
-            data = google_api_request(integration, f'{GOOGLE_CALENDAR_API_URL}/calendars/primary/events/{event_id}', method='PATCH', data=payload)
+            try:
+                data = google_api_request(integration, f'{GOOGLE_CALENDAR_API_URL}/calendars/primary/events/{event_id}', method='PATCH', data=payload)
+            except HTTPError as error:
+                if error.code != 404:
+                    raise
+                appointment.external_event_id = ''
+                data = google_api_request(integration, f'{GOOGLE_CALENDAR_API_URL}/calendars/primary/events', method='POST', data=payload)
         else:
             data = google_api_request(integration, f'{GOOGLE_CALENDAR_API_URL}/calendars/primary/events', method='POST', data=payload)
         appointment.external_event_id = data.get('id', appointment.external_event_id)

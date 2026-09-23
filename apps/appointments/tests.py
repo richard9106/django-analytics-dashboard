@@ -1,5 +1,6 @@
 from datetime import timedelta
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -212,6 +213,8 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'Delete appointment')
         self.assertContains(response, f"{reverse('appointments:create')}?date={starts_at.date().isoformat()}")
         self.assertContains(response, 'aria-label="Add appointment on')
+        self.assertContains(response, 'Google Calendar: Not Synced')
+        self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
 
     def test_appointment_list_highlights_today(self):
         user, _practice, _therapist, _client = self.create_practice_user()
@@ -400,6 +403,65 @@ class AppointmentViewTests(TestCase):
         args, kwargs = google_request.call_args
         self.assertEqual(kwargs['method'], 'PATCH')
         self.assertIn('/calendars/primary/events/google-event-123', args[1])
+
+    def test_google_sync_restores_event_deleted_from_google_calendar(self):
+        user, practice, therapist, client = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            calendar_enabled=True,
+            access_token='access-token',
+            refresh_token='refresh-token',
+        )
+        starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+            sync_enabled=True,
+            external_calendar_provider=Appointment.CalendarProvider.GOOGLE,
+            external_calendar_id='primary',
+            external_event_id='deleted-google-event',
+            sync_status=Appointment.SyncStatus.SYNCED,
+        )
+
+        self.client.force_login(user)
+        with patch('apps.appointments.google_calendar.google_api_request') as google_request:
+            google_request.side_effect = [
+                HTTPError('https://calendar.example/events/deleted-google-event', 404, 'Not Found', None, None),
+                {'id': 'replacement-google-event', 'htmlLink': 'https://calendar.google.com/replacement'},
+            ]
+            response = self.client.post(reverse('appointments:google_sync', args=[appointment.pk]))
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.external_event_id, 'replacement-google-event')
+        self.assertEqual(appointment.sync_status, Appointment.SyncStatus.SYNCED)
+        self.assertEqual(google_request.call_args_list[0].kwargs['method'], 'PATCH')
+        self.assertEqual(google_request.call_args_list[1].kwargs['method'], 'POST')
+
+    def test_google_sync_action_is_scoped_to_user_practice(self):
+        user, _practice, _therapist, _client = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client = self.create_practice_user(
+            username='otherdoc',
+            practice_name='Other Practice',
+        )
+        starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:google_sync', args=[appointment.pk]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_appointment_edit_form_shows_delete_action(self):
         user, practice, therapist, client = self.create_practice_user()
