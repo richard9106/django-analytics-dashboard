@@ -90,6 +90,22 @@
       form.elements.sessions_purchased.value = option.dataset.sessions;
       form.elements.total_price.value = option.dataset.price;
     });
+    document.addEventListener('change', (event) => {
+      const packageSelect = event.target.closest('[data-invoice-package-select]');
+      if (!packageSelect) return;
+      const option = packageSelect.selectedOptions[0];
+      const form = packageSelect.closest('form');
+      if (!form || !option) return;
+      if (option.dataset.client) form.elements.client.value = option.dataset.client;
+      if (option.dataset.amount) form.elements.amount.value = option.dataset.amount;
+    });
+    document.addEventListener('change', (event) => {
+      const appointmentSelect = event.target.closest('[data-invoice-appointment-select]');
+      if (!appointmentSelect) return;
+      const option = appointmentSelect.selectedOptions[0];
+      const form = appointmentSelect.closest('form');
+      if (form && option?.dataset.client) form.elements.client.value = option.dataset.client;
+    });
   </script>
 </body>
 </html>

@@ -18,6 +18,8 @@ class InvoiceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
+        self.fields['client'].required = False
+        self.fields['amount'].required = False
         self.fields['invoice_number'].required = False
         self.fields['paid_at'].input_formats = ['%Y-%m-%dT%H:%M']
         if practice:
@@ -32,7 +34,24 @@ class InvoiceForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         invoice_number = cleaned_data.get('invoice_number')
+        client = cleaned_data.get('client')
+        appointment = cleaned_data.get('appointment')
         package = cleaned_data.get('package')
+        amount = cleaned_data.get('amount')
+
+        if not client:
+            if package:
+                cleaned_data['client'] = package.client
+                self.instance.client = package.client
+            elif appointment:
+                cleaned_data['client'] = appointment.client
+                self.instance.client = appointment.client
+
+        if amount is None and package:
+            cleaned_data['amount'] = package.total_price
+            self.instance.amount = package.total_price
+        elif amount is None:
+            self.add_error('amount', 'Amount is required unless a package is selected.')
 
         if not invoice_number and not self.instance.pk:
             cleaned_data['invoice_number'] = self.build_invoice_number(package)

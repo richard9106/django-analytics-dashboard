@@ -260,6 +260,35 @@ class BillingViewTests(TestCase):
         expected_prefix = f"PKG-{package.pk}-{timezone.localdate():%Y%m%d}-"
         self.assertEqual(invoice.invoice_number, f"{expected_prefix}0001")
 
+    def test_invoice_create_autofills_client_and_amount_from_package(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        package = ServicePackage.objects.create(
+            practice=practice,
+            client=client,
+            name="4 session package",
+            sessions_purchased=4,
+            total_price=Decimal("520.00"),
+            purchased_at=timezone.localdate(),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:invoice_create"), {
+            "client": "",
+            "appointment": "",
+            "package": package.pk,
+            "invoice_number": "",
+            "amount": "",
+            "status": Invoice.Status.DRAFT,
+            "due_date": "",
+            "paid_at": "",
+            "notes": "Package invoice.",
+        })
+
+        self.assertRedirects(response, reverse("billing:list"))
+        invoice = Invoice.objects.get()
+        self.assertEqual(invoice.client, client)
+        self.assertEqual(invoice.amount, Decimal("520.00"))
+
     def test_invoice_create_auto_generates_sequential_package_invoice_number(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
         package = ServicePackage.objects.create(
@@ -315,6 +344,39 @@ class BillingViewTests(TestCase):
         package = ServicePackage.objects.get()
         self.assertEqual(package.practice, practice)
         self.assertEqual(package.sessions_remaining, 3)
+
+    def test_expired_package_cannot_be_used_for_session(self):
+        _user, practice, _therapist, client, appointment = self.create_practice_user()
+        package = ServicePackage.objects.create(
+            practice=practice,
+            client=client,
+            name="Expired package",
+            sessions_purchased=4,
+            total_price=Decimal("520.00"),
+            purchased_at=timezone.localdate() - timedelta(days=30),
+            expires_at=timezone.localdate() - timedelta(days=1),
+        )
+        usage = PackageUsage(package=package, appointment=appointment, quantity=1, used_at=timezone.now())
+
+        with self.assertRaisesMessage(ValidationError, "Expired packages cannot be used"):
+            usage.full_clean()
+
+    def test_completed_package_cannot_be_used_for_session(self):
+        _user, practice, _therapist, client, appointment = self.create_practice_user()
+        package = ServicePackage.objects.create(
+            practice=practice,
+            client=client,
+            name="Completed package",
+            sessions_purchased=4,
+            sessions_used=4,
+            total_price=Decimal("520.00"),
+            status=ServicePackage.Status.COMPLETED,
+            purchased_at=timezone.localdate(),
+        )
+        usage = PackageUsage(package=package, appointment=appointment, quantity=1, used_at=timezone.now())
+
+        with self.assertRaisesMessage(ValidationError, "Only active packages can be used"):
+            usage.full_clean()
 
     def test_package_create_can_use_template(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()

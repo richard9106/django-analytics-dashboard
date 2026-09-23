@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 
 class Invoice(models.Model):
@@ -166,6 +167,10 @@ class PackageUsage(models.Model):
         if self.quantity <= 0:
             errors["quantity"] = "Usage quantity must be greater than zero."
         if self.package_id and self.appointment_id:
+            if self.package.status != ServicePackage.Status.ACTIVE:
+                errors["package"] = "Only active packages can be used for sessions."
+            if self.package.expires_at and self.package.expires_at < timezone.localdate():
+                errors["package"] = "Expired packages cannot be used for sessions."
             if self.appointment.practice_id != self.package.practice_id:
                 errors["appointment"] = "Usage appointment must belong to the same practice as the package."
             if self.appointment.client_id != self.package.client_id:
