@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
 from .models import Appointment
 from .forms import AppointmentForm
 
@@ -121,6 +122,11 @@ class AppointmentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
         context['submit_label'] = 'Create appointment'
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        sync_appointment_to_google(self.object)
+        return response
+
 
 class AppointmentUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
     model = Appointment
@@ -151,6 +157,11 @@ class AppointmentUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView
         context['show_delete_action'] = True
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        sync_appointment_to_google(self.object)
+        return response
+
 
 class AppointmentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
     model = Appointment
@@ -162,3 +173,10 @@ class AppointmentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
             return Appointment.objects.none()
 
         return Appointment.objects.filter(practice=practice)
+
+    def form_valid(self, form):
+        try:
+            delete_google_event_for_appointment(self.object)
+        except Exception:
+            pass
+        return super().form_valid(form)

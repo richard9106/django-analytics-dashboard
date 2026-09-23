@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -9,7 +10,7 @@ from django.utils import timezone
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
 from apps.clients.models import Client
-from apps.practices.models import Practice, TherapistProfile
+from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
 
 class AppointmentModelTests(TestCase):
@@ -245,6 +246,46 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(appointment.client, client)
         self.assertEqual(appointment.therapist, therapist)
 
+    def test_appointment_create_syncs_to_google_calendar_when_enabled(self):
+        user, practice, therapist, client = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            calendar_enabled=True,
+            access_token='access-token',
+            refresh_token='refresh-token',
+        )
+        starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        ends_at = starts_at + timedelta(minutes=50)
+
+        self.client.force_login(user)
+        with patch('apps.appointments.google_calendar.google_api_request') as google_request:
+            google_request.return_value = {'id': 'google-event-123', 'htmlLink': 'https://calendar.google.com/event'}
+            response = self.client.post(reverse('appointments:create'), {
+                'client': client.pk,
+                'therapist': therapist.pk,
+                'starts_at': starts_at.strftime('%Y-%m-%dT%H:%M'),
+                'ends_at': ends_at.strftime('%Y-%m-%dT%H:%M'),
+                'appointment_type': Appointment.AppointmentType.VIDEO,
+                'status': Appointment.Status.SCHEDULED,
+                'location': 'Office 1',
+                'meeting_url': '',
+                'notes': 'Do not send notes to Google.',
+            })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointment = Appointment.objects.get()
+        self.assertTrue(appointment.sync_enabled)
+        self.assertEqual(appointment.external_calendar_provider, Appointment.CalendarProvider.GOOGLE)
+        self.assertEqual(appointment.external_event_id, 'google-event-123')
+        self.assertEqual(appointment.sync_status, Appointment.SyncStatus.SYNCED)
+        args, kwargs = google_request.call_args
+        self.assertEqual(kwargs['method'], 'POST')
+        self.assertIn('/calendars/primary/events', args[1])
+        self.assertEqual(kwargs['data']['summary'], 'Appointment with Maya Johnson')
+        self.assertNotIn('Do not send notes', kwargs['data']['description'])
+
     def test_appointment_create_prefills_from_calendar_date(self):
         user, _practice, _therapist, _client = self.create_practice_user()
 
@@ -312,6 +353,54 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(appointment.status, Appointment.Status.COMPLETED)
         self.assertEqual(appointment.notes, 'Updated session.')
 
+    def test_appointment_update_patches_google_calendar_event(self):
+        user, practice, therapist, client = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            calendar_enabled=True,
+            access_token='access-token',
+            refresh_token='refresh-token',
+        )
+        starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+            sync_enabled=True,
+            external_calendar_provider=Appointment.CalendarProvider.GOOGLE,
+            external_calendar_id='primary',
+            external_event_id='google-event-123',
+            sync_status=Appointment.SyncStatus.SYNCED,
+        )
+        updated_start = starts_at.replace(hour=14)
+        updated_end = updated_start + timedelta(minutes=50)
+
+        self.client.force_login(user)
+        with patch('apps.appointments.google_calendar.google_api_request') as google_request:
+            google_request.return_value = {'id': 'google-event-123', 'htmlLink': 'https://calendar.google.com/event'}
+            response = self.client.post(reverse('appointments:edit', args=[appointment.pk]), {
+                'client': client.pk,
+                'therapist': therapist.pk,
+                'starts_at': updated_start.strftime('%Y-%m-%dT%H:%M'),
+                'ends_at': updated_end.strftime('%Y-%m-%dT%H:%M'),
+                'appointment_type': Appointment.AppointmentType.PHONE,
+                'status': Appointment.Status.SCHEDULED,
+                'location': '',
+                'meeting_url': '',
+                'notes': 'Updated session.',
+            })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.sync_status, Appointment.SyncStatus.SYNCED)
+        args, kwargs = google_request.call_args
+        self.assertEqual(kwargs['method'], 'PATCH')
+        self.assertIn('/calendars/primary/events/google-event-123', args[1])
+
     def test_appointment_edit_form_shows_delete_action(self):
         user, practice, therapist, client = self.create_practice_user()
         starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
@@ -346,6 +435,40 @@ class AppointmentViewTests(TestCase):
 
         self.assertRedirects(response, reverse('appointments:list'))
         self.assertEqual(Appointment.objects.count(), 0)
+
+    def test_appointment_delete_removes_google_calendar_event(self):
+        user, practice, therapist, client = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            calendar_enabled=True,
+            access_token='access-token',
+            refresh_token='refresh-token',
+        )
+        starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+            sync_enabled=True,
+            external_calendar_provider=Appointment.CalendarProvider.GOOGLE,
+            external_calendar_id='primary',
+            external_event_id='google-event-123',
+            sync_status=Appointment.SyncStatus.SYNCED,
+        )
+
+        self.client.force_login(user)
+        with patch('apps.appointments.google_calendar.google_api_request') as google_request:
+            response = self.client.post(reverse('appointments:delete', args=[appointment.pk]))
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        self.assertEqual(Appointment.objects.count(), 0)
+        args, kwargs = google_request.call_args
+        self.assertEqual(kwargs['method'], 'DELETE')
+        self.assertIn('/calendars/primary/events/google-event-123', args[1])
 
     def test_appointment_update_is_scoped_to_user_practice(self):
         user, _practice, _therapist, _client = self.create_practice_user()
