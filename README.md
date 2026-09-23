@@ -13,34 +13,129 @@ NuviaMy helps mental health professionals manage their practice from one calm, s
 
 This project is educational and portfolio-focused. It is designed with HIPAA-aware principles, but it is not certified for real clinical use.
 
-## Planned Core Domains
+## Implemented Product Areas
 
-- `accounts`: users, roles, authentication, and permissions.
-- `practices`: solo practices, clinics, therapists, and practice settings.
-- `clients`: client records, contact details, status, emergency contacts, and insurance metadata.
-- `appointments`: appointments, session status, calendar sync metadata, cancellations, and no-shows.
-- `clinical`: session notes, progress notes, and clinical documentation workflows.
-- `billing`: invoices, payments, balances, and future payment provider integration.
-- `portal`: client-facing dashboard for sessions, billing, and requested information.
-- `documents`: consent forms, intake files, insurance documents, and client uploads.
-- `audit`: HIPAA-aware audit trail for sensitive actions.
-- `telehealth`: video session links and telehealth provider metadata.
-- `notifications`: appointment, billing, portal, and workflow notifications.
-- `dashboard`: therapist and practice overview screens.
+The current version includes these working modules:
 
-## MVP Scope
+- `accounts`: signup/onboarding, login/logout, role/profile model, practice ownership setup.
+- `practices`: practice and therapist profile models with tenant scoping.
+- `clients`: patient directory, create/edit/delete popups, practice-scoped client records, add note from client, assign package from client.
+- `appointments`: calendar view, Monday-start calendar, create/edit/delete popups, today highlighting, tenant-scoped appointment scheduling.
+- `clinical`: clinical notes list, create/edit/delete popups, optional appointment link, lock note behavior with `locked_at`.
+- `billing`: invoices, package invoices, automatic invoice numbering, prepaid service packages, package usage tracking, package expiration/use rules.
+- `documents`: client document upload/list/download/delete, file metadata, tenant-scoped downloads, local storage with R2-ready abstraction.
+- `dashboard`: operational practice dashboard with today appointments, tasks, billing summary, recent invoices, and quick actions.
+- `settings`: session package template configuration for reusable prepaid packages.
+- `admin`: Django admin registration for core domain models.
 
-The first implementation phase focuses on the foundation:
+The following apps exist at the model/admin level or are reserved for later phases:
 
-- Practice model that supports both solo providers and clinics.
-- Therapist profile linked to Django users.
-- Client records scoped to a practice.
-- Appointment scheduling.
-- Session notes.
-- Protected therapist dashboard.
-- Basic client portal.
-- Tests for authentication and practice-level data isolation.
-- Production domain target: `nuviamy.com`.
+- `portal`: client-facing access model exists, but client portal UI is not implemented yet.
+- `audit`: audit model exists, but full event coverage is not implemented yet.
+- `telehealth`: telehealth room model exists, but provider integration is not implemented yet.
+- `notifications`: notification model exists, but delivery workers/providers are not implemented yet.
+
+## Current Workflow Summary
+
+### Dashboard
+
+- Top action bar with quick create actions and profile menu.
+- Practice metrics: monthly revenue, active patients, today's sessions, pending tasks.
+- Today appointments panel.
+- Tasks panel from notes, invoices, and notifications.
+- Recent billing activity.
+
+### Clients
+
+- `My patients` grid with four desktop columns, two tablet columns, one mobile column.
+- Create/edit/delete client using popups.
+- Add clinical note directly from a client card.
+- Assign a prepaid session package directly from a client card.
+- Client cards are practice-scoped.
+
+### Appointments
+
+- Calendar page with Monday-first weeks.
+- Current day highlighted.
+- Day-level `+` opens appointment creation popup and pre-fills date/time.
+- Existing appointment opens edit popup.
+- Delete appointment from edit popup.
+- Fallback create/edit pages remain available.
+
+### Clinical Notes
+
+- Notes workspace with list and popups.
+- Notes link to client, therapist, and optional appointment.
+- `Lock note` marks a note as final and sets `locked_at`.
+- Locked notes are currently still editable; stricter edit rules can be added later.
+
+### Billing And Packages
+
+- Billing workspace with invoices and prepaid session packages.
+- Session package templates configured under Settings.
+- Assign package to client from Clients page.
+- Create invoices against either appointments or packages.
+- Invoice number auto-generates when blank:
+
+```text
+PKG-{package_id}-{YYYYMMDD}-{sequence}
+```
+
+- Selecting a package in invoice form fills client and amount.
+- Selecting an appointment fills client.
+- Package usage tracks sessions used and remaining.
+- Expired, completed, or refunded packages cannot be used for sessions.
+- No-show/cancellation consumption rules are not finalized yet.
+
+### Documents
+
+- Upload client documents from `/documents/`.
+- Documents are scoped to practice and client.
+- Metadata stored in DB: original filename, content type, file size, portal visibility flag.
+- Downloads go through Django authorization checks.
+- Local `MEDIA_ROOT` storage works now.
+- Cloudflare R2 support is configured through env vars but must be enabled in production.
+
+## Storage
+
+By default, uploaded documents use local filesystem storage:
+
+```env
+DJANGO_STORAGE_BACKEND=
+```
+
+For Cloudflare R2, production should set:
+
+```env
+DJANGO_STORAGE_BACKEND=r2
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_STORAGE_BUCKET_NAME=nuviamy
+AWS_S3_ENDPOINT_URL=https://<account-id>.us.r2.cloudflarestorage.com
+AWS_S3_REGION_NAME=auto
+```
+
+Do not commit R2 credentials. `.env` and `media/` are ignored by Git.
+
+## Next Recommended Work
+
+The next major product step is a read-only client portal:
+
+- Client login/access flow.
+- Client dashboard showing upcoming appointments.
+- Client-visible documents where `visible_to_client=True`.
+- Client invoices and package balances.
+- Available package templates for future purchase/request flow.
+- Tenant isolation tests ensuring one client cannot access another client's data.
+
+Other follow-up work:
+
+- Define no-show/cancellation rules for package usage.
+- Add document upload to client portal.
+- Add payment provider integration.
+- Add audit events for document, note, billing, and login actions.
+- Add notification delivery providers.
+- Move document storage fully to R2 in production and rotate exposed credentials.
 
 ## Security And Compliance Direction
 

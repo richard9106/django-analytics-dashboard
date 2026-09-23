@@ -1,0 +1,11 @@
+<form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}" {% if not object %}data-portal-access-form{% endif %}>
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Client</label><select name="client" required {% if object %}disabled{% endif %}>{% if object %}{% for client in portal_clients %}<option value="{{ client.pk }}" {% if object.client_id == client.pk %}selected{% endif %}>{{ client }}</option>{% endfor %}{% else %}{% for suggestion in portal_client_suggestions %}<option value="{{ suggestion.client.pk }}" data-email="{{ suggestion.email }}" data-username="{{ suggestion.username }}" data-password="{{ suggestion.password }}">{{ suggestion.client }}</option>{% endfor %}{% endif %}</select>{% if object %}<input type="hidden" name="client" value="{{ object.client_id }}">{% endif %}</div>
+    <div class="field"><label>Username</label><input name="username" value="{{ object.user.username }}" required></div>
+    <div class="field"><label>Email</label><input name="email" type="email" value="{{ object.user.email }}"></div>
+    <div class="field"><label>Password</label><input name="password" type="{% if object %}password{% else %}text{% endif %}" {% if not object %}required{% endif %} placeholder="{% if object %}Leave blank to keep current{% else %}Temporary password{% endif %}"></div>
+    <div class="field checkbox-field"><label><input name="is_active" type="checkbox" {% if object.is_active or not object %}checked{% endif %}> Active portal access</label></div>
+  </div>
+  <div class="form-actions split-actions">{% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'portal_settings:portal_access_delete' object.pk %}">Delete access</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div></div>
+</form>

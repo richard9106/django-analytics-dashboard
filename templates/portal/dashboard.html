@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Client Portal | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page portal-page">
+  <main class="portal-shell">
+    <section class="action-bar" aria-label="Portal actions">
+      <a class="brand" href="{% url 'portal:dashboard' %}" aria-label="NuviaMy client portal">
+        <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span>
+        <span>NuviaMy Portal</span>
+      </a>
+      <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+    </section>
+
+    <section class="welcome-panel">
+      <div>
+        <p class="eyebrow">Client Portal</p>
+        <h2>Welcome, <span class="serif">{{ portal_client.first_name }}</span></h2>
+        <p>{{ portal_practice.name }} keeps your appointments, billing, packages, and shared documents in one secure place.</p>
+      </div>
+    </section>
+
+    <section class="portal-grid">
+      <article class="panel">
+        <div class="panel-head"><div><h2>Upcoming appointments</h2><p>Your scheduled sessions.</p></div></div>
+        <div class="appointment-list">
+          {% for appointment in upcoming_appointments %}
+            <div class="appointment-card appointment-card-mini"><div class="appointment-time"><strong>{{ appointment.starts_at|date:"M j" }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span></div><div class="appointment-body"><h3>{{ appointment.get_appointment_type_display }}</h3><p>With {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p></div><span class="badge success">{{ appointment.get_status_display }}</span></div>
+          {% empty %}<p class="empty-state">No upcoming appointments.</p>{% endfor %}
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><h2>Package balance</h2><p>Prepaid session balances.</p></div></div>
+        <div class="package-list">
+          {% for package in service_packages %}
+            <div class="package-card"><strong>{{ package.name }}</strong><p>{{ package.sessions_remaining }} of {{ package.sessions_purchased }} sessions remaining · {{ package.get_status_display }}</p></div>
+          {% empty %}<p class="empty-state">No active packages yet.</p>{% endfor %}
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><h2>Open invoices</h2><p>Invoices that still need attention.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Amount</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td></tr>{% empty %}<tr><td colspan="3">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><h2>Shared documents</h2><p>Documents your practice has made visible to you.</p></div></div>
+        <div class="document-grid portal-documents">
+          {% for document in visible_documents %}
+            <div class="document-card"><strong>{{ document.title }}</strong><p>{{ document.get_document_type_display }} · {{ document.created_at|date:"M j, Y" }}</p><a class="inline-link" href="{% url 'documents:download' document.pk %}">Download</a></div>
+          {% empty %}<p class="empty-state">No shared documents yet.</p>{% endfor %}
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

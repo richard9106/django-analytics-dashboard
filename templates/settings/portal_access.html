@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Client Portal Settings | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
+      <nav class="nav-list">
+        <a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
+        <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
+        <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
+        <a class="nav-item" href="{% url 'documents:list' %}"><span>▣</span>Documents</a>
+        <details class="sidebar-settings" open><summary class="nav-item active"><span>⚙</span>Settings</summary><a class="nav-item subitem" href="{% url 'settings:package_templates' %}">Session packages</a><a class="nav-item active subitem" href="{% url 'portal_settings:portal_access' %}">Client portal</a></details>
+      </nav>
+      <div class="sidebar-card"><strong>Client portal</strong><p>Create and manage client-facing portal accounts.</p></div>
+    </aside>
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions"><a class="btn btn-primary" href="{% url 'portal_settings:portal_access_create' %}" data-modal-target="portal-access-create-modal">+ Enable portal access</a><a class="btn btn-secondary" href="{% url 'portal:dashboard' %}">Portal preview</a></div>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      </section>
+
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Settings</p><h1>Client Portal Access</h1></div></header>
+
+      <section class="panel clients-panel">
+        <div class="panel-head"><div><h2>Portal accounts</h2><p>Give clients access to their portal dashboard, shared documents, appointments, invoices, and package balances.</p></div><span class="badge brand">{{ portal_accesses|length }} accounts</span></div>
+        <div class="client-grid">
+          {% for access in portal_accesses %}
+            <article class="client-card"><div class="client-avatar" aria-hidden="true">{{ access.client.first_name|first }}{{ access.client.last_name|first }}</div><div class="client-card-body"><div class="client-card-head"><div><h3>{{ access.client }}</h3><p>{{ access.user.username }}{% if access.user.email %} · {{ access.user.email }}{% endif %}</p></div><span class="badge {% if access.is_active %}success{% else %}brand{% endif %}">{% if access.is_active %}Active{% else %}Inactive{% endif %}</span></div><a class="inline-link" href="{% url 'portal_settings:portal_access_edit' access.pk %}" data-modal-target="portal-access-modal-{{ access.pk }}">Edit access</a></div></article>
+          {% empty %}<p class="empty-state">No client portal accounts yet.</p>{% endfor %}
+        </div>
+      </section>
+
+      <dialog class="modal-dialog" id="portal-access-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Client Portal</p><h2>Enable portal access</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'settings/partials/portal_access_form.html' with action_url='portal_settings:portal_access_create' submit_label='Create access' %}</div></dialog>
+      {% for access in portal_accesses %}<dialog class="modal-dialog" id="portal-access-modal-{{ access.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Client Portal</p><h2>{{ access.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'settings/partials/portal_access_form.html' with action_url='portal_settings:portal_access_edit' object=access submit_label='Save changes' %}</div></dialog>{% endfor %}
+    </main>
+  </div>
+  <script>function fillPortalAccessForm(form){const select=form.querySelector('select[name="client"]');const option=select?.selectedOptions?.[0];if(!option)return;form.querySelector('input[name="email"]').value=option.dataset.email||'';form.querySelector('input[name="username"]').value=option.dataset.username||'';form.querySelector('input[name="password"]').value=option.dataset.password||'';}document.querySelectorAll('[data-portal-access-form]').forEach((form)=>{fillPortalAccessForm(form);form.querySelector('select[name="client"]')?.addEventListener('change',()=>fillPortalAccessForm(form));});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();const form=dialog.querySelector('[data-portal-access-form]');if(form)fillPortalAccessForm(form);});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});</script>
+</body>
+</html>

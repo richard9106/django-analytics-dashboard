@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
@@ -75,7 +76,19 @@ class DocumentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
 class DocumentDownloadView(LoginRequiredMixin, PracticeContextMixin, View):
     def get(self, request, pk):
         practice = self.get_practice()
-        document = get_object_or_404(ClientDocument, pk=pk, practice=practice)
+        portal_access = getattr(request.user, 'client_portal_access', None)
+        if portal_access and portal_access.is_active:
+            document = get_object_or_404(
+                ClientDocument,
+                pk=pk,
+                practice=portal_access.practice,
+                client=portal_access.client,
+                visible_to_client=True,
+            )
+        elif practice:
+            document = get_object_or_404(ClientDocument, pk=pk, practice=practice)
+        else:
+            raise PermissionDenied('You do not have access to this document.')
         return FileResponse(
             document.file.open('rb'),
             as_attachment=True,

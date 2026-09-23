@@ -8,6 +8,7 @@ import tempfile
 from apps.accounts.models import UserProfile
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
+from apps.portal.models import ClientPortalAccess
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -152,3 +153,39 @@ class ClientDocumentViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/plain")
+
+    def test_portal_client_can_download_visible_document(self):
+        _user, practice, _therapist, client = self.create_practice_user()
+        portal_user = get_user_model().objects.create_user(username="portal", password="StrongPass123!")
+        ClientPortalAccess.objects.create(user=portal_user, practice=practice, client=client, is_active=True)
+        document = ClientDocument.objects.create(
+            practice=practice,
+            client=client,
+            title="Visible consent",
+            original_filename="consent.txt",
+            content_type="text/plain",
+            visible_to_client=True,
+            file=SimpleUploadedFile("consent.txt", b"signed", content_type="text/plain"),
+        )
+
+        self.client.force_login(portal_user)
+        response = self.client.get(reverse("documents:download", args=[document.pk]))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_portal_client_cannot_download_hidden_document(self):
+        _user, practice, _therapist, client = self.create_practice_user()
+        portal_user = get_user_model().objects.create_user(username="portal", password="StrongPass123!")
+        ClientPortalAccess.objects.create(user=portal_user, practice=practice, client=client, is_active=True)
+        document = ClientDocument.objects.create(
+            practice=practice,
+            client=client,
+            title="Internal consent",
+            visible_to_client=False,
+            file=SimpleUploadedFile("internal.txt", b"hidden", content_type="text/plain"),
+        )
+
+        self.client.force_login(portal_user)
+        response = self.client.get(reverse("documents:download", args=[document.pk]))
+
+        self.assertEqual(response.status_code, 404)

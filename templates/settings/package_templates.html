@@ -19,7 +19,7 @@
         <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
         <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
         <a class="nav-item" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
-        <details class="sidebar-settings" open><summary class="nav-item active"><span>⚙</span>Settings</summary><a class="nav-item active subitem" href="{% url 'settings:package_templates' %}">Session packages</a></details>
+        <details class="sidebar-settings" open><summary class="nav-item active"><span>⚙</span>Settings</summary><a class="nav-item active subitem" href="{% url 'settings:package_templates' %}">Session packages</a><a class="nav-item subitem" href="{% url 'portal_settings:portal_access' %}">Client portal</a></details>
       </nav>
       <div class="sidebar-card"><strong>Package settings</strong><p>Preconfigure prepaid package names, session counts, and prices.</p></div>
     </aside>

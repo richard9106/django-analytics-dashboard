@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 
 from apps.dashboard.views import DashboardView
 from apps.billing.urls import settings_patterns
+from apps.portal.settings_urls import urlpatterns as portal_settings_patterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,7 +16,9 @@ urlpatterns = [
     path('clinical-notes/', include('apps.clinical.urls')),
     path('billing/', include('apps.billing.urls')),
     path('settings/', include((settings_patterns, 'settings'), namespace='settings')),
+    path('settings/', include((portal_settings_patterns, 'portal_settings'), namespace='portal_settings')),
     path('documents/', include('apps.documents.urls')),
+    path('portal/', include('apps.portal.urls')),
     path('login/', LoginView.as_view(template_name='dashboard/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('summernote/', include('django_summernote.urls')),
