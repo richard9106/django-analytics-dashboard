@@ -1,3 +1,106 @@
-from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-# Create your views here.
+from .forms import ClientForm
+from .models import Client
+
+
+class PracticeContextMixin:
+    def get_practice(self):
+        user = self.request.user
+        user_profile = getattr(user, 'nuvia_profile', None)
+        if user_profile:
+            return user_profile.practice
+
+        therapist_profile = getattr(user, 'therapist_profile', None)
+        if therapist_profile:
+            return therapist_profile.practice
+
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['practice'] = self.get_practice()
+        return context
+
+
+class ClientListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+    model = Client
+    template_name = 'clients/list.html'
+    context_object_name = 'clients'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Client.objects.none()
+
+        return (
+            Client.objects.filter(practice=practice)
+            .select_related('primary_therapist__user')
+            .order_by('last_name', 'first_name')
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        context['client_therapists'] = practice.therapists.select_related('user') if practice else []
+        return context
+
+
+class ClientCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+    model = Client
+    form_class = ClientForm
+    template_name = 'clients/form.html'
+    success_url = reverse_lazy('clients:list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'New Client'
+        context['form_heading'] = 'Create a client profile'
+        context['submit_label'] = 'Create client'
+        return context
+
+
+class ClientUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
+    model = Client
+    form_class = ClientForm
+    template_name = 'clients/form.html'
+    success_url = reverse_lazy('clients:list')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Client.objects.none()
+
+        return Client.objects.filter(practice=practice)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'Edit Client'
+        context['form_heading'] = 'Edit client profile'
+        context['submit_label'] = 'Save changes'
+        context['show_delete_action'] = True
+        return context
+
+
+class ClientDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+    model = Client
+    success_url = reverse_lazy('clients:list')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Client.objects.none()
+
+        return Client.objects.filter(practice=practice)

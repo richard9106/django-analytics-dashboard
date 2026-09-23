@@ -50,9 +50,12 @@ class DashboardTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Practice Dashboard')
+        self.assertContains(response, 'Good')
         self.assertContains(response, 'Laura')
+        self.assertContains(response, '+ New client')
         self.assertContains(response, '+ New appointment')
+        self.assertContains(response, 'Profile settings')
+        self.assertContains(response, 'Sign out')
         self.assertNotContains(response, 'href="/admin/"')
 
     def test_dashboard_shows_today_appointments(self):

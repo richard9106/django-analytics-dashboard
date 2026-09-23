@@ -25,8 +25,8 @@
       <nav class="nav-list">
         <a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
         <a class="nav-item active" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
-        <a class="nav-item" href="#"><span>◉</span>Clients</a>
-        <a class="nav-item" href="#"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
         <a class="nav-item" href="#"><span>□</span>Billing</a>
         <a class="nav-item" href="#"><span>▣</span>Documents</a>
       </nav>
@@ -38,15 +38,65 @@
     </aside>
 
     <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions">
+          <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
+          <a class="btn btn-secondary" href="{% url 'appointments:create' %}">+ New appointment</a>
+          <a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>
+        </div>
+        <details class="profile-menu">
+          <summary>{{ request.user.first_name|default:request.user.username }}</summary>
+          <div class="profile-menu-panel">
+            <a href="#">Profile settings</a>
+            <a href="#">Practice settings</a>
+            {% if request.user.is_staff %}
+              <a href="/admin/">Admin</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit">Sign out</button>
+            </form>
+          </div>
+        </details>
+      </section>
+
       <header class="topbar compact-topbar">
         <div>
           <p class="eyebrow">Appointments</p>
           <h1>{{ form_title }}</h1>
         </div>
-        <div class="topbar-actions">
-          <a class="btn btn-secondary" href="{% url 'appointments:list' %}">Back to appointments</a>
-        </div>
       </header>
+
+      <dialog class="modal-dialog" id="client-create-modal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">New Client</p>
+              <h2>Create a client profile</h2>
+            </div>
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+          </div>
+          <form class="appointment-form" method="post" action="{% url 'clients:create' %}">
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field"><label for="appointment-form-client-create-first-name">First name</label><input id="appointment-form-client-create-first-name" name="first_name" required></div>
+              <div class="field"><label for="appointment-form-client-create-last-name">Last name</label><input id="appointment-form-client-create-last-name" name="last_name" required></div>
+              <div class="field"><label for="appointment-form-client-create-email">Email</label><input id="appointment-form-client-create-email" name="email" type="email"></div>
+              <div class="field"><label for="appointment-form-client-create-phone">Phone</label><input id="appointment-form-client-create-phone" name="phone"></div>
+              <div class="field"><label for="appointment-form-client-create-dob">Date of birth</label><input id="appointment-form-client-create-dob" name="date_of_birth" type="date"></div>
+              <div class="field"><label for="appointment-form-client-create-status">Status</label><select id="appointment-form-client-create-status" name="status" required><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archive</option></select></div>
+              <div class="field"><label for="appointment-form-client-create-therapist">Primary therapist</label><select id="appointment-form-client-create-therapist" name="primary_therapist"><option value="">Unassigned</option>{% for therapist in client_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="appointment-form-client-create-insurance">Insurance provider</label><input id="appointment-form-client-create-insurance" name="insurance_provider"></div>
+              <div class="field"><label for="appointment-form-client-create-member">Insurance member ID</label><input id="appointment-form-client-create-member" name="insurance_member_id"></div>
+              <div class="field"><label for="appointment-form-client-create-emergency-name">Emergency contact name</label><input id="appointment-form-client-create-emergency-name" name="emergency_contact_name"></div>
+              <div class="field"><label for="appointment-form-client-create-emergency-phone">Emergency contact phone</label><input id="appointment-form-client-create-emergency-phone" name="emergency_contact_phone"></div>
+              <div class="field full"><label for="appointment-form-client-create-address-1">Address line 1</label><input id="appointment-form-client-create-address-1" name="address_line1"></div>
+              <div class="field full"><label for="appointment-form-client-create-address-2">Address line 2</label><input id="appointment-form-client-create-address-2" name="address_line2"></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create client</button></div>
+          </form>
+        </div>
+      </dialog>
 
       <section class="panel form-panel">
         <div class="panel-head">
@@ -89,5 +139,19 @@
       </section>
     </main>
   </div>
+  <script>
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-target]');
+      if (!trigger) return;
+      const dialog = document.getElementById(trigger.dataset.modalTarget);
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      event.preventDefault();
+      dialog.showModal();
+    });
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-close]');
+      if (trigger) trigger.closest('dialog')?.close();
+    });
+  </script>
 </body>
 </html>

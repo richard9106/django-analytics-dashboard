@@ -3,8 +3,10 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
 from apps.clinical.models import SessionNote
 from apps.clients.models import Client
@@ -137,3 +139,205 @@ class SessionNoteModelTests(TestCase):
 
         with self.assertRaisesMessage(ValidationError, "cannot have locked_at set unless it is locked"):
             note.full_clean()
+
+
+class SessionNoteViewTests(TestCase):
+    def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
+        user = get_user_model().objects.create_user(
+            username=username,
+            password="StrongPass123!",
+            first_name="Laura",
+            last_name="Smith",
+        )
+        practice = Practice.objects.create(name=practice_name)
+        therapist = TherapistProfile.objects.create(
+            user=user,
+            practice=practice,
+            license_number=f"{username}-12345",
+            license_state="CA",
+        )
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.OWNER)
+        client = Client.objects.create(
+            practice=practice,
+            primary_therapist=therapist,
+            first_name="Maya",
+            last_name="Johnson",
+        )
+        starts_at = timezone.now() + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+        return user, practice, therapist, client, appointment
+
+    def note_payload(self, therapist, client, appointment=None, **overrides):
+        data = {
+            "client": client.pk,
+            "therapist": therapist.pk,
+            "appointment": appointment.pk if appointment else "",
+            "note_type": SessionNote.NoteType.PROGRESS_NOTE,
+            "content": "Client reported improved sleep and lower anxiety.",
+        }
+        data.update(overrides)
+        return data
+
+    def test_note_list_requires_login(self):
+        response = self.client.get(reverse("clinical:list"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clinical:list')}")
+
+    def test_note_create_requires_login(self):
+        response = self.client.get(reverse("clinical:create"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clinical:create')}")
+
+    def test_note_list_is_scoped_to_user_practice_and_shows_modals(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            appointment=appointment,
+            note_type=SessionNote.NoteType.PROGRESS_NOTE,
+            content="Visible clinical content.",
+        )
+        SessionNote.objects.create(
+            practice=other_practice,
+            therapist=other_therapist,
+            client=other_client,
+            note_type=SessionNote.NoteType.GENERAL_NOTE,
+            content="Hidden clinical content.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clinical:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Visible clinical content")
+        self.assertNotContains(response, "Hidden clinical content")
+        self.assertContains(response, 'id="note-create-modal"')
+        self.assertContains(response, f'id="note-modal-{note.pk}"')
+        self.assertContains(response, reverse("clinical:edit", args=[note.pk]))
+
+    def test_note_create_saves_to_user_practice(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:create"),
+            self.note_payload(therapist, client, appointment),
+        )
+
+        self.assertRedirects(response, reverse("clinical:list"))
+        note = SessionNote.objects.get()
+        self.assertEqual(note.practice, practice)
+        self.assertEqual(note.client, client)
+        self.assertEqual(note.therapist, therapist)
+
+    def test_note_create_rejects_client_from_another_practice(self):
+        user, _practice, therapist, _client, _appointment = self.create_practice_user()
+        _other_user, _other_practice, _other_therapist, other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:create"),
+            self.note_payload(therapist, other_client),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Select a valid choice")
+        self.assertEqual(SessionNote.objects.count(), 0)
+
+    def test_note_update_saves_and_locks_note(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            appointment=appointment,
+            note_type=SessionNote.NoteType.GENERAL_NOTE,
+            content="Draft note.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:edit", args=[note.pk]),
+            self.note_payload(
+                therapist,
+                client,
+                appointment,
+                note_type=SessionNote.NoteType.TREATMENT_PLAN,
+                content="Locked treatment plan.",
+                is_locked="on",
+            ),
+        )
+
+        self.assertRedirects(response, reverse("clinical:list"))
+        note.refresh_from_db()
+        self.assertEqual(note.note_type, SessionNote.NoteType.TREATMENT_PLAN)
+        self.assertTrue(note.is_locked)
+        self.assertIsNotNone(note.locked_at)
+
+    def test_note_update_is_scoped_to_user_practice(self):
+        user, _practice, _therapist, _client, _appointment = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        note = SessionNote.objects.create(
+            practice=other_practice,
+            therapist=other_therapist,
+            client=other_client,
+            content="Hidden note.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clinical:edit", args=[note.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_note_delete_removes_note(self):
+        user, practice, therapist, client, _appointment = self.create_practice_user()
+        note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            content="Delete me.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clinical:delete", args=[note.pk]))
+
+        self.assertRedirects(response, reverse("clinical:list"))
+        self.assertEqual(SessionNote.objects.count(), 0)
+
+    def test_note_delete_is_scoped_to_user_practice(self):
+        user, _practice, _therapist, _client, _appointment = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        note = SessionNote.objects.create(
+            practice=other_practice,
+            therapist=other_therapist,
+            client=other_client,
+            content="Hidden note.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clinical:delete", args=[note.pk]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(SessionNote.objects.count(), 1)

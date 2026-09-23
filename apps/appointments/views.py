@@ -26,7 +26,9 @@ class PracticeContextMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['practice'] = self.get_practice()
+        practice = self.get_practice()
+        context['practice'] = practice
+        context['client_therapists'] = practice.therapists.select_related('user') if practice else []
         return context
 
 
@@ -90,6 +92,9 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(self.get_calendar_context(context['appointments']))
+        practice = self.get_practice()
+        context['appointment_clients'] = practice.clients.all() if practice else []
+        context['appointment_therapists'] = practice.therapists.select_related('user') if practice else []
         return context
 
 

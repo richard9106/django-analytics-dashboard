@@ -25,8 +25,8 @@
       <nav class="nav-list">
         <a class="nav-item active" href="#"><span>⌂</span>Overview</a>
         <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
-        <a class="nav-item" href="#"><span>◉</span>Clients</a>
-        <a class="nav-item" href="#"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
         <a class="nav-item" href="#"><span>□</span>Billing</a>
         <a class="nav-item" href="#"><span>▣</span>Documents</a>
       </nav>
@@ -38,28 +38,33 @@
     </aside>
 
     <main class="app-main">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Practice Workspace</p>
-          <h1>Practice Dashboard</h1>
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions">
+          <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
+          <a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>
+          <a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>
         </div>
-        <div class="topbar-actions">
-          {% if request.user.is_staff %}
-            <a class="btn btn-secondary" href="/admin/">Admin</a>
-          {% endif %}
-          <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="btn btn-primary" type="submit">Sign out</button>
-          </form>
-        </div>
-      </header>
+        <details class="profile-menu">
+          <summary>{{ request.user.first_name|default:request.user.username }}</summary>
+          <div class="profile-menu-panel">
+            <a href="#">Profile settings</a>
+            <a href="#">Practice settings</a>
+            {% if request.user.is_staff %}
+              <a href="/admin/">Admin</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit">Sign out</button>
+            </form>
+          </div>
+        </details>
+      </section>
 
       <section class="welcome-panel">
         <div>
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
           <p>{{ dashboard_date_label }}</p>
         </div>
-        <a class="btn btn-primary" href="{% url 'appointments:create' %}">+ New appointment</a>
       </section>
 
       <section class="stats" aria-label="Practice metrics">
@@ -162,7 +167,79 @@
           </table>
         </div>
       </section>
+
+      <dialog class="modal-dialog" id="client-create-modal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">New Client</p>
+              <h2>Create a client profile</h2>
+            </div>
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+          </div>
+          <form class="appointment-form" method="post" action="{% url 'clients:create' %}">
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field"><label for="dash-client-first-name">First name</label><input id="dash-client-first-name" name="first_name" required></div>
+              <div class="field"><label for="dash-client-last-name">Last name</label><input id="dash-client-last-name" name="last_name" required></div>
+              <div class="field"><label for="dash-client-email">Email</label><input id="dash-client-email" name="email" type="email"></div>
+              <div class="field"><label for="dash-client-phone">Phone</label><input id="dash-client-phone" name="phone"></div>
+              <div class="field"><label for="dash-client-dob">Date of birth</label><input id="dash-client-dob" name="date_of_birth" type="date"></div>
+              <div class="field"><label for="dash-client-status">Status</label><select id="dash-client-status" name="status" required><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archive</option></select></div>
+              <div class="field"><label for="dash-client-therapist">Primary therapist</label><select id="dash-client-therapist" name="primary_therapist"><option value="">Unassigned</option>{% for therapist in practice_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="dash-client-insurance">Insurance provider</label><input id="dash-client-insurance" name="insurance_provider"></div>
+              <div class="field"><label for="dash-client-member">Insurance member ID</label><input id="dash-client-member" name="insurance_member_id"></div>
+              <div class="field"><label for="dash-client-emergency-name">Emergency contact name</label><input id="dash-client-emergency-name" name="emergency_contact_name"></div>
+              <div class="field"><label for="dash-client-emergency-phone">Emergency contact phone</label><input id="dash-client-emergency-phone" name="emergency_contact_phone"></div>
+              <div class="field full"><label for="dash-client-address-1">Address line 1</label><input id="dash-client-address-1" name="address_line1"></div>
+              <div class="field full"><label for="dash-client-address-2">Address line 2</label><input id="dash-client-address-2" name="address_line2"></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create client</button></div>
+          </form>
+        </div>
+      </dialog>
+
+      <dialog class="modal-dialog" id="appointment-create-modal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">New Appointment</p>
+              <h2>Schedule a session</h2>
+            </div>
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+          </div>
+          <form class="appointment-form" method="post" action="{% url 'appointments:create' %}">
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field"><label for="dash-appointment-client">Client</label><select id="dash-appointment-client" name="client" required>{% for client in practice_clients %}<option value="{{ client.pk }}">{{ client }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="dash-appointment-therapist">Therapist</label><select id="dash-appointment-therapist" name="therapist" required>{% for therapist in practice_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="dash-appointment-start">Starts at</label><input id="dash-appointment-start" name="starts_at" type="datetime-local" required></div>
+              <div class="field"><label for="dash-appointment-end">Ends at</label><input id="dash-appointment-end" name="ends_at" type="datetime-local" required></div>
+              <div class="field"><label for="dash-appointment-type">Appointment type</label><select id="dash-appointment-type" name="appointment_type" required><option value="video">Video Call</option><option value="in_person">In Person</option><option value="phone">Phone Call</option></select></div>
+              <div class="field"><label for="dash-appointment-status">Status</label><select id="dash-appointment-status" name="status" required><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="no_show">No Show</option></select></div>
+              <div class="field"><label for="dash-appointment-location">Location</label><input id="dash-appointment-location" name="location"></div>
+              <div class="field"><label for="dash-appointment-url">Meeting URL</label><input id="dash-appointment-url" name="meeting_url" type="url"></div>
+              <div class="field full"><label for="dash-appointment-notes">Notes</label><textarea id="dash-appointment-notes" name="notes" rows="4"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create appointment</button></div>
+          </form>
+        </div>
+      </dialog>
     </main>
   </div>
+  <script>
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-target]');
+      if (!trigger) return;
+      const dialog = document.getElementById(trigger.dataset.modalTarget);
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      event.preventDefault();
+      dialog.showModal();
+    });
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-close]');
+      if (trigger) trigger.closest('dialog')?.close();
+    });
+  </script>
 </body>
 </html>

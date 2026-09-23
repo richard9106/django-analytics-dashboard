@@ -92,6 +92,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         practice = self.get_practice()
         today_appointments = Appointment.objects.none()
         recent_invoices = Invoice.objects.none()
+        practice_clients = []
+        practice_therapists = []
         monthly_revenue = 0
         active_client_count = 0
 
@@ -106,6 +108,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .order_by('starts_at')
             )
             recent_invoices = Invoice.objects.filter(practice=practice).select_related('client')[:6]
+            practice_clients = practice.clients.all()
+            practice_therapists = practice.therapists.select_related('user')
             monthly_revenue = Invoice.objects.filter(
                 practice=practice,
                 status=Invoice.Status.PAID,
@@ -130,5 +134,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'today_appointments': today_appointments,
             'tasks': tasks,
             'recent_invoices': recent_invoices,
+            'practice_clients': practice_clients,
+            'practice_therapists': practice_therapists,
         })
         return context

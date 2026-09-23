@@ -1,8 +1,10 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 
+from apps.accounts.models import UserProfile
 from apps.clients.models import Client
 from apps.practices.models import Practice, TherapistProfile
 
@@ -84,3 +86,191 @@ class ClientModelTests(TestCase):
         
         with self.assertRaises(ValidationError):
             client.full_clean()
+
+
+class ClientViewTests(TestCase):
+    def create_practice_user(self, username="drsmith", practice_name="Nuvia Wellness"):
+        user = get_user_model().objects.create_user(
+            username=username,
+            password="StrongPass123!",
+            first_name="Laura",
+            last_name="Smith",
+        )
+        practice = Practice.objects.create(name=practice_name)
+        therapist = TherapistProfile.objects.create(
+            user=user,
+            practice=practice,
+            license_number=f"{username}-12345",
+            license_state="CA",
+        )
+        UserProfile.objects.create(
+            user=user,
+            practice=practice,
+            role=UserProfile.Role.OWNER,
+        )
+        return user, practice, therapist
+
+    def test_client_list_requires_login(self):
+        response = self.client.get(reverse("clients:list"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clients:list')}")
+
+    def test_client_create_requires_login(self):
+        response = self.client.get(reverse("clients:create"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clients:create')}")
+
+    def test_client_list_is_scoped_to_user_practice(self):
+        user, practice, _therapist = self.create_practice_user()
+        _other_user, other_practice, _other_therapist = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+        Client.objects.create(practice=other_practice, first_name="Hidden", last_name="Client")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clients:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Maya Johnson")
+        self.assertContains(response, 'id="client-create-modal"')
+        self.assertContains(response, reverse("clients:create"))
+        self.assertContains(response, "Create client")
+        client = Client.objects.get(first_name="Maya")
+        self.assertContains(response, reverse("clients:edit", args=[client.pk]))
+        self.assertContains(response, f'id="client-modal-{client.pk}"')
+        self.assertContains(response, "Save changes")
+        self.assertContains(response, "Delete client")
+        self.assertNotContains(response, "Hidden Client")
+
+    def test_client_create_saves_to_user_practice(self):
+        user, practice, therapist = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clients:create"), {
+            "first_name": "Maya",
+            "last_name": "Johnson",
+            "email": "maya@example.com",
+            "phone": "555-0101",
+            "date_of_birth": "1991-04-12",
+            "status": Client.Status.ACTIVE,
+            "primary_therapist": therapist.pk,
+            "insurance_provider": "Aetna",
+            "insurance_member_id": "AET123",
+            "emergency_contact_name": "Jordan Johnson",
+            "emergency_contact_phone": "555-0102",
+            "address_line1": "123 Main St",
+            "address_line2": "Apt 4",
+        })
+
+        self.assertRedirects(response, reverse("clients:list"))
+        client = Client.objects.get()
+        self.assertEqual(client.practice, practice)
+        self.assertEqual(client.primary_therapist, therapist)
+        self.assertEqual(client.email, "maya@example.com")
+
+    def test_client_create_rejects_therapist_from_another_practice(self):
+        user, _practice, _therapist = self.create_practice_user()
+        _other_user, _other_practice, other_therapist = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clients:create"), {
+            "first_name": "Maya",
+            "last_name": "Johnson",
+            "email": "",
+            "phone": "",
+            "date_of_birth": "",
+            "status": Client.Status.ACTIVE,
+            "primary_therapist": other_therapist.pk,
+            "insurance_provider": "",
+            "insurance_member_id": "",
+            "emergency_contact_name": "",
+            "emergency_contact_phone": "",
+            "address_line1": "",
+            "address_line2": "",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Select a valid choice")
+        self.assertEqual(Client.objects.count(), 0)
+
+    def test_client_update_saves_changes(self):
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clients:edit", args=[client.pk]), {
+            "first_name": "Maya",
+            "last_name": "Rivera",
+            "email": "maya.rivera@example.com",
+            "phone": "555-0101",
+            "date_of_birth": "1991-04-12",
+            "status": Client.Status.INACTIVE,
+            "primary_therapist": therapist.pk,
+            "insurance_provider": "Aetna",
+            "insurance_member_id": "AET123",
+            "emergency_contact_name": "Jordan Johnson",
+            "emergency_contact_phone": "555-0102",
+            "address_line1": "123 Main St",
+            "address_line2": "Apt 4",
+        })
+
+        self.assertRedirects(response, reverse("clients:list"))
+        client.refresh_from_db()
+        self.assertEqual(client.last_name, "Rivera")
+        self.assertEqual(client.status, Client.Status.INACTIVE)
+        self.assertEqual(client.primary_therapist, therapist)
+
+    def test_client_update_is_scoped_to_user_practice(self):
+        user, _practice, _therapist = self.create_practice_user()
+        _other_user, other_practice, _other_therapist = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        client = Client.objects.create(practice=other_practice, first_name="Hidden", last_name="Client")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clients:edit", args=[client.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_client_edit_form_shows_delete_action(self):
+        user, practice, _therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clients:edit", args=[client.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Delete client")
+        self.assertContains(response, reverse("clients:delete", args=[client.pk]))
+
+    def test_client_delete_removes_client(self):
+        user, practice, _therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clients:delete", args=[client.pk]))
+
+        self.assertRedirects(response, reverse("clients:list"))
+        self.assertEqual(Client.objects.count(), 0)
+
+    def test_client_delete_is_scoped_to_user_practice(self):
+        user, _practice, _therapist = self.create_practice_user()
+        _other_user, other_practice, _other_therapist = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        client = Client.objects.create(practice=other_practice, first_name="Hidden", last_name="Client")
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clients:delete", args=[client.pk]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(Client.objects.count(), 1)

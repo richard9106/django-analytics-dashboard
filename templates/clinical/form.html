@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ form_title }} | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
+      <nav class="nav-list">
+        <a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
+        <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
+        <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item active" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="#"><span>□</span>Billing</a>
+        <a class="nav-item" href="#"><span>▣</span>Documents</a>
+      </nav>
+      <div class="sidebar-card"><strong>Clinical documentation</strong><p>Notes can be saved as drafts or locked when complete.</p></div>
+    </aside>
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions"><a class="btn btn-primary" href="{% url 'clinical:create' %}">+ New note</a><a class="btn btn-secondary" href="{% url 'clients:list' %}">Client directory</a><a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a></div>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a><a href="#">Practice settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      </section>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Notes</p><h1>{{ form_title }}</h1></div></header>
+
+      <section class="panel form-panel notes-panel">
+        <div class="panel-head"><div><h2>{{ form_heading }}</h2><p>Keep documentation concise, scoped, and ready to lock when complete.</p></div></div>
+        <form id="note-form" class="appointment-form" method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+          <div class="field-grid two">
+            {% for field in form %}
+              <div class="field {% if field.name == 'content' %}full{% endif %}">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}{{ field.errors }}{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </form>
+        <div class="form-actions split-actions">
+          {% if show_delete_action %}<form method="post" action="{% url 'clinical:delete' object.pk %}">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete note</button></form>{% endif %}
+          <div class="form-actions"><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Cancel</a><button class="btn btn-primary" type="submit" form="note-form">{{ submit_label }}</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

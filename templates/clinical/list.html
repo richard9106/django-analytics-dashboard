@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clinical Notes | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard">
+        <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span>
+        <span>NuviaMy</span>
+      </a>
+      <nav class="nav-list">
+        <a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
+        <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
+        <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item active" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="#"><span>□</span>Billing</a>
+        <a class="nav-item" href="#"><span>▣</span>Documents</a>
+      </nav>
+      <div class="sidebar-card"><strong>Clinical documentation</strong><p>Notes are scoped by practice and can be locked when complete.</p></div>
+    </aside>
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions">
+          <a class="btn btn-primary" href="{% url 'clinical:create' %}" data-modal-target="note-create-modal">+ New note</a>
+          <a class="btn btn-secondary" href="{% url 'clients:create' %}">+ New client</a>
+          <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
+        </div>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a><a href="#">Practice settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      </section>
+
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Notes</p><h1>Notes Workspace</h1></div></header>
+
+      <section class="panel notes-panel">
+        <div class="panel-head">
+          <div><h2>{{ practice.name|default:"Practice" }} notes</h2><p>Review, edit, lock, and manage clinical documentation.</p></div>
+          <span class="badge brand">{{ notes|length }} notes</span>
+        </div>
+        <div class="notes-list">
+          {% for note in notes %}
+            <article class="note-card">
+              <div class="note-card-head">
+                <div><h3>{{ note.get_note_type_display }} for {{ note.client }}</h3><p>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</p></div>
+                <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
+              </div>
+              <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
+              <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
+            </article>
+          {% empty %}
+            <p class="empty-state">No clinical notes have been created yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <dialog class="modal-dialog" id="note-create-modal">
+        <div class="modal-card">
+          <div class="modal-head"><div><p class="eyebrow">New Clinical Note</p><h2>Document a client session</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+          <form class="appointment-form" method="post" action="{% url 'clinical:create' %}">
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field"><label for="note-create-client">Client</label><select id="note-create-client" name="client" required>{% for client in note_clients %}<option value="{{ client.pk }}">{{ client }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="note-create-therapist">Therapist</label><select id="note-create-therapist" name="therapist" required>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="note-create-appointment">Appointment</label><select id="note-create-appointment" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}">{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="note-create-type">Note type</label><select id="note-create-type" name="note_type" required><option value="progress_note">Progress Note</option><option value="intake_note">Intake Note</option><option value="treatment_plan">Treatment Plan</option><option value="general_note">General Note</option></select></div>
+              <div class="field full"><label for="note-create-content">Content</label><textarea id="note-create-content" name="content" rows="8"></textarea></div>
+              <div class="field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create note</button></div>
+          </form>
+        </div>
+      </dialog>
+
+      {% for note in notes %}
+        <dialog class="modal-dialog" id="note-modal-{{ note.pk }}">
+          <div class="modal-card">
+            <div class="modal-head"><div><p class="eyebrow">Edit Clinical Note</p><h2>{{ note.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <form class="appointment-form" method="post" action="{% url 'clinical:edit' note.pk %}">
+              {% csrf_token %}
+              <div class="field-grid two">
+                <div class="field"><label for="note-client-{{ note.pk }}">Client</label><select id="note-client-{{ note.pk }}" name="client" required>{% for client in note_clients %}<option value="{{ client.pk }}" {% if client.pk == note.client_id %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-therapist-{{ note.pk }}">Therapist</label><select id="note-therapist-{{ note.pk }}" name="therapist" required>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}" {% if therapist.pk == note.therapist_id %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-appointment-{{ note.pk }}">Appointment</label><select id="note-appointment-{{ note.pk }}" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}" {% if note.appointment_id == appointment.pk %}selected{% endif %}>{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-type-{{ note.pk }}">Note type</label><select id="note-type-{{ note.pk }}" name="note_type" required><option value="progress_note" {% if note.note_type == 'progress_note' %}selected{% endif %}>Progress Note</option><option value="intake_note" {% if note.note_type == 'intake_note' %}selected{% endif %}>Intake Note</option><option value="treatment_plan" {% if note.note_type == 'treatment_plan' %}selected{% endif %}>Treatment Plan</option><option value="general_note" {% if note.note_type == 'general_note' %}selected{% endif %}>General Note</option></select></div>
+                <div class="field full"><label for="note-content-{{ note.pk }}">Content</label><textarea id="note-content-{{ note.pk }}" name="content" rows="8">{{ note.content }}</textarea></div>
+                <div class="field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock note</label></div>
+              </div>
+              <div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:delete' note.pk %}">Delete note</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
+            </form>
+          </div>
+        </dialog>
+      {% endfor %}
+    </main>
+  </div>
+  <script>
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
+  </script>
+</body>
+</html>

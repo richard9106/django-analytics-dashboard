@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clients | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+            <path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>NuviaMy</span>
+      </a>
+
+      <nav class="nav-list">
+        <a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
+        <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
+        <a class="nav-item active" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+        <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
+        <a class="nav-item" href="#"><span>□</span>Billing</a>
+        <a class="nav-item" href="#"><span>▣</span>Documents</a>
+      </nav>
+
+      <div class="sidebar-card">
+        <strong>Client records</strong>
+        <p>Profiles are scoped to your practice and ready for scheduling workflows.</p>
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions">
+          <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
+          <a class="btn btn-secondary" href="{% url 'appointments:create' %}">+ New appointment</a>
+          <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
+        </div>
+        <details class="profile-menu">
+          <summary>{{ request.user.first_name|default:request.user.username }}</summary>
+          <div class="profile-menu-panel">
+            <a href="#">Profile settings</a>
+            <a href="#">Practice settings</a>
+            {% if request.user.is_staff %}
+              <a href="/admin/">Admin</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit">Sign out</button>
+            </form>
+          </div>
+        </details>
+      </section>
+
+      <header class="topbar compact-topbar">
+        <div>
+          <p class="eyebrow">Clients</p>
+          <h1>Client Directory</h1>
+        </div>
+      </header>
+
+      <section class="panel clients-panel">
+        <div class="panel-head">
+          <div>
+            <h2>{{ practice.name|default:"Practice" }} clients</h2>
+            <p>Manage demographics, contact details, status, and therapist assignment.</p>
+          </div>
+          <span class="badge brand">{{ clients|length }} clients</span>
+        </div>
+
+        <div class="client-grid">
+          {% for client in clients %}
+            <article class="client-card">
+              <div class="client-avatar" aria-hidden="true">{{ client.first_name|first }}{{ client.last_name|first }}</div>
+              <div class="client-card-body">
+                <div class="client-card-head">
+                  <div>
+                    <h3>{{ client }}</h3>
+                    <p>{{ client.email|default:"No email on file" }}</p>
+                  </div>
+                  <span class="badge success">{{ client.get_status_display }}</span>
+                </div>
+                <dl class="client-meta">
+                  <div><dt>Phone</dt><dd>{{ client.phone|default:"Not provided" }}</dd></div>
+                  <div><dt>Therapist</dt><dd>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}Unassigned{% endif %}</dd></div>
+                  <div><dt>Insurance</dt><dd>{{ client.insurance_provider|default:"Not provided" }}</dd></div>
+                </dl>
+                <a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit client</a>
+              </div>
+            </article>
+          {% empty %}
+            <p class="empty-state">No clients have been created yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <dialog class="modal-dialog" id="client-create-modal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">New Client</p>
+              <h2>Create a client profile</h2>
+            </div>
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+          </div>
+
+          <form class="appointment-form" method="post" action="{% url 'clients:create' %}">
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field">
+                <label for="client-create-first-name">First name</label>
+                <input id="client-create-first-name" name="first_name" required>
+              </div>
+              <div class="field">
+                <label for="client-create-last-name">Last name</label>
+                <input id="client-create-last-name" name="last_name" required>
+              </div>
+              <div class="field">
+                <label for="client-create-email">Email</label>
+                <input id="client-create-email" name="email" type="email">
+              </div>
+              <div class="field">
+                <label for="client-create-phone">Phone</label>
+                <input id="client-create-phone" name="phone">
+              </div>
+              <div class="field">
+                <label for="client-create-dob">Date of birth</label>
+                <input id="client-create-dob" name="date_of_birth" type="date">
+              </div>
+              <div class="field">
+                <label for="client-create-status">Status</label>
+                <select id="client-create-status" name="status" required>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="archived">Archive</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="client-create-therapist">Primary therapist</label>
+                <select id="client-create-therapist" name="primary_therapist">
+                  <option value="">Unassigned</option>
+                  {% for therapist in client_therapists %}
+                    <option value="{{ therapist.pk }}">{{ therapist }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label for="client-create-insurance">Insurance provider</label>
+                <input id="client-create-insurance" name="insurance_provider">
+              </div>
+              <div class="field">
+                <label for="client-create-member">Insurance member ID</label>
+                <input id="client-create-member" name="insurance_member_id">
+              </div>
+              <div class="field">
+                <label for="client-create-emergency-name">Emergency contact name</label>
+                <input id="client-create-emergency-name" name="emergency_contact_name">
+              </div>
+              <div class="field">
+                <label for="client-create-emergency-phone">Emergency contact phone</label>
+                <input id="client-create-emergency-phone" name="emergency_contact_phone">
+              </div>
+              <div class="field full">
+                <label for="client-create-address-1">Address line 1</label>
+                <input id="client-create-address-1" name="address_line1">
+              </div>
+              <div class="field full">
+                <label for="client-create-address-2">Address line 2</label>
+                <input id="client-create-address-2" name="address_line2">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+              <button class="btn btn-primary" type="submit">Create client</button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+
+      {% for client in clients %}
+        <dialog class="modal-dialog" id="client-modal-{{ client.pk }}">
+          <div class="modal-card">
+            <div class="modal-head">
+              <div>
+                <p class="eyebrow">Edit Client</p>
+                <h2>{{ client }}</h2>
+              </div>
+              <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+            </div>
+
+            <form class="appointment-form" method="post" action="{% url 'clients:edit' client.pk %}">
+              {% csrf_token %}
+              <div class="field-grid two">
+                <div class="field">
+                  <label for="client-first-name-{{ client.pk }}">First name</label>
+                  <input id="client-first-name-{{ client.pk }}" name="first_name" value="{{ client.first_name }}" required>
+                </div>
+                <div class="field">
+                  <label for="client-last-name-{{ client.pk }}">Last name</label>
+                  <input id="client-last-name-{{ client.pk }}" name="last_name" value="{{ client.last_name }}" required>
+                </div>
+                <div class="field">
+                  <label for="client-email-{{ client.pk }}">Email</label>
+                  <input id="client-email-{{ client.pk }}" name="email" type="email" value="{{ client.email }}">
+                </div>
+                <div class="field">
+                  <label for="client-phone-{{ client.pk }}">Phone</label>
+                  <input id="client-phone-{{ client.pk }}" name="phone" value="{{ client.phone }}">
+                </div>
+                <div class="field">
+                  <label for="client-dob-{{ client.pk }}">Date of birth</label>
+                  <input id="client-dob-{{ client.pk }}" name="date_of_birth" type="date" value="{{ client.date_of_birth|date:'Y-m-d' }}">
+                </div>
+                <div class="field">
+                  <label for="client-status-{{ client.pk }}">Status</label>
+                  <select id="client-status-{{ client.pk }}" name="status" required>
+                    <option value="active" {% if client.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if client.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option value="archived" {% if client.status == 'archived' %}selected{% endif %}>Archive</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-therapist-{{ client.pk }}">Primary therapist</label>
+                  <select id="client-therapist-{{ client.pk }}" name="primary_therapist">
+                    <option value="">Unassigned</option>
+                    {% for therapist in client_therapists %}
+                      <option value="{{ therapist.pk }}" {% if client.primary_therapist_id == therapist.pk %}selected{% endif %}>{{ therapist }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="client-insurance-{{ client.pk }}">Insurance provider</label>
+                  <input id="client-insurance-{{ client.pk }}" name="insurance_provider" value="{{ client.insurance_provider }}">
+                </div>
+                <div class="field">
+                  <label for="client-member-{{ client.pk }}">Insurance member ID</label>
+                  <input id="client-member-{{ client.pk }}" name="insurance_member_id" value="{{ client.insurance_member_id }}">
+                </div>
+                <div class="field">
+                  <label for="client-emergency-name-{{ client.pk }}">Emergency contact name</label>
+                  <input id="client-emergency-name-{{ client.pk }}" name="emergency_contact_name" value="{{ client.emergency_contact_name }}">
+                </div>
+                <div class="field">
+                  <label for="client-emergency-phone-{{ client.pk }}">Emergency contact phone</label>
+                  <input id="client-emergency-phone-{{ client.pk }}" name="emergency_contact_phone" value="{{ client.emergency_contact_phone }}">
+                </div>
+                <div class="field full">
+                  <label for="client-address-1-{{ client.pk }}">Address line 1</label>
+                  <input id="client-address-1-{{ client.pk }}" name="address_line1" value="{{ client.address_line1 }}">
+                </div>
+                <div class="field full">
+                  <label for="client-address-2-{{ client.pk }}">Address line 2</label>
+                  <input id="client-address-2-{{ client.pk }}" name="address_line2" value="{{ client.address_line2 }}">
+                </div>
+              </div>
+              <div class="form-actions split-actions">
+                <button class="btn btn-danger" type="submit" formaction="{% url 'clients:delete' client.pk %}">Delete client</button>
+                <div class="form-actions">
+                  <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+                  <button class="btn btn-primary" type="submit">Save changes</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </dialog>
+      {% endfor %}
+    </main>
+  </div>
+  <script>
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-target]');
+      if (!trigger) return;
+      const dialog = document.getElementById(trigger.dataset.modalTarget);
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      event.preventDefault();
+      dialog.showModal();
+    });
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-close]');
+      if (trigger) trigger.closest('dialog')?.close();
+    });
+  </script>
+</body>
+</html>
