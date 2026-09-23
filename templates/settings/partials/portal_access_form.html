@@ -7,5 +7,6 @@
     <div class="field"><label>Password</label><input name="password" type="{% if object %}password{% else %}text{% endif %}" {% if not object %}required{% endif %} placeholder="{% if object %}Leave blank to keep current{% else %}Temporary password{% endif %}"></div>
     <div class="field checkbox-field"><label><input name="is_active" type="checkbox" {% if object.is_active or not object %}checked{% endif %}> Active portal access</label></div>
   </div>
+  {% if not object %}<div class="credential-hint"><strong>Portal URL:</strong> {{ request.scheme }}://{{ request.get_host }}{% url 'portal:dashboard' %}<button class="inline-button" type="button" data-copy-create-credentials>Copy suggested credentials</button></div>{% endif %}
   <div class="form-actions split-actions">{% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'portal_settings:portal_access_delete' object.pk %}">Delete access</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div></div>
 </form>

@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 
 from apps.dashboard.views import DashboardView
 from apps.billing.urls import settings_patterns
-from apps.accounts.views import RoleAwareLoginView
+from apps.accounts.views import ForcePasswordChangeView, RoleAwareLoginView
 from apps.portal.settings_urls import urlpatterns as portal_settings_patterns
 
 urlpatterns = [
@@ -21,6 +21,7 @@ urlpatterns = [
     path('documents/', include('apps.documents.urls')),
     path('portal/', include('apps.portal.urls')),
     path('login/', RoleAwareLoginView.as_view(), name='login'),
+    path('change-temporary-password/', ForcePasswordChangeView.as_view(), name='force_password_change'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('summernote/', include('django_summernote.urls')),
     path('', DashboardView.as_view(), name='dashboard'),

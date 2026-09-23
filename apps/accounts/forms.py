@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -89,3 +90,7 @@ class PracticeSignupForm(forms.Form):
             phone=self.cleaned_data.get("practice_phone", ""),
         )
         return user
+
+
+class ForcePasswordChangeForm(SetPasswordForm):
+    pass

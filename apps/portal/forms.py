@@ -100,9 +100,15 @@ class ClientPortalAccessForm(forms.ModelForm):
         if commit:
             access.full_clean()
             access.save()
-            UserProfile.objects.update_or_create(
+            profile, _created = UserProfile.objects.update_or_create(
                 user=user,
-                defaults={'practice': self.practice, 'role': UserProfile.Role.CLIENT},
+                defaults={
+                    'practice': self.practice,
+                    'role': UserProfile.Role.CLIENT,
+                },
             )
+            if password:
+                profile.must_change_password = True
+                profile.save(update_fields=['must_change_password', 'updated_at'])
             self.save_m2m()
         return access

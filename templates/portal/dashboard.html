@@ -27,12 +27,19 @@
       </div>
     </section>
 
+    <section class="stats portal-stats" aria-label="Portal summary">
+      <article class="stat-card"><span>Next appointment</span><strong>{% if next_appointment %}{{ next_appointment.starts_at|date:"M j" }}{% else %}None scheduled{% endif %}</strong><small>{% if next_appointment %}{{ next_appointment.starts_at|time:"g:i A" }}{% else %}Your practice will schedule future sessions here.{% endif %}</small></article>
+      <article class="stat-card"><span>Open balance</span><strong>${{ open_invoice_total }}</strong><small>Open invoice total</small></article>
+      <article class="stat-card"><span>Package sessions</span><strong>{{ remaining_sessions }}</strong><small>Remaining prepaid sessions</small></article>
+      <article class="stat-card"><span>Documents</span><strong>{{ shared_document_count }}</strong><small>Shared with you</small></article>
+    </section>
+
     <section class="portal-grid">
       <article class="panel">
         <div class="panel-head"><div><h2>Upcoming appointments</h2><p>Your scheduled sessions.</p></div></div>
         <div class="appointment-list">
           {% for appointment in upcoming_appointments %}
-            <div class="appointment-card appointment-card-mini"><div class="appointment-time"><strong>{{ appointment.starts_at|date:"M j" }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span></div><div class="appointment-body"><h3>{{ appointment.get_appointment_type_display }}</h3><p>With {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p></div><span class="badge success">{{ appointment.get_status_display }}</span></div>
+            <div class="appointment-card appointment-card-mini"><div class="appointment-time"><strong>{{ appointment.starts_at|date:"M j" }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span></div><div class="appointment-body"><h3>{{ appointment.get_appointment_type_display }}</h3><p>With {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p><p>{{ appointment.starts_at|date:"l, F j" }} · {{ appointment.ends_at|time:"g:i A" }}</p></div><span class="badge success">{{ appointment.get_status_display }}</span></div>
           {% empty %}<p class="empty-state">No upcoming appointments.</p>{% endfor %}
         </div>
       </article>
@@ -41,14 +48,14 @@
         <div class="panel-head"><div><h2>Package balance</h2><p>Prepaid session balances.</p></div></div>
         <div class="package-list">
           {% for package in service_packages %}
-            <div class="package-card"><strong>{{ package.name }}</strong><p>{{ package.sessions_remaining }} of {{ package.sessions_purchased }} sessions remaining · {{ package.get_status_display }}</p></div>
+            <div class="package-card"><div class="client-card-head"><strong>{{ package.name }}</strong><span class="badge brand">{{ package.get_status_display }}</span></div><p>{{ package.sessions_remaining }} of {{ package.sessions_purchased }} sessions remaining</p><p>Purchased {{ package.purchased_at|date:"M j, Y" }}{% if package.expires_at %} · Expires {{ package.expires_at|date:"M j, Y" }}{% endif %}</p></div>
           {% empty %}<p class="empty-state">No active packages yet.</p>{% endfor %}
         </div>
       </article>
 
       <article class="panel">
         <div class="panel-head"><div><h2>Open invoices</h2><p>Invoices that still need attention.</p></div></div>
-        <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Amount</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td></tr>{% empty %}<tr><td colspan="3">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Due</th><th>Amount</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.amount }}</td></tr>{% empty %}<tr><td colspan="4">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
       </article>
 
       <article class="panel">

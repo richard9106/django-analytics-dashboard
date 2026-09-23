@@ -176,8 +176,13 @@ h1, h2, h3, p { margin-top: 0; }
 .document-card strong { display: block; margin-bottom: 4px; }
 .document-card p { color: var(--slate-500); font-size: 14px; overflow-wrap: anywhere; }
 .inline-button-danger { margin-top: 8px; border: 0; background: transparent; color: var(--danger); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.inline-button { border: 0; background: transparent; color: var(--brand-700); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; padding: 0; }
+.credential-panel { border-color: rgba(20, 184, 166, .25); background: radial-gradient(circle at top right, rgba(204, 251, 245, .72), transparent 32%), #fff; }
+.credential-box { white-space: pre-line; overflow-wrap: anywhere; padding: 14px; border: 1px dashed rgba(112, 82, 217, .35); border-radius: 16px; background: rgba(255,255,255,.8); color: var(--slate-800); font-weight: 800; line-height: 1.7; }
+.credential-hint { padding: 12px 14px; border-radius: 14px; background: var(--slate-50); color: var(--slate-600); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }
+.portal-stats .stat-card { background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(244,240,255,.82)); }
 .portal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .portal-documents { grid-template-columns: 1fr; }
 .modal-dialog { width: min(860px, calc(100% - 28px)); max-height: min(82vh, 820px); padding: 0; border: 0; border-radius: 24px; background: transparent; color: var(--slate-800); }

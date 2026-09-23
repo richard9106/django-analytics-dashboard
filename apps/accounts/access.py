@@ -8,6 +8,18 @@ def is_client_user(user):
     return bool((profile and profile.role == UserProfile.Role.CLIENT) or getattr(user, 'client_portal_access', None))
 
 
+def must_change_password(user):
+    profile = getattr(user, 'nuvia_profile', None)
+    return bool(profile and profile.must_change_password)
+
+
+class ForcePasswordChangeRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and must_change_password(request.user):
+            return redirect('force_password_change')
+        return super().dispatch(request, *args, **kwargs)
+
+
 def get_practice_for_user(user):
     profile = getattr(user, 'nuvia_profile', None)
     if profile and profile.role != UserProfile.Role.CLIENT:

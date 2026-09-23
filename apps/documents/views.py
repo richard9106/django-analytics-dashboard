@@ -1,12 +1,12 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
 
-from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user, must_change_password
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .forms import ClientDocumentForm
@@ -94,6 +94,8 @@ class DocumentDeleteView(LoginRequiredMixin, ClientPortalRedirectMixin, Practice
 
 class DocumentDownloadView(LoginRequiredMixin, PracticeContextMixin, View):
     def get(self, request, pk):
+        if must_change_password(request.user):
+            return redirect('force_password_change')
         practice = self.get_practice()
         portal_access = getattr(request.user, 'client_portal_access', None)
         if portal_access and portal_access.is_active:

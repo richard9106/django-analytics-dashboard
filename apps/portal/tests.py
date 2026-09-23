@@ -3,10 +3,12 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from apps.appointments.models import Appointment
+from apps.accounts.models import UserProfile
+from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, ServicePackage
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
@@ -152,7 +154,6 @@ class ClientPortalViewTests(TestCase):
     def test_portal_settings_list_is_scoped_to_practice(self):
         user, practice, _therapist, client, _access = self.create_portal_user(username="practice-client")
         practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
-        from apps.accounts.models import UserProfile
         UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
         other_user, _other_practice, _other_therapist, _other_client, _other_access = self.create_portal_user(
             username="other-client",
@@ -188,11 +189,11 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(access.client, client)
         self.assertTrue(access.is_active)
         self.assertTrue(access.user.check_password("StrongPass123!"))
+        self.assertTrue(access.user.nuvia_profile.must_change_password)
 
     def test_portal_settings_suggests_client_email_unique_username_and_password(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
         practice_user = get_user_model().objects.create_user(username="owner", password="StrongPass123!")
-        from apps.accounts.models import UserProfile
         UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
         get_user_model().objects.create_user(username="maya.johnson")
         Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson", email="maya@example.com")
@@ -208,7 +209,6 @@ class ClientPortalViewTests(TestCase):
     def test_portal_settings_rejects_duplicate_username_case_insensitive(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
         practice_user = get_user_model().objects.create_user(username="owner", password="StrongPass123!")
-        from apps.accounts.models import UserProfile
         UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
         client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
         get_user_model().objects.create_user(username="Maya.Portal")
@@ -233,10 +233,93 @@ class ClientPortalViewTests(TestCase):
             practice_name="Other Practice",
         )
         practice_user = get_user_model().objects.create_user(username="owner", password="StrongPass123!")
-        from apps.accounts.models import UserProfile
         UserProfile.objects.create(user=practice_user, practice=Practice.objects.get(name="NuviaMy Wellness"), role=UserProfile.Role.OWNER)
 
         self.client.force_login(practice_user)
         response = self.client.get(reverse("portal_settings:portal_access_edit", args=[other_access.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_portal_settings_shows_last_login(self):
+        user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        user.last_login = timezone.make_aware(datetime(2026, 9, 23, 15, 30))
+        user.save(update_fields=["last_login"])
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+
+        self.client.force_login(practice_user)
+        response = self.client.get(reverse("portal_settings:portal_access"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Last login:")
+        self.assertNotContains(response, "Last login: Never")
+
+    def test_portal_settings_reset_password_creates_temporary_credentials_and_audit_log(self):
+        user, practice, _therapist, client, access = self.create_portal_user(username="practice-client")
+        old_password = user.password
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_settings:portal_access_reset_password", args=[access.pk]), follow=True)
+
+        user.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(user.password, old_password)
+        self.assertTrue(user.nuvia_profile.must_change_password)
+        self.assertContains(response, "Temporary credentials")
+        self.assertContains(response, "Portal URL:")
+        self.assertContains(response, user.username)
+        log = AuditLog.objects.get(action=AuditLog.Action.UPDATE, object_type="portal.ClientPortalAccess")
+        self.assertEqual(log.object_id, str(access.pk))
+        self.assertEqual(log.metadata["client_id"], client.pk)
+        self.assertTrue(log.metadata["password_reset"])
+
+    def test_portal_settings_reset_password_is_scoped_to_practice(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        _other_user, _other_practice, _other_therapist, _other_client, other_access = self.create_portal_user(
+            username="other-client",
+            practice_name="Other Practice",
+        )
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_settings:portal_access_reset_password", args=[other_access.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_client_with_temporary_password_is_forced_to_change_password(self):
+        user, _practice, _therapist, _client, _access = self.create_portal_user()
+        UserProfile.objects.create(user=user, practice=_practice, role=UserProfile.Role.CLIENT, must_change_password=True)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal:dashboard"))
+
+        self.assertRedirects(response, reverse("force_password_change"))
+
+    def test_client_login_with_temporary_password_redirects_to_password_change(self):
+        user, practice, _therapist, _client, _access = self.create_portal_user()
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT, must_change_password=True)
+
+        response = self.client.post(reverse("login"), {
+            "username": user.username,
+            "password": "StrongPass123!",
+        })
+
+        self.assertRedirects(response, reverse("force_password_change"))
+
+    def test_client_password_change_clears_required_flag(self):
+        user, practice, _therapist, _client, _access = self.create_portal_user()
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT, must_change_password=True)
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("force_password_change"), {
+            "new_password1": "NewStrongPass123!",
+            "new_password2": "NewStrongPass123!",
+        })
+
+        user.refresh_from_db()
+        self.assertRedirects(response, reverse("portal:dashboard"))
+        self.assertFalse(user.nuvia_profile.must_change_password)
+        self.assertTrue(user.check_password("NewStrongPass123!"))
