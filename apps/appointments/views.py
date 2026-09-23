@@ -1,3 +1,167 @@
-from django.shortcuts import render
+import calendar
+from datetime import date, datetime, time, timedelta
 
-# Create your views here.
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+
+from .models import Appointment
+from .forms import AppointmentForm
+
+
+class PracticeContextMixin:
+    def get_practice(self):
+        user = self.request.user
+        user_profile = getattr(user, 'nuvia_profile', None)
+        if user_profile:
+            return user_profile.practice
+
+        therapist_profile = getattr(user, 'therapist_profile', None)
+        if therapist_profile:
+            return therapist_profile.practice
+
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['practice'] = self.get_practice()
+        return context
+
+
+class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+    model = Appointment
+    template_name = 'appointments/list.html'
+    context_object_name = 'appointments'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Appointment.objects.none()
+
+        return (
+            Appointment.objects.filter(practice=practice)
+            .select_related('client', 'therapist__user')
+            .order_by('starts_at')
+        )
+
+    def get_calendar_month(self):
+        month_value = self.request.GET.get('month')
+        if month_value:
+            try:
+                return datetime.strptime(month_value, '%Y-%m').date().replace(day=1)
+            except ValueError:
+                pass
+        return timezone.localdate().replace(day=1)
+
+    def get_calendar_context(self, appointments):
+        month_start = self.get_calendar_month()
+        previous_month = (month_start - timedelta(days=1)).replace(day=1)
+        next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        month_dates = calendar.Calendar(firstweekday=0).monthdatescalendar(month_start.year, month_start.month)
+        today = timezone.localdate()
+
+        appointments_by_date = {}
+        for appointment in appointments:
+            local_date = timezone.localtime(appointment.starts_at).date()
+            appointments_by_date.setdefault(local_date, []).append(appointment)
+
+        weeks = []
+        for week in month_dates:
+            weeks.append([
+                {
+                    'date': day,
+                    'in_month': day.month == month_start.month,
+                    'is_today': day == today,
+                    'appointments': appointments_by_date.get(day, []),
+                }
+                for day in week
+            ])
+
+        return {
+            'calendar_weeks': weeks,
+            'calendar_month_label': month_start.strftime('%B %Y'),
+            'previous_month': previous_month.strftime('%Y-%m'),
+            'next_month': next_month.strftime('%Y-%m'),
+            'weekday_labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_calendar_context(context['appointments']))
+        return context
+
+
+class AppointmentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+    model = Appointment
+    form_class = AppointmentForm
+    template_name = 'appointments/form.html'
+    success_url = reverse_lazy('appointments:list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        date_value = self.request.GET.get('date')
+        if date_value:
+            try:
+                selected_date = date.fromisoformat(date_value)
+            except ValueError:
+                return initial
+            starts_at = timezone.make_aware(datetime.combine(selected_date, time(hour=9)))
+            initial['starts_at'] = starts_at
+            initial['ends_at'] = starts_at + timedelta(minutes=50)
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'New Appointment'
+        context['form_heading'] = 'Schedule a session'
+        context['submit_label'] = 'Create appointment'
+        return context
+
+
+class AppointmentUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
+    model = Appointment
+    form_class = AppointmentForm
+    template_name = 'appointments/form.html'
+    success_url = reverse_lazy('appointments:list')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Appointment.objects.none()
+
+        return Appointment.objects.filter(practice=practice)
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs['pk'])
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'Edit Appointment'
+        context['form_heading'] = 'Edit session details'
+        context['submit_label'] = 'Save changes'
+        context['show_delete_action'] = True
+        return context
+
+
+class AppointmentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+    model = Appointment
+    success_url = reverse_lazy('appointments:list')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Appointment.objects.none()
+
+        return Appointment.objects.filter(practice=practice)

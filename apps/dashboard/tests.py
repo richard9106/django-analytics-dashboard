@@ -1,9 +1,38 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+
+from apps.accounts.models import UserProfile
+from apps.appointments.models import Appointment
+from apps.clients.models import Client
+from apps.practices.models import Practice, TherapistProfile
 
 
 class DashboardTests(TestCase):
+    def create_practice_user(self, username='laura', practice_name='Nuvia Therapy'):
+        user = get_user_model().objects.create_user(
+            username=username,
+            password='StrongPass123!',
+            first_name='Laura',
+            last_name='Chen',
+        )
+        practice = Practice.objects.create(name=practice_name)
+        therapist = TherapistProfile.objects.create(
+            user=user,
+            practice=practice,
+            license_number=f'{username}-12345',
+            license_state='CA',
+        )
+        UserProfile.objects.create(
+            user=user,
+            practice=practice,
+            role=UserProfile.Role.OWNER,
+        )
+        return user, practice, therapist
+
     def test_dashboard_requires_login(self):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 302)
@@ -17,11 +46,7 @@ class DashboardTests(TestCase):
         self.assertNotContains(response, 'Use Django admin instead')
 
     def test_authenticated_user_can_view_dashboard(self):
-        user = get_user_model().objects.create_user(
-            username='admin',
-            password='StrongPass123!',
-            first_name='Laura',
-        )
+        user, _practice, _therapist = self.create_practice_user()
         self.client.force_login(user)
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
@@ -29,6 +54,83 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Laura')
         self.assertContains(response, '+ New appointment')
         self.assertNotContains(response, 'href="/admin/"')
+
+    def test_dashboard_shows_today_appointments(self):
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(
+            practice=practice,
+            primary_therapist=therapist,
+            first_name='Maya',
+            last_name='Johnson',
+            status=Client.Status.ACTIVE,
+        )
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0)
+        Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(hours=1),
+            appointment_type=Appointment.AppointmentType.VIDEO,
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Today's appointments")
+        self.assertContains(response, 'Maya Johnson')
+        self.assertContains(response, 'Video Call')
+
+    def test_dashboard_scopes_appointments_to_user_practice(self):
+        user, practice, therapist = self.create_practice_user()
+        _other_user, other_practice, other_therapist = self.create_practice_user(
+            username='other',
+            practice_name='Other Practice',
+        )
+        client = Client.objects.create(
+            practice=practice,
+            primary_therapist=therapist,
+            first_name='Visible',
+            last_name='Client',
+        )
+        other_client = Client.objects.create(
+            practice=other_practice,
+            primary_therapist=other_therapist,
+            first_name='Hidden',
+            last_name='Client',
+        )
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0)
+        Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(hours=1),
+        )
+        Appointment.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(hours=1),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Visible Client')
+        self.assertNotContains(response, 'Hidden Client')
+
+    def test_dashboard_shows_empty_appointment_state(self):
+        user, _practice, _therapist = self.create_practice_user()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No appointments scheduled for today.')
 
     def test_staff_user_can_see_admin_link(self):
         user = get_user_model().objects.create_user(

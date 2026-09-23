@@ -1,9 +1,13 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Sum
+from django.db.models import Sum
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from .models import Customer, OperationalEvent, Product, Sale
+from apps.appointments.models import Appointment
+from apps.billing.models import Invoice
+from apps.clients.models import Client
+from apps.clinical.models import SessionNote
+from apps.notifications.models import Notification
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -24,26 +28,107 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ]
         return f'{weekdays[value.weekday()]}, {months[value.month - 1]} {value.day}'
 
+    def get_practice(self):
+        user = self.request.user
+        user_profile = getattr(user, 'nuvia_profile', None)
+        if user_profile:
+            return user_profile.practice
+
+        therapist_profile = getattr(user, 'therapist_profile', None)
+        if therapist_profile:
+            return therapist_profile.practice
+
+        return None
+
+    def get_tasks(self, practice):
+        if not practice:
+            return []
+
+        open_note_count = SessionNote.objects.filter(
+            practice=practice,
+            is_locked=False,
+        ).count()
+        open_invoice_count = Invoice.objects.filter(
+            practice=practice,
+            status__in=[Invoice.Status.DRAFT, Invoice.Status.SENT, Invoice.Status.OVERDUE],
+        ).count()
+        pending_notification_count = Notification.objects.filter(
+            practice=practice,
+            status=Notification.Status.PENDING,
+        ).count()
+
+        tasks = []
+        if open_note_count:
+            suffix = '' if open_note_count == 1 else 's'
+            tasks.append({
+                'label': 'Clinical documentation',
+                'detail': f'{open_note_count} note{suffix} ready to review or lock',
+                'tone': 'warning',
+            })
+        if open_invoice_count:
+            suffix = '' if open_invoice_count == 1 else 's'
+            tasks.append({
+                'label': 'Billing follow-up',
+                'detail': f'{open_invoice_count} invoice{suffix} need attention',
+                'tone': 'brand',
+            })
+        if pending_notification_count:
+            suffix = '' if pending_notification_count == 1 else 's'
+            tasks.append({
+                'label': 'Client notifications',
+                'detail': f'{pending_notification_count} message{suffix} pending delivery',
+                'tone': 'success',
+            })
+
+        return tasks
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.localtime()
+        today = now.date()
+        start_of_day = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.min.time()))
+        end_of_day = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.max.time()))
         display_name = self.request.user.first_name or self.request.user.username
-        sales_by_segment = (
-            Sale.objects.values('customer__segment')
-            .annotate(total=Sum('total'))
-            .order_by('customer__segment')
-        )
+        practice = self.get_practice()
+        today_appointments = Appointment.objects.none()
+        recent_invoices = Invoice.objects.none()
+        monthly_revenue = 0
+        active_client_count = 0
+
+        if practice:
+            today_appointments = (
+                Appointment.objects.filter(
+                    practice=practice,
+                    starts_at__gte=start_of_day,
+                    starts_at__lte=end_of_day,
+                )
+                .select_related('client', 'therapist__user')
+                .order_by('starts_at')
+            )
+            recent_invoices = Invoice.objects.filter(practice=practice).select_related('client')[:6]
+            monthly_revenue = Invoice.objects.filter(
+                practice=practice,
+                status=Invoice.Status.PAID,
+                paid_at__year=today.year,
+                paid_at__month=today.month,
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            active_client_count = Client.objects.filter(
+                practice=practice,
+                status=Client.Status.ACTIVE,
+            ).count()
+
+        tasks = self.get_tasks(practice)
         context.update({
             'dashboard_greeting': self.get_greeting(now.hour),
             'dashboard_display_name': display_name,
             'dashboard_date_label': self.get_date_label(now),
-            'total_revenue': Sale.objects.aggregate(total=Sum('total'))['total'] or 0,
-            'customer_count': Customer.objects.count(),
-            'active_product_count': Product.objects.filter(active=True).count(),
-            'event_count': OperationalEvent.objects.count(),
-            'recent_sales': Sale.objects.select_related('customer', 'product')[:8],
-            'recent_events': OperationalEvent.objects.all()[:6],
-            'chart_labels': [row['customer__segment'] for row in sales_by_segment],
-            'chart_values': [float(row['total'] or 0) for row in sales_by_segment],
+            'practice': practice,
+            'monthly_revenue': monthly_revenue,
+            'active_client_count': active_client_count,
+            'today_appointment_count': today_appointments.count(),
+            'task_count': len(tasks),
+            'today_appointments': today_appointments,
+            'tasks': tasks,
+            'recent_invoices': recent_invoices,
         })
         return context

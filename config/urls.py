@@ -9,6 +9,7 @@ from apps.dashboard.views import DashboardView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('apps.accounts.urls')),
+    path('appointments/', include('apps.appointments.urls')),
     path('login/', LoginView.as_view(template_name='dashboard/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('summernote/', include('django_summernote.urls')),

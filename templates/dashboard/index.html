@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="app-page">
   <div class="app-shell">
@@ -25,7 +24,7 @@
 
       <nav class="nav-list">
         <a class="nav-item active" href="#"><span>⌂</span>Overview</a>
-        <a class="nav-item" href="#"><span>◷</span>Appointments</a>
+        <a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
         <a class="nav-item" href="#"><span>◉</span>Clients</a>
         <a class="nav-item" href="#"><span>✎</span>Clinical Notes</a>
         <a class="nav-item" href="#"><span>□</span>Billing</a>
@@ -60,56 +59,78 @@
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
           <p>{{ dashboard_date_label }}</p>
         </div>
-        <a class="btn btn-primary" href="#today">+ New appointment</a>
+        <a class="btn btn-primary" href="{% url 'appointments:create' %}">+ New appointment</a>
       </section>
 
       <section class="stats" aria-label="Practice metrics">
         <article class="stat-card">
           <span>Monthly revenue</span>
-          <strong>${{ total_revenue }}</strong>
-          <small>Seed/demo billing signal</small>
+          <strong>${{ monthly_revenue }}</strong>
+          <small>Paid invoices this month</small>
         </article>
         <article class="stat-card">
           <span>Active patients</span>
-          <strong>{{ customer_count }}</strong>
+          <strong>{{ active_client_count }}</strong>
           <small>Active records in workspace</small>
         </article>
         <article class="stat-card">
-          <span>Active services</span>
-          <strong>{{ active_product_count }}</strong>
-          <small>Services/products modeled</small>
+          <span>Today's sessions</span>
+          <strong>{{ today_appointment_count }}</strong>
+          <small>Appointments on your calendar</small>
         </article>
         <article class="stat-card">
           <span>Pending tasks</span>
-          <strong>{{ event_count }}</strong>
-          <small>Recent system activity</small>
+          <strong>{{ task_count }}</strong>
+          <small>Items that need attention</small>
         </article>
       </section>
 
       <section class="content-grid" id="today">
-        <article class="panel chart-panel">
+        <article class="panel">
           <div class="panel-head">
             <div>
-              <h2>Revenue by client segment</h2>
-              <p>Demo analytics remain available while NuviaMy domain UI is built out.</p>
+              <h2>Today's appointments</h2>
+              <p>Your scheduled sessions for {{ dashboard_date_label }}.</p>
             </div>
-            <span class="badge brand">Live ORM</span>
+            <span class="badge brand">{{ today_appointment_count }} today</span>
           </div>
-          <canvas id="segmentChart" aria-label="Revenue by client segment chart"></canvas>
+          <div class="appointment-list">
+            {% for appointment in today_appointments %}
+              <div class="appointment-card">
+                <div class="appointment-time">
+                  <strong>{{ appointment.starts_at|time:"g:i A" }}</strong>
+                  <span>{{ appointment.ends_at|time:"g:i A" }}</span>
+                </div>
+                <div class="appointment-body">
+                  <h3>{{ appointment.client }}</h3>
+                  <p>{{ appointment.get_appointment_type_display }} with {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p>
+                </div>
+                <span class="badge success">{{ appointment.get_status_display }}</span>
+              </div>
+            {% empty %}
+              <p class="empty-state">No appointments scheduled for today.</p>
+            {% endfor %}
+          </div>
         </article>
 
         <article class="panel">
           <div class="panel-head compact">
             <div>
-              <h2>Care operations</h2>
-              <p>Recent practice events.</p>
+              <h2>Tasks</h2>
+              <p>Focused follow-ups for this practice.</p>
             </div>
           </div>
-          <div class="event-list">
-            {% for event in recent_events %}
-              <div class="event {{ event.level }}"><span>{{ event.level }}</span>{{ event.title }}</div>
+          <div class="task-list">
+            {% for task in tasks %}
+              <div class="task-card {{ task.tone }}">
+                <span></span>
+                <div>
+                  <strong>{{ task.label }}</strong>
+                  <p>{{ task.detail }}</p>
+                </div>
+              </div>
             {% empty %}
-              <p class="empty-state">No events yet.</p>
+              <p class="empty-state">No urgent tasks right now.</p>
             {% endfor %}
           </div>
         </article>
@@ -119,18 +140,23 @@
         <div class="panel-head">
           <div>
             <h2>Recent billing activity</h2>
-            <p>Temporary demo data until billing screens are connected to invoices and payments.</p>
+            <p>Latest invoices for this practice.</p>
           </div>
-          <span class="badge success">Ready for billing UI</span>
+          <span class="badge success">Practice scoped</span>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Client</th><th>Service</th><th>Qty</th><th>Total</th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead>
             <tbody>
-              {% for sale in recent_sales %}
-                <tr><td>{{ sale.customer.name }}</td><td>{{ sale.product.name }}</td><td>{{ sale.quantity }}</td><td>${{ sale.total }}</td></tr>
+              {% for invoice in recent_invoices %}
+                <tr>
+                  <td>{{ invoice.invoice_number }}</td>
+                  <td>{{ invoice.client }}</td>
+                  <td>{{ invoice.get_status_display }}</td>
+                  <td>${{ invoice.amount }}</td>
+                </tr>
               {% empty %}
-                <tr><td colspan="4">Run seed_demo_data to create sample billing activity.</td></tr>
+                <tr><td colspan="4">No invoices have been created yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -138,25 +164,5 @@
       </section>
     </main>
   </div>
-
-  <script>
-    new Chart(document.getElementById('segmentChart'), {
-      type: 'bar',
-      data: {
-        labels: {{ chart_labels|safe }},
-        datasets: [{
-          label: 'Revenue',
-          data: {{ chart_values|safe }},
-          backgroundColor: '#7052D9',
-          borderRadius: 10
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: '#E5E7EB' } }, x: { grid: { display: false } } }
-      }
-    });
-  </script>
 </body>
 </html>
