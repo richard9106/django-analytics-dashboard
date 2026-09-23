@@ -1,8 +1,10 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum
+from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import TemplateView
 
+from apps.accounts.access import get_practice_for_user, is_client_user
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice
 from apps.clients.models import Client
@@ -12,6 +14,11 @@ from apps.notifications.models import Notification
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/index.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and is_client_user(request.user):
+            return redirect('portal:dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def get_greeting(self, hour):
         if hour < 12:
@@ -29,16 +36,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return f'{weekdays[value.weekday()]}, {months[value.month - 1]} {value.day}'
 
     def get_practice(self):
-        user = self.request.user
-        user_profile = getattr(user, 'nuvia_profile', None)
-        if user_profile:
-            return user_profile.practice
-
-        therapist_profile = getattr(user, 'therapist_profile', None)
-        if therapist_profile:
-            return therapist_profile.practice
-
-        return None
+        return get_practice_for_user(self.request.user)
 
     def get_tasks(self, practice):
         if not practice:

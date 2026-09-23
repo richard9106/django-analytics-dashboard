@@ -6,20 +6,14 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
 
+from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from .forms import ClientDocumentForm
 from .models import ClientDocument
 
 
 class PracticeContextMixin:
     def get_practice(self):
-        user = self.request.user
-        user_profile = getattr(user, 'nuvia_profile', None)
-        if user_profile:
-            return user_profile.practice
-        therapist_profile = getattr(user, 'therapist_profile', None)
-        if therapist_profile:
-            return therapist_profile.practice
-        return None
+        return get_practice_for_user(self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -29,7 +23,7 @@ class PracticeContextMixin:
         return context
 
 
-class DocumentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class DocumentListView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, ListView):
     model = ClientDocument
     template_name = 'documents/list.html'
     context_object_name = 'documents'
@@ -41,7 +35,7 @@ class DocumentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         return ClientDocument.objects.filter(practice=practice).select_related('client', 'uploaded_by')
 
 
-class DocumentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class DocumentCreateView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, CreateView):
     model = ClientDocument
     form_class = ClientDocumentForm
     template_name = 'documents/form.html'
@@ -54,7 +48,7 @@ class DocumentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
         return kwargs
 
 
-class DocumentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class DocumentDeleteView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, DeleteView):
     model = ClientDocument
     success_url = reverse_lazy('documents:list')
 

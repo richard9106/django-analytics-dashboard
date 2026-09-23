@@ -1,11 +1,12 @@
 from django.contrib import admin
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LogoutView
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
 from apps.dashboard.views import DashboardView
 from apps.billing.urls import settings_patterns
+from apps.accounts.views import RoleAwareLoginView
 from apps.portal.settings_urls import urlpatterns as portal_settings_patterns
 
 urlpatterns = [
@@ -19,7 +20,7 @@ urlpatterns = [
     path('settings/', include((portal_settings_patterns, 'portal_settings'), namespace='portal_settings')),
     path('documents/', include('apps.documents.urls')),
     path('portal/', include('apps.portal.urls')),
-    path('login/', LoginView.as_view(template_name='dashboard/login.html'), name='login'),
+    path('login/', RoleAwareLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('summernote/', include('django_summernote.urls')),
     path('', DashboardView.as_view(), name='dashboard'),

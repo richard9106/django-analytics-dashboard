@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
+from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice, ServicePackage
 from apps.documents.models import ClientDocument
@@ -11,16 +12,9 @@ from .forms import ClientPortalAccessForm, suggest_portal_password, suggest_port
 from .models import ClientPortalAccess
 
 
-class PracticeContextMixin(LoginRequiredMixin):
+class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
     def get_practice(self):
-        user = self.request.user
-        user_profile = getattr(user, 'nuvia_profile', None)
-        if user_profile:
-            return user_profile.practice
-        therapist_profile = getattr(user, 'therapist_profile', None)
-        if therapist_profile:
-            return therapist_profile.practice
-        return None
+        return get_practice_for_user(self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

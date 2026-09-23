@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
 from apps.clients.models import Client
+from apps.portal.models import ClientPortalAccess
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -57,6 +58,44 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Profile settings')
         self.assertContains(response, 'Sign out')
         self.assertNotContains(response, 'href="/admin/"')
+
+    def test_client_login_redirects_to_portal(self):
+        practice = Practice.objects.create(name='Nuvia Therapy')
+        portal_client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
+        user = get_user_model().objects.create_user(username='maya', password='StrongPass123!')
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT)
+        ClientPortalAccess.objects.create(user=user, practice=practice, client=portal_client, is_active=True)
+
+        response = self.client.post(reverse('login'), {
+            'username': 'maya',
+            'password': 'StrongPass123!',
+        })
+
+        self.assertRedirects(response, reverse('portal:dashboard'))
+
+    def test_client_cannot_view_practice_dashboard(self):
+        practice = Practice.objects.create(name='Nuvia Therapy')
+        portal_client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
+        user = get_user_model().objects.create_user(username='maya', password='StrongPass123!')
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT)
+        ClientPortalAccess.objects.create(user=user, practice=practice, client=portal_client, is_active=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertRedirects(response, reverse('portal:dashboard'))
+
+    def test_client_cannot_view_practice_clients_page(self):
+        practice = Practice.objects.create(name='Nuvia Therapy')
+        portal_client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
+        user = get_user_model().objects.create_user(username='maya', password='StrongPass123!')
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT)
+        ClientPortalAccess.objects.create(user=user, practice=practice, client=portal_client, is_active=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('clients:list'))
+
+        self.assertRedirects(response, reverse('portal:dashboard'))
 
     def test_dashboard_shows_today_appointments(self):
         user, practice, therapist = self.create_practice_user()

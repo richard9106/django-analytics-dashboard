@@ -1,8 +1,19 @@
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.views.generic.edit import FormView
 
+from .access import is_client_user
 from .forms import PracticeSignupForm
+
+
+class RoleAwareLoginView(LoginView):
+    template_name = "dashboard/login.html"
+
+    def get_success_url(self):
+        if is_client_user(self.request.user):
+            return reverse_lazy("portal:dashboard")
+        return super().get_success_url()
 
 
 class PracticeSignupView(FormView):
@@ -14,6 +25,8 @@ class PracticeSignupView(FormView):
         if request.user.is_authenticated:
             from django.shortcuts import redirect
 
+            if is_client_user(request.user):
+                return redirect("portal:dashboard")
             return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)
 
