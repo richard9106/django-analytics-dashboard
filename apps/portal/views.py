@@ -6,6 +6,8 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.appointments.models import Appointment
+from apps.audit.models import AuditLog
+from apps.audit.utils import log_audit_event
 from apps.billing.models import Invoice, ServicePackage
 from apps.documents.models import ClientDocument
 from .forms import ClientPortalAccessForm, suggest_portal_password, suggest_portal_username
@@ -102,6 +104,19 @@ class PortalAccessCreateView(PracticeContextMixin, CreateView):
         kwargs['practice'] = self.get_practice()
         return kwargs
 
+    def form_valid(self, form):
+        action = AuditLog.Action.UPDATE if self.object else AuditLog.Action.CREATE
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            action,
+            'portal.ClientPortalAccess',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'portal_user_id': self.object.user_id, 'is_active': self.object.is_active},
+        )
+        return response
+
 
 class PortalAccessUpdateView(PortalAccessCreateView, UpdateView):
     def get_queryset(self):
@@ -120,3 +135,11 @@ class PortalAccessDeleteView(PracticeContextMixin, DeleteView):
         if not practice:
             return ClientPortalAccess.objects.none()
         return ClientPortalAccess.objects.filter(practice=practice)
+
+    def form_valid(self, form):
+        access_id = self.object.pk
+        practice = self.object.practice
+        metadata = {'client_id': self.object.client_id, 'portal_user_id': self.object.user_id, 'is_active': self.object.is_active}
+        response = super().form_valid(form)
+        log_audit_event(self.request, AuditLog.Action.DELETE, 'portal.ClientPortalAccess', access_id, practice=practice, metadata=metadata)
+        return response

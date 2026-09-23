@@ -3,6 +3,8 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.audit.models import AuditLog
+from apps.audit.utils import log_audit_event
 from .forms import SessionNoteForm
 from .models import SessionNote
 
@@ -61,6 +63,18 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
         context['submit_label'] = 'Create note'
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.CREATE,
+            'clinical.SessionNote',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'appointment_id': self.object.appointment_id},
+        )
+        return response
+
 
 class SessionNoteUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
     model = SessionNote
@@ -88,6 +102,18 @@ class SessionNoteUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView
         context['show_delete_action'] = True
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.UPDATE,
+            'clinical.SessionNote',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'appointment_id': self.object.appointment_id, 'is_locked': self.object.is_locked},
+        )
+        return response
+
 
 class SessionNoteDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
     model = SessionNote
@@ -99,3 +125,18 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
             return SessionNote.objects.none()
 
         return SessionNote.objects.filter(practice=practice)
+
+    def form_valid(self, form):
+        note_id = self.object.pk
+        practice = self.object.practice
+        metadata = {'client_id': self.object.client_id, 'appointment_id': self.object.appointment_id}
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.DELETE,
+            'clinical.SessionNote',
+            note_id,
+            practice=practice,
+            metadata=metadata,
+        )
+        return response

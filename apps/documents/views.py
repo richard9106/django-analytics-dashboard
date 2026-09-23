@@ -7,6 +7,8 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.audit.models import AuditLog
+from apps.audit.utils import log_audit_event
 from .forms import ClientDocumentForm
 from .models import ClientDocument
 
@@ -47,6 +49,18 @@ class DocumentCreateView(LoginRequiredMixin, ClientPortalRedirectMixin, Practice
         kwargs['uploaded_by'] = self.request.user
         return kwargs
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.CREATE,
+            'documents.ClientDocument',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'filename': self.object.original_filename},
+        )
+        return response
+
 
 class DocumentDeleteView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, DeleteView):
     model = ClientDocument
@@ -61,9 +75,20 @@ class DocumentDeleteView(LoginRequiredMixin, ClientPortalRedirectMixin, Practice
     def form_valid(self, form):
         storage = self.object.file.storage
         name = self.object.file.name
+        document_id = self.object.pk
+        practice = self.object.practice
+        metadata = {'client_id': self.object.client_id, 'filename': self.object.original_filename}
         response = super().form_valid(form)
         if name:
             storage.delete(name)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.DELETE,
+            'documents.ClientDocument',
+            document_id,
+            practice=practice,
+            metadata=metadata,
+        )
         return response
 
 
@@ -83,6 +108,14 @@ class DocumentDownloadView(LoginRequiredMixin, PracticeContextMixin, View):
             document = get_object_or_404(ClientDocument, pk=pk, practice=practice)
         else:
             raise PermissionDenied('You do not have access to this document.')
+        log_audit_event(
+            request,
+            AuditLog.Action.EXPORT,
+            'documents.ClientDocument',
+            document.pk,
+            practice=document.practice,
+            metadata={'client_id': document.client_id, 'filename': document.original_filename},
+        )
         return FileResponse(
             document.file.open('rb'),
             as_attachment=True,
