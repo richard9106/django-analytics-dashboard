@@ -12,7 +12,7 @@ from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, ServicePackage
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
-from apps.portal.models import ClientPortalAccess
+from apps.portal.models import ClientPortalAccess, ClientPortalRequest
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -144,6 +144,149 @@ class ClientPortalViewTests(TestCase):
         self.assertNotContains(response, "Hidden Client")
         self.assertNotContains(response, "Internal document")
         self.assertNotContains(response, "Hidden document")
+
+    def test_portal_client_can_create_request(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("portal:request_create"), {
+            "category": ClientPortalRequest.Category.RESCHEDULE,
+            "subject": "Need a different time",
+            "message": "Could we move next week's session?",
+        })
+
+        self.assertRedirects(response, reverse("portal:dashboard"))
+        portal_request = ClientPortalRequest.objects.get()
+        self.assertEqual(portal_request.practice, practice)
+        self.assertEqual(portal_request.client, client)
+        self.assertEqual(portal_request.submitted_by, user)
+        self.assertEqual(portal_request.status, ClientPortalRequest.Status.NEW)
+        log = AuditLog.objects.get(action=AuditLog.Action.CREATE, object_type="portal.ClientPortalRequest")
+        self.assertEqual(log.metadata["client_id"], client.pk)
+        self.assertEqual(log.metadata["category"], ClientPortalRequest.Category.RESCHEDULE)
+
+    def test_portal_dashboard_shows_only_linked_client_requests(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        other_client = Client.objects.create(practice=practice, first_name="Hidden", last_name="Client")
+        ClientPortalRequest.objects.create(
+            practice=practice,
+            client=client,
+            submitted_by=user,
+            category=ClientPortalRequest.Category.BILLING,
+            subject="Visible request",
+            message="Question about invoice.",
+        )
+        ClientPortalRequest.objects.create(
+            practice=practice,
+            client=other_client,
+            category=ClientPortalRequest.Category.GENERAL,
+            subject="Hidden request",
+            message="Should not show.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Visible request")
+        self.assertNotContains(response, "Hidden request")
+
+    def test_practice_dashboard_shows_portal_request_task(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        ClientPortalRequest.objects.create(
+            practice=practice,
+            client=client,
+            submitted_by=user,
+            category=ClientPortalRequest.Category.DOCUMENT,
+            subject="Document question",
+            message="Can you share the consent form?",
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Client portal requests")
+        self.assertContains(response, "1 portal request awaiting follow-up")
+
+    def test_practice_can_view_portal_requests_with_sidebar_badge(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        ClientPortalRequest.objects.create(
+            practice=practice,
+            client=client,
+            submitted_by=user,
+            category=ClientPortalRequest.Category.BILLING,
+            subject="Billing question",
+            message="Can you explain this invoice?",
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.get(reverse("portal_requests:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Client Requests")
+        self.assertContains(response, "Billing question")
+        self.assertContains(response, 'class="nav-badge">1</strong>')
+
+    def test_practice_can_update_portal_request_status(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        portal_request = ClientPortalRequest.objects.create(
+            practice=practice,
+            client=client,
+            submitted_by=user,
+            category=ClientPortalRequest.Category.DOCUMENT,
+            subject="Document question",
+            message="Can you share a copy?",
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_requests:status", args=[portal_request.pk]), {"status": ClientPortalRequest.Status.RESOLVED})
+
+        portal_request.refresh_from_db()
+        self.assertRedirects(response, reverse("portal_requests:list"))
+        self.assertEqual(portal_request.status, ClientPortalRequest.Status.RESOLVED)
+        log = AuditLog.objects.get(action=AuditLog.Action.UPDATE, object_type="portal.ClientPortalRequest")
+        self.assertEqual(log.object_id, str(portal_request.pk))
+        self.assertEqual(log.metadata["status"], ClientPortalRequest.Status.RESOLVED)
+
+    def test_portal_request_status_update_is_scoped_to_practice(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        other_user, other_practice, _other_therapist, other_client, _other_access = self.create_portal_user(
+            username="other-client",
+            practice_name="Other Practice",
+        )
+        portal_request = ClientPortalRequest.objects.create(
+            practice=other_practice,
+            client=other_client,
+            submitted_by=other_user,
+            category=ClientPortalRequest.Category.GENERAL,
+            subject="Hidden request",
+            message="Should not update.",
+        )
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_requests:status", args=[portal_request.pk]), {"status": ClientPortalRequest.Status.RESOLVED})
+
+        portal_request.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(portal_request.status, ClientPortalRequest.Status.NEW)
+
+    def test_client_cannot_open_practice_requests_page(self):
+        user, practice, _therapist, _client, _access = self.create_portal_user()
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal_requests:list"))
+
+        self.assertRedirects(response, reverse("portal:dashboard"))
 
     def test_portal_settings_list_requires_login(self):
         response = self.client.get(reverse("portal_settings:portal_access"))

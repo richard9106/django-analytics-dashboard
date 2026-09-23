@@ -8,6 +8,7 @@ from apps.dashboard.views import DashboardView
 from apps.billing.urls import settings_patterns
 from apps.accounts.views import ForcePasswordChangeView, RoleAwareLoginView
 from apps.portal.settings_urls import urlpatterns as portal_settings_patterns
+from apps.portal.practice_urls import urlpatterns as portal_request_patterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -19,6 +20,7 @@ urlpatterns = [
     path('settings/', include((settings_patterns, 'settings'), namespace='settings')),
     path('settings/', include((portal_settings_patterns, 'portal_settings'), namespace='portal_settings')),
     path('documents/', include('apps.documents.urls')),
+    path('requests/', include((portal_request_patterns, 'portal_requests'), namespace='portal_requests')),
     path('portal/', include('apps.portal.urls')),
     path('login/', RoleAwareLoginView.as_view(), name='login'),
     path('change-temporary-password/', ForcePasswordChangeView.as_view(), name='force_password_change'),

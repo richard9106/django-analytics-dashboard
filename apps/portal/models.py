@@ -20,3 +20,36 @@ class ClientPortalAccess(models.Model):
 
     def __str__(self):
         return f"Portal access for {self.client}"
+
+
+class ClientPortalRequest(models.Model):
+    class Category(models.TextChoices):
+        RESCHEDULE = "reschedule", "I need to reschedule"
+        BILLING = "billing", "Billing question"
+        DOCUMENT = "document", "Document question"
+        GENERAL = "general", "General message"
+
+    class Status(models.TextChoices):
+        NEW = "new", "New"
+        REVIEWED = "reviewed", "Reviewed"
+        RESOLVED = "resolved", "Resolved"
+
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="portal_requests")
+    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="portal_requests")
+    submitted_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="portal_requests")
+    category = models.CharField(max_length=30, choices=Category.choices)
+    subject = models.CharField(max_length=160)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def clean(self):
+        if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
+            raise ValidationError({"client": "Portal request client must belong to the same practice."})
+
+    def __str__(self):
+        return f"{self.get_category_display()} from {self.client}"

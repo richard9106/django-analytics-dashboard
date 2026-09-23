@@ -10,6 +10,7 @@ from apps.billing.models import Invoice
 from apps.clients.models import Client
 from apps.clinical.models import SessionNote
 from apps.notifications.models import Notification
+from apps.portal.models import ClientPortalRequest
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -54,6 +55,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             practice=practice,
             status=Notification.Status.PENDING,
         ).count()
+        open_portal_request_count = ClientPortalRequest.objects.filter(
+            practice=practice,
+            status__in=[ClientPortalRequest.Status.NEW, ClientPortalRequest.Status.REVIEWED],
+        ).count()
 
         tasks = []
         if open_note_count:
@@ -76,6 +81,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'label': 'Client notifications',
                 'detail': f'{pending_notification_count} message{suffix} pending delivery',
                 'tone': 'success',
+            })
+        if open_portal_request_count:
+            suffix = '' if open_portal_request_count == 1 else 's'
+            tasks.append({
+                'label': 'Client portal requests',
+                'detail': f'{open_portal_request_count} portal request{suffix} awaiting follow-up',
+                'tone': 'brand',
             })
 
         return tasks

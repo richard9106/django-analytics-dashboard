@@ -65,6 +65,8 @@ h1, h2, h3, p { margin-top: 0; }
 .sidebar .brand { padding: 0 8px; }
 .nav-list { display: grid; gap: 3px; }
 .nav-item { min-height: 44px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 10px; color: var(--slate-600); font-size: 14px; font-weight: 700; }
+.nav-item-with-badge { justify-content: flex-start; }
+.nav-badge { margin-left: auto; min-width: 22px; min-height: 22px; display: inline-grid; place-items: center; padding: 0 7px; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 12px; font-weight: 900; }
 .nav-item.active, .nav-item:hover { background: var(--brand-50); color: var(--brand-700); }
 .nav-item span { min-width: 18px; text-align: center; }
 .sidebar-settings { display: grid; gap: 3px; }
@@ -168,6 +170,9 @@ h1, h2, h3, p { margin-top: 0; }
 .billing-panel { background: radial-gradient(circle at top right, rgba(255, 227, 216, .5), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }
 .package-list { display: grid; gap: 12px; }
 .package-card { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255, 255, 255, .86); box-shadow: var(--shadow-1); }
+.request-list { display: grid; gap: 14px; }
+.request-card { display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.9); box-shadow: var(--shadow-1); }
+.request-card h3 { margin: 0 0 4px; font-size: 18px; letter-spacing: -.03em; }
 .package-card strong { display: block; margin-bottom: 4px; }
 .package-card p { font-size: 14px; }
 .documents-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .5), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }
@@ -184,6 +189,7 @@ h1, h2, h3, p { margin-top: 0; }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }
 .portal-stats .stat-card { background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(244,240,255,.82)); }
 .portal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.portal-request-panel { background: radial-gradient(circle at top right, rgba(255, 227, 216, .56), transparent 34%), #fff; }
 .portal-documents { grid-template-columns: 1fr; }
 .modal-dialog { width: min(860px, calc(100% - 28px)); max-height: min(82vh, 820px); padding: 0; border: 0; border-radius: 24px; background: transparent; color: var(--slate-800); }
 .modal-dialog::backdrop { background: rgba(17, 24, 39, .42); backdrop-filter: blur(3px); }

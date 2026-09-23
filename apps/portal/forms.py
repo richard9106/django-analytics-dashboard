@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from apps.accounts.models import UserProfile
-from .models import ClientPortalAccess
+from .models import ClientPortalAccess, ClientPortalRequest
 
 
 def suggest_portal_username(client):
@@ -112,3 +112,31 @@ class ClientPortalAccessForm(forms.ModelForm):
                 profile.save(update_fields=['must_change_password', 'updated_at'])
             self.save_m2m()
         return access
+
+
+class ClientPortalRequestForm(forms.ModelForm):
+    class Meta:
+        model = ClientPortalRequest
+        fields = ['category', 'subject', 'message']
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def __init__(self, *args, portal_access=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.portal_access = portal_access
+        if portal_access:
+            self.instance.practice = portal_access.practice
+            self.instance.client = portal_access.client
+            self.instance.submitted_by = portal_access.user
+
+    def save(self, commit=True):
+        portal_request = super().save(commit=False)
+        portal_request.practice = self.portal_access.practice
+        portal_request.client = self.portal_access.client
+        portal_request.submitted_by = self.portal_access.user
+        if commit:
+            portal_request.full_clean()
+            portal_request.save()
+            self.save_m2m()
+        return portal_request

@@ -2,6 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import View
@@ -14,8 +15,8 @@ from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import Invoice, ServicePackage
 from apps.documents.models import ClientDocument
-from .forms import ClientPortalAccessForm, suggest_portal_password, suggest_portal_username
-from .models import ClientPortalAccess
+from .forms import ClientPortalAccessForm, ClientPortalRequestForm, suggest_portal_password, suggest_portal_username
+from .models import ClientPortalAccess, ClientPortalRequest
 
 
 class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
@@ -80,6 +81,10 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             practice=access.practice,
             client=access.client,
         )
+        portal_requests = ClientPortalRequest.objects.filter(
+            practice=access.practice,
+            client=access.client,
+        )
         context.update({
             'upcoming_appointments': upcoming_appointments[:6],
             'next_appointment': upcoming_appointments.first(),
@@ -89,8 +94,77 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'service_packages': service_packages[:6],
             'remaining_sessions': sum(package.sessions_remaining for package in service_packages),
             'shared_document_count': visible_documents.count(),
+            'portal_request_form': ClientPortalRequestForm(portal_access=access),
+            'portal_requests': portal_requests[:5],
+            'open_request_count': portal_requests.exclude(status=ClientPortalRequest.Status.RESOLVED).count(),
         })
         return context
+
+
+class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
+    def get_portal_context(self, access, form):
+        now = timezone.now()
+        upcoming_appointments = Appointment.objects.filter(
+            practice=access.practice,
+            client=access.client,
+            starts_at__gte=now,
+        ).select_related('therapist__user')
+        open_invoices = Invoice.objects.filter(
+            practice=access.practice,
+            client=access.client,
+        ).exclude(status__in=[Invoice.Status.PAID, Invoice.Status.VOID])
+        visible_documents = ClientDocument.objects.filter(
+            practice=access.practice,
+            client=access.client,
+            visible_to_client=True,
+        )
+        service_packages = ServicePackage.objects.filter(
+            practice=access.practice,
+            client=access.client,
+        )
+        portal_requests = ClientPortalRequest.objects.filter(
+            practice=access.practice,
+            client=access.client,
+        )
+        return {
+            'portal_access': access,
+            'portal_client': access.client,
+            'portal_practice': access.practice,
+            'upcoming_appointments': upcoming_appointments[:6],
+            'next_appointment': upcoming_appointments.first(),
+            'visible_documents': visible_documents[:8],
+            'open_invoices': open_invoices[:8],
+            'open_invoice_total': open_invoices.aggregate(total=Sum('amount'))['total'] or 0,
+            'service_packages': service_packages[:6],
+            'remaining_sessions': sum(package.sessions_remaining for package in service_packages),
+            'shared_document_count': visible_documents.count(),
+            'portal_request_form': form,
+            'portal_requests': portal_requests[:5],
+            'open_request_count': portal_requests.exclude(status=ClientPortalRequest.Status.RESOLVED).count(),
+        }
+
+    def post(self, request):
+        access = self.get_portal_access()
+        form = ClientPortalRequestForm(request.POST, portal_access=access)
+        if form.is_valid():
+            portal_request = form.save()
+            log_audit_event(
+                request,
+                AuditLog.Action.CREATE,
+                'portal.ClientPortalRequest',
+                portal_request.pk,
+                practice=portal_request.practice,
+                metadata={
+                    'client_id': portal_request.client_id,
+                    'category': portal_request.category,
+                    'status': portal_request.status,
+                },
+            )
+            return redirect('portal:dashboard')
+
+        context = self.get_portal_context(access, form)
+        context['open_request_modal'] = True
+        return TemplateResponse(request, 'portal/dashboard.html', context, status=400)
 
 
 class PortalAccessListView(PracticeContextMixin, ListView):
@@ -193,3 +267,35 @@ class PortalAccessPasswordResetView(PracticeContextMixin, View):
             metadata={'client_id': access.client_id, 'portal_user_id': access.user_id, 'password_reset': True},
         )
         return redirect('portal_settings:portal_access')
+
+
+class PracticePortalRequestListView(PracticeContextMixin, ListView):
+    model = ClientPortalRequest
+    template_name = 'requests/list.html'
+    context_object_name = 'portal_requests'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return ClientPortalRequest.objects.none()
+        return ClientPortalRequest.objects.filter(practice=practice).select_related('client', 'submitted_by')
+
+
+class PracticePortalRequestStatusView(PracticeContextMixin, View):
+    def post(self, request, pk):
+        practice = self.get_practice()
+        portal_request = get_object_or_404(ClientPortalRequest, pk=pk, practice=practice)
+        status = request.POST.get('status')
+        valid_statuses = {choice for choice, _label in ClientPortalRequest.Status.choices}
+        if status in valid_statuses:
+            portal_request.status = status
+            portal_request.save(update_fields=['status', 'updated_at'])
+            log_audit_event(
+                request,
+                AuditLog.Action.UPDATE,
+                'portal.ClientPortalRequest',
+                portal_request.pk,
+                practice=portal_request.practice,
+                metadata={'client_id': portal_request.client_id, 'status': portal_request.status},
+            )
+        return redirect('portal_requests:list')

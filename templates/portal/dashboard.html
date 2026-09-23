@@ -31,10 +31,24 @@
       <article class="stat-card"><span>Next appointment</span><strong>{% if next_appointment %}{{ next_appointment.starts_at|date:"M j" }}{% else %}None scheduled{% endif %}</strong><small>{% if next_appointment %}{{ next_appointment.starts_at|time:"g:i A" }}{% else %}Your practice will schedule future sessions here.{% endif %}</small></article>
       <article class="stat-card"><span>Open balance</span><strong>${{ open_invoice_total }}</strong><small>Open invoice total</small></article>
       <article class="stat-card"><span>Package sessions</span><strong>{{ remaining_sessions }}</strong><small>Remaining prepaid sessions</small></article>
-      <article class="stat-card"><span>Documents</span><strong>{{ shared_document_count }}</strong><small>Shared with you</small></article>
+      <article class="stat-card"><span>Requests</span><strong>{{ open_request_count }}</strong><small>Open portal requests</small></article>
     </section>
 
     <section class="portal-grid">
+      <article class="panel portal-request-panel">
+        <div class="panel-head"><div><h2>Portal requests</h2><p>Message your practice about scheduling, billing, documents, or general questions.</p></div><button class="btn btn-primary" type="button" data-modal-target="portal-request-modal">Send a request</button></div>
+        <p class="empty-state">Use requests for non-urgent practice questions. If this is an emergency, contact emergency services directly.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><h2>Recent requests</h2><p>Status of messages sent to your practice.</p></div></div>
+        <div class="package-list">
+          {% for portal_request in portal_requests %}
+            <div class="package-card"><div class="client-card-head"><strong>{{ portal_request.subject }}</strong><span class="badge brand">{{ portal_request.get_status_display }}</span></div><p>{{ portal_request.get_category_display }} · {{ portal_request.created_at|date:"M j, Y" }}</p><p>{{ portal_request.message|truncatechars:110 }}</p></div>
+          {% empty %}<p class="empty-state">No portal requests yet.</p>{% endfor %}
+        </div>
+      </article>
+
       <article class="panel">
         <div class="panel-head"><div><h2>Upcoming appointments</h2><p>Your scheduled sessions.</p></div></div>
         <div class="appointment-list">
@@ -67,6 +81,39 @@
         </div>
       </article>
     </section>
+
+    <dialog class="modal-dialog" id="portal-request-modal">
+      <div class="modal-card">
+        <div class="modal-head"><div><p class="eyebrow">Client Portal</p><h2>Send a request</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+        <form class="appointment-form" method="post" action="{% url 'portal:request_create' %}">
+          {% csrf_token %}
+          {% if portal_request_form.non_field_errors %}<div class="form-error">{{ portal_request_form.non_field_errors }}</div>{% endif %}
+          <div class="field-grid">
+            <div class="field"><label for="{{ portal_request_form.category.id_for_label }}">Request type</label>{{ portal_request_form.category }}{{ portal_request_form.category.errors }}</div>
+            <div class="field"><label for="{{ portal_request_form.subject.id_for_label }}">Subject</label>{{ portal_request_form.subject }}{{ portal_request_form.subject.errors }}</div>
+            <div class="field full"><label for="{{ portal_request_form.message.id_for_label }}">Message</label>{{ portal_request_form.message }}{{ portal_request_form.message.errors }}</div>
+          </div>
+          <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Send request</button></div>
+        </form>
+      </div>
+    </dialog>
   </main>
+  <script>
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-target]');
+      if (!trigger) return;
+      const dialog = document.getElementById(trigger.dataset.modalTarget);
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      event.preventDefault();
+      dialog.showModal();
+    });
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-close]');
+      if (trigger) trigger.closest('dialog')?.close();
+    });
+    {% if open_request_modal %}
+      window.addEventListener('DOMContentLoaded', () => document.getElementById('portal-request-modal')?.showModal());
+    {% endif %}
+  </script>
 </body>
 </html>
