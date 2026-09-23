@@ -1,0 +1,10 @@
+<form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}">
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Name</label><input name="name" value="{{ object.name }}" required></div>
+    <div class="field"><label>Payer ID</label><input name="payer_id" value="{{ object.payer_id }}"></div>
+    <div class="field checkbox-field"><label><input name="active" type="checkbox" {% if object.active or not object %}checked{% endif %}> Active</label></div>
+    <div class="field full"><label>Notes</label><textarea name="notes" rows="3">{{ object.notes }}</textarea></div>
+  </div>
+  <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div>
+</form>

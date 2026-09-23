@@ -1,7 +1,7 @@
 from django_summernote.admin import SummernoteModelAdmin
 from django.contrib import admin
 
-from .models import Practice, TherapistProfile
+from .models import ExternalIntegration, Practice, TherapistProfile
 
 
 class PracticeAdmin(SummernoteModelAdmin):
@@ -31,4 +31,11 @@ class TherapistProfileAdmin(SummernoteModelAdmin):
 
 admin.site.register(Practice, PracticeAdmin)
 admin.site.register(TherapistProfile, TherapistProfileAdmin)
-# Register your models here.
+
+
+@admin.register(ExternalIntegration)
+class ExternalIntegrationAdmin(admin.ModelAdmin):
+    list_display = ("practice", "provider", "status", "account_email", "send_email_enabled", "read_email_enabled", "file_storage_enabled")
+    list_filter = ("practice", "provider", "status")
+    search_fields = ("practice__name", "account_email", "default_folder")
+    readonly_fields = ("created_at", "updated_at", "connected_at")

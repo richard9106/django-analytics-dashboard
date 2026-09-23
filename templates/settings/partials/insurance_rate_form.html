@@ -1,0 +1,13 @@
+<form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}">
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Payer</label><select name="payer" required>{% for payer in system_payers %}<option value="{{ payer.pk }}" {% if object.payer_id == payer.pk %}selected{% endif %}>{{ payer.name }}</option>{% endfor %}{% for payer in custom_payers %}<option value="{{ payer.pk }}" {% if object.payer_id == payer.pk %}selected{% endif %}>{{ payer.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label>State</label><input name="state" maxlength="2" placeholder="CA" value="{{ object.state }}" required></div>
+    <div class="field"><label>Service code</label><select name="service_code" required>{% for value,label in rate_form.fields.service_code.choices %}<option value="{{ value }}" {% if object.service_code == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Service label</label><input name="service_label" value="{{ object.service_label }}" placeholder="Optional custom label"></div>
+    <div class="field"><label>Reimbursement amount</label><input name="reimbursement_amount" type="number" step="0.01" min="0" value="{{ object.reimbursement_amount }}"></div>
+    <div class="field checkbox-field"><label><input name="active" type="checkbox" {% if object.active or not object %}checked{% endif %}> Active</label></div>
+    <div class="field full"><label>Notes</label><textarea name="notes" rows="3">{{ object.notes }}</textarea></div>
+  </div>
+  <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div>
+</form>

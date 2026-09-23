@@ -2,6 +2,13 @@ from django.urls import path
 
 from .views import (
     BillingListView,
+    InsurancePayerCreateView,
+    InsurancePayerDeleteView,
+    InsurancePayerUpdateView,
+    InsuranceRateCreateView,
+    InsuranceRateDeleteView,
+    InsuranceRateUpdateView,
+    InsuranceSettingsView,
     InvoiceCreateView,
     InvoiceDeleteView,
     InvoiceUpdateView,
@@ -35,4 +42,11 @@ settings_patterns = [
     path('session-packages/new/', SessionPackageTemplateCreateView.as_view(), name='package_template_create'),
     path('session-packages/<int:pk>/edit/', SessionPackageTemplateUpdateView.as_view(), name='package_template_edit'),
     path('session-packages/<int:pk>/delete/', SessionPackageTemplateDeleteView.as_view(), name='package_template_delete'),
+    path('insurance/', InsuranceSettingsView.as_view(), name='insurance'),
+    path('insurance/payers/new/', InsurancePayerCreateView.as_view(), name='insurance_payer_create'),
+    path('insurance/payers/<int:pk>/edit/', InsurancePayerUpdateView.as_view(), name='insurance_payer_edit'),
+    path('insurance/payers/<int:pk>/delete/', InsurancePayerDeleteView.as_view(), name='insurance_payer_delete'),
+    path('insurance/rates/new/', InsuranceRateCreateView.as_view(), name='insurance_rate_create'),
+    path('insurance/rates/<int:pk>/edit/', InsuranceRateUpdateView.as_view(), name='insurance_rate_edit'),
+    path('insurance/rates/<int:pk>/delete/', InsuranceRateDeleteView.as_view(), name='insurance_rate_delete'),
 ]

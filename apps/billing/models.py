@@ -151,6 +151,72 @@ class SessionPackageTemplate(models.Model):
         return f"{self.name} ({self.sessions_included} sessions)"
 
 
+class InsurancePayer(models.Model):
+    practice = models.ForeignKey(
+        "practices.Practice",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="insurance_payers",
+    )
+    name = models.CharField(max_length=140)
+    payer_id = models.CharField(max_length=80, blank=True)
+    is_system_template = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["practice", "name"], name="unique_insurance_payer_per_practice"),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class InsuranceRate(models.Model):
+    class ServiceCode(models.TextChoices):
+        INTAKE = "90791", "90791 - Psychiatric diagnostic evaluation"
+        PSYCHOTHERAPY_45 = "90834", "90834 - Psychotherapy, 45 minutes"
+        PSYCHOTHERAPY_60 = "90837", "90837 - Psychotherapy, 60 minutes"
+        FAMILY = "90847", "90847 - Family psychotherapy"
+        GROUP = "90853", "90853 - Group psychotherapy"
+        CRISIS = "90839", "90839 - Psychotherapy for crisis"
+        OTHER = "other", "Other"
+
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="insurance_rates")
+    payer = models.ForeignKey(InsurancePayer, on_delete=models.CASCADE, related_name="rates")
+    state = models.CharField(max_length=2)
+    service_code = models.CharField(max_length=20, choices=ServiceCode.choices)
+    service_label = models.CharField(max_length=160, blank=True)
+    reimbursement_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["state", "payer__name", "service_code"]
+        constraints = [
+            models.UniqueConstraint(fields=["practice", "payer", "state", "service_code"], name="unique_insurance_rate_per_state_service"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.payer_id and self.practice_id and self.payer.practice_id and self.payer.practice_id != self.practice_id:
+            errors["payer"] = "Insurance payer must be global or belong to the same practice."
+        if self.reimbursement_amount is not None and self.reimbursement_amount < Decimal("0.00"):
+            errors["reimbursement_amount"] = "Reimbursement amount cannot be negative."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.payer} {self.state} {self.service_code}"
+
+
 class PackageUsage(models.Model):
     package = models.ForeignKey(ServicePackage, on_delete=models.CASCADE, related_name="usages")
     appointment = models.OneToOneField("appointments.Appointment", on_delete=models.CASCADE, related_name="package_usage")

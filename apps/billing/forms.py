@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Invoice, PackageUsage, ServicePackage, SessionPackageTemplate
+from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, ServicePackage, SessionPackageTemplate
 
 
 class InvoiceForm(forms.ModelForm):
@@ -137,6 +137,59 @@ class SessionPackageTemplateForm(forms.ModelForm):
             template.save()
             self.save_m2m()
         return template
+
+
+class InsurancePayerForm(forms.ModelForm):
+    class Meta:
+        model = InsurancePayer
+        fields = ['name', 'payer_id', 'active', 'notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+
+    def save(self, commit=True):
+        payer = super().save(commit=False)
+        payer.practice = self.practice
+        payer.is_system_template = False
+        if commit:
+            payer.full_clean()
+            payer.save()
+            self.save_m2m()
+        return payer
+
+
+class InsuranceRateForm(forms.ModelForm):
+    class Meta:
+        model = InsuranceRate
+        fields = ['payer', 'state', 'service_code', 'service_label', 'reimbursement_amount', 'active', 'notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+        payer_queryset = InsurancePayer.objects.filter(practice__isnull=True) | InsurancePayer.objects.filter(practice=practice)
+        self.fields['payer'].queryset = payer_queryset.filter(active=True).order_by('name') if practice else InsurancePayer.objects.none()
+        self.fields['state'].widget.attrs.update({'maxlength': 2, 'placeholder': 'CA'})
+
+    def clean_state(self):
+        return self.cleaned_data['state'].upper()
+
+    def save(self, commit=True):
+        rate = super().save(commit=False)
+        rate.practice = self.practice
+        if commit:
+            rate.full_clean()
+            rate.save()
+            self.save_m2m()
+        return rate
 
 
 class PackageUsageForm(forms.ModelForm):

@@ -5,8 +5,8 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
-from .forms import InvoiceForm, PackageUsageForm, ServicePackageForm, SessionPackageTemplateForm
-from .models import Invoice, PackageUsage, ServicePackage, SessionPackageTemplate
+from .forms import InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, ServicePackageForm, SessionPackageTemplateForm
+from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, ServicePackage, SessionPackageTemplate
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -258,3 +258,90 @@ class SessionPackageTemplateDeleteView(LoginRequiredMixin, PracticeContextMixin,
         response = super().form_valid(form)
         log_audit_event(self.request, AuditLog.Action.DELETE, 'billing.SessionPackageTemplate', template_id, practice=practice, metadata=metadata)
         return response
+
+
+class InsuranceSettingsView(LoginRequiredMixin, PracticeContextMixin, ListView):
+    model = InsuranceRate
+    template_name = 'settings/insurance.html'
+    context_object_name = 'insurance_rates'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return InsuranceRate.objects.none()
+        return InsuranceRate.objects.filter(practice=practice).select_related('payer')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        context['system_payers'] = InsurancePayer.objects.filter(practice__isnull=True, active=True)
+        context['custom_payers'] = InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
+        context['payer_form'] = InsurancePayerForm(practice=practice)
+        context['rate_form'] = InsuranceRateForm(practice=practice)
+        return context
+
+
+class InsurancePayerCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+    model = InsurancePayer
+    form_class = InsurancePayerForm
+    template_name = 'settings/insurance_payer_form.html'
+    success_url = reverse_lazy('settings:insurance')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def form_valid(self, form):
+        action = AuditLog.Action.UPDATE if self.object else AuditLog.Action.CREATE
+        response = super().form_valid(form)
+        log_audit_event(self.request, action, 'billing.InsurancePayer', self.object.pk, practice=self.object.practice, metadata={'name': self.object.name})
+        return response
+
+
+class InsurancePayerUpdateView(InsurancePayerCreateView, UpdateView):
+    def get_queryset(self):
+        practice = self.get_practice()
+        return InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
+
+
+class InsurancePayerDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+    model = InsurancePayer
+    success_url = reverse_lazy('settings:insurance')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        return InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
+
+
+class InsuranceRateCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+    model = InsuranceRate
+    form_class = InsuranceRateForm
+    template_name = 'settings/insurance_rate_form.html'
+    success_url = reverse_lazy('settings:insurance')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def form_valid(self, form):
+        action = AuditLog.Action.UPDATE if self.object else AuditLog.Action.CREATE
+        response = super().form_valid(form)
+        log_audit_event(self.request, action, 'billing.InsuranceRate', self.object.pk, practice=self.object.practice, metadata={'payer_id': self.object.payer_id, 'state': self.object.state, 'service_code': self.object.service_code})
+        return response
+
+
+class InsuranceRateUpdateView(InsuranceRateCreateView, UpdateView):
+    def get_queryset(self):
+        practice = self.get_practice()
+        return InsuranceRate.objects.filter(practice=practice) if practice else InsuranceRate.objects.none()
+
+
+class InsuranceRateDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+    model = InsuranceRate
+    success_url = reverse_lazy('settings:insurance')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        return InsuranceRate.objects.filter(practice=practice) if practice else InsuranceRate.objects.none()

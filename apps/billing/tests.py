@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
-from apps.billing.models import Invoice, PackageUsage, Payment, ServicePackage
+from apps.billing.models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, ServicePackage
 from apps.billing.models import SessionPackageTemplate
 from apps.clients.models import Client
 from apps.practices.models import Practice, TherapistProfile
@@ -455,3 +455,71 @@ class BillingViewTests(TestCase):
         template = SessionPackageTemplate.objects.get()
         self.assertEqual(template.practice, practice)
         self.assertEqual(template.sessions_included, 6)
+
+    def test_insurance_settings_requires_login(self):
+        response = self.client.get(reverse("settings:insurance"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('settings:insurance')}")
+
+    def test_insurance_settings_shows_common_payers_and_scoped_rates(self):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        payer = InsurancePayer.objects.create(practice=practice, name="Visible payer")
+        InsuranceRate.objects.create(
+            practice=practice,
+            payer=payer,
+            state="CA",
+            service_code=InsuranceRate.ServiceCode.PSYCHOTHERAPY_60,
+            reimbursement_amount=Decimal("150.00"),
+        )
+        other_user, other_practice, _other_therapist, _other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        other_payer = InsurancePayer.objects.create(practice=other_practice, name="Hidden payer")
+        InsuranceRate.objects.create(
+            practice=other_practice,
+            payer=other_payer,
+            state="NY",
+            service_code=InsuranceRate.ServiceCode.PSYCHOTHERAPY_45,
+            reimbursement_amount=Decimal("90.00"),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("settings:insurance"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Insurance")
+        self.assertContains(response, "Visible payer")
+        self.assertNotContains(response, "Hidden payer")
+
+    def test_insurance_payer_and_rate_create_save_to_practice(self):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("settings:insurance_payer_create"), {
+            "name": "Local Health Plan",
+            "payer_id": "LHP001",
+            "active": "on",
+            "notes": "Contracted payer.",
+        })
+
+        self.assertRedirects(response, reverse("settings:insurance"))
+        payer = InsurancePayer.objects.get(name="Local Health Plan")
+        self.assertEqual(payer.practice, practice)
+
+        response = self.client.post(reverse("settings:insurance_rate_create"), {
+            "payer": payer.pk,
+            "state": "ca",
+            "service_code": InsuranceRate.ServiceCode.PSYCHOTHERAPY_60,
+            "service_label": "Individual therapy",
+            "reimbursement_amount": "175.00",
+            "active": "on",
+            "notes": "Practice contracted amount.",
+        })
+
+        self.assertRedirects(response, reverse("settings:insurance"))
+        rate = InsuranceRate.objects.get()
+        self.assertEqual(rate.practice, practice)
+        self.assertEqual(rate.state, "CA")
+        self.assertEqual(rate.reimbursement_amount, Decimal("175.00"))
