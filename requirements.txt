@@ -2,6 +2,7 @@ asgiref==3.12.1
 bleach==6.4.0
 boto3==1.43.100
 botocore==1.43.100
+cryptography==46.0.3
 Django==5.1.15
 django-storages==1.14.6
 django-summernote==0.8.20.0

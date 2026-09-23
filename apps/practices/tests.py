@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
 
+from cryptography.fernet import Fernet
+from django.db import connection
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -217,3 +219,28 @@ class IntegrationSettingsTests(TestCase):
         })
 
         self.assertEqual(response.status_code, 403)
+
+    @override_settings(FIELD_ENCRYPTION_KEY=Fernet.generate_key().decode())
+    def test_oauth_tokens_are_encrypted_at_rest(self):
+        _user, practice = self.create_practice_user()
+
+        integration = ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            access_token="access-token",
+            refresh_token="refresh-token",
+        )
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT access_token, refresh_token FROM practices_externalintegration WHERE id = %s",
+                [integration.pk],
+            )
+            stored_access_token, stored_refresh_token = cursor.fetchone()
+
+        self.assertNotEqual(stored_access_token, "access-token")
+        self.assertNotEqual(stored_refresh_token, "refresh-token")
+        self.assertTrue(stored_access_token.startswith("fernet:"))
+        integration.refresh_from_db()
+        self.assertEqual(integration.access_token, "access-token")
+        self.assertEqual(integration.refresh_token, "refresh-token")

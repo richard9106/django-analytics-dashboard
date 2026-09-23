@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from .fields import EncryptedTextField
+
 
 class Practice(models.Model):
     class PracticeType(models.TextChoices):
@@ -66,8 +68,8 @@ class ExternalIntegration(models.Model):
     account_email = models.EmailField(blank=True)
     enabled_scopes = models.JSONField(default=list, blank=True)
     granted_scopes = models.JSONField(default=list, blank=True)
-    access_token = models.TextField(blank=True)
-    refresh_token = models.TextField(blank=True)
+    access_token = EncryptedTextField(blank=True)
+    refresh_token = EncryptedTextField(blank=True)
     token_expires_at = models.DateTimeField(null=True, blank=True)
     oauth_state = models.CharField(max_length=120, blank=True)
     send_email_enabled = models.BooleanField(default=False)
