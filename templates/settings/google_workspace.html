@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Google Workspace | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="{% url 'dashboard' %}"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
+      <nav class="nav-list"><a class="nav-item" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a><a class="nav-item" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a><a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a><a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a><a class="nav-item" href="{% url 'billing:list' %}"><span>□</span>Billing</a><a class="nav-item nav-item-with-badge" href="{% url 'portal_requests:list' %}"><span>◇</span>Requests{% if open_portal_request_count %}<strong class="nav-badge">{{ open_portal_request_count }}</strong>{% endif %}</a><details class="sidebar-settings" open><summary class="nav-item active"><span>⚙</span>Settings</summary><a class="nav-item subitem" href="{% url 'settings:package_templates' %}">Session packages</a><a class="nav-item subitem" href="{% url 'settings:insurance' %}">Insurance</a><a class="nav-item active subitem" href="{% url 'practice_settings:integrations' %}">Integrations</a><a class="nav-item subitem" href="{% url 'portal_settings:portal_access' %}">Client portal</a></details></nav>
+      <div class="sidebar-card"><strong>Google workspace</strong><p>Read Gmail, send email, and view Calendar events from your connected Google account.</p></div>
+    </aside>
+    <main class="app-main">
+      <section class="action-bar"><div class="quick-actions"><a class="btn btn-secondary" href="{% url 'practice_settings:integrations' %}">Back to integrations</a></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Google</p><h1>Workspace</h1><p>{% if google_integration %}Connected as {{ google_integration.account_email }}{% else %}Google is not connected.{% endif %}</p></div></header>
+      {% if google_error %}<section class="panel"><p class="form-error">{{ google_error }}</p></section>{% endif %}
+      <section class="billing-grid">
+        <article class="panel">
+          <div class="panel-head"><div><h2>Send email</h2><p>Send a simple Gmail message from the connected Google account.</p></div></div>
+          {% if google_integration.send_email_enabled %}<form class="appointment-form" method="post" action="{% url 'practice_settings:gmail_send' %}">{% csrf_token %}<div class="field-grid"><div class="field"><label>To</label>{{ send_form.to_email }}{{ send_form.to_email.errors }}</div><div class="field"><label>Subject</label>{{ send_form.subject }}{{ send_form.subject.errors }}</div><div class="field full"><label>Body</label>{{ send_form.body }}{{ send_form.body.errors }}</div></div><div class="form-actions"><button class="btn btn-primary" type="submit">Send email</button></div></form>{% else %}<p class="empty-state">Gmail sending is not enabled for this Google connection.</p>{% endif %}
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Upcoming calendar events</h2><p>Primary Google Calendar events.</p></div></div>
+          <div class="package-list">{% for event in calendar_events %}<div class="package-card"><strong>{{ event.summary }}</strong><p>{{ event.start }}{% if event.end %} to {{ event.end }}{% endif %}</p></div>{% empty %}<p class="empty-state">No events available or Calendar sync is not enabled.</p>{% endfor %}</div>
+        </article>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h2>Recent Gmail</h2><p>Recent messages from the connected inbox.</p></div></div>
+        <div class="request-list">{% for message in gmail_messages %}<article class="request-card"><div class="client-card-head"><div><h3>{{ message.subject }}</h3><p>{{ message.from }} · {{ message.date }}</p></div></div><p>{{ message.snippet }}</p></article>{% empty %}<p class="empty-state">No messages available or Gmail reading is not enabled.</p>{% endfor %}</div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

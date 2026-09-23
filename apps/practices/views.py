@@ -11,8 +11,16 @@ from django.views.generic import TemplateView
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
-from .forms import DropboxIntegrationForm, GoogleOAuthSelectionForm
-from .google_oauth import build_google_authorization_url, exchange_google_code, fetch_google_account_email, token_expiry_from_response
+from .forms import DropboxIntegrationForm, GmailSendForm, GoogleOAuthSelectionForm
+from .google_oauth import (
+    build_google_authorization_url,
+    exchange_google_code,
+    fetch_google_account_email,
+    list_calendar_events,
+    list_gmail_messages,
+    send_gmail_message,
+    token_expiry_from_response,
+)
 from .models import ExternalIntegration
 
 
@@ -149,3 +157,67 @@ class DropboxIntegrationUpdateView(PracticeContextMixin, View):
                 metadata={'provider': 'dropbox', 'file_storage_enabled': integration.file_storage_enabled},
             )
         return redirect('practice_settings:integrations')
+
+
+class GoogleWorkspaceView(PracticeContextMixin, TemplateView):
+    template_name = 'settings/google_workspace.html'
+
+    def get_integration(self):
+        practice = self.get_practice()
+        return ExternalIntegration.objects.filter(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+        ).first()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        integration = self.get_integration()
+        context['google_integration'] = integration
+        context['send_form'] = kwargs.get('send_form') or GmailSendForm()
+        context['gmail_messages'] = []
+        context['calendar_events'] = []
+        context['google_error'] = ''
+        if not integration:
+            context['google_error'] = 'Connect Google first.'
+            return context
+        try:
+            if integration.read_email_enabled:
+                context['gmail_messages'] = list_gmail_messages(integration)
+            if integration.calendar_enabled:
+                context['calendar_events'] = list_calendar_events(integration)
+        except Exception as error:
+            context['google_error'] = str(error)
+        return context
+
+
+class GmailSendView(PracticeContextMixin, View):
+    def post(self, request):
+        practice = self.get_practice()
+        integration = ExternalIntegration.objects.filter(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            send_email_enabled=True,
+        ).first()
+        if not integration:
+            raise PermissionDenied('Google Gmail send is not connected.')
+        form = GmailSendForm(request.POST)
+        if form.is_valid():
+            send_gmail_message(
+                integration,
+                form.cleaned_data['to_email'],
+                form.cleaned_data['subject'],
+                form.cleaned_data['body'],
+            )
+            log_audit_event(
+                request,
+                AuditLog.Action.CREATE,
+                'google.GmailMessage',
+                practice=practice,
+                metadata={'to_email': form.cleaned_data['to_email'], 'subject': form.cleaned_data['subject']},
+            )
+            return redirect('practice_settings:google_workspace')
+        view = GoogleWorkspaceView()
+        view.request = request
+        return view.render_to_response(view.get_context_data(send_form=form), status=400)

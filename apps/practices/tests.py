@@ -150,3 +150,70 @@ class IntegrationSettingsTests(TestCase):
         self.assertFalse(integration.send_email_enabled)
         self.assertFalse(integration.read_email_enabled)
         self.assertTrue(integration.file_storage_enabled)
+
+    def test_google_workspace_shows_mocked_gmail_and_calendar_data(self):
+        user, practice = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            account_email="clinic@example.com",
+            access_token="access-token",
+            read_email_enabled=True,
+            calendar_enabled=True,
+        )
+        self.client.force_login(user)
+
+        with patch("apps.practices.views.list_gmail_messages") as gmail, patch("apps.practices.views.list_calendar_events") as calendar:
+            gmail.return_value = [{"subject": "Client email", "from": "client@example.com", "date": "Today", "snippet": "Hello"}]
+            calendar.return_value = [{"summary": "Therapy session", "start": "2026-09-24T10:00:00", "end": "2026-09-24T10:50:00"}]
+            response = self.client.get(reverse("practice_settings:google_workspace"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Client email")
+        self.assertContains(response, "Therapy session")
+
+    def test_google_workspace_send_email_uses_connected_account(self):
+        user, practice = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            account_email="clinic@example.com",
+            access_token="access-token",
+            send_email_enabled=True,
+        )
+        self.client.force_login(user)
+
+        with patch("apps.practices.views.send_gmail_message") as send_email:
+            response = self.client.post(reverse("practice_settings:gmail_send"), {
+                "to_email": "client@example.com",
+                "subject": "Appointment reminder",
+                "body": "See you tomorrow.",
+            })
+
+        self.assertRedirects(response, reverse("practice_settings:google_workspace"))
+        send_email.assert_called_once()
+        args = send_email.call_args.args
+        self.assertEqual(args[1], "client@example.com")
+        self.assertEqual(args[2], "Appointment reminder")
+
+    def test_google_workspace_send_email_requires_send_scope(self):
+        user, practice = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            account_email="clinic@example.com",
+            access_token="access-token",
+            send_email_enabled=False,
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("practice_settings:gmail_send"), {
+            "to_email": "client@example.com",
+            "subject": "Appointment reminder",
+            "body": "See you tomorrow.",
+        })
+
+        self.assertEqual(response.status_code, 403)

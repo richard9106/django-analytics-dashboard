@@ -67,3 +67,9 @@ class DropboxIntegrationForm(forms.ModelForm):
             integration.save()
             self.save_m2m()
         return integration
+
+
+class GmailSendForm(forms.Form):
+    to_email = forms.EmailField(label='To')
+    subject = forms.CharField(max_length=160)
+    body = forms.CharField(widget=forms.Textarea(attrs={'rows': 6}))

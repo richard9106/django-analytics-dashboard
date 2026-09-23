@@ -38,7 +38,7 @@
             <div class="form-actions"><button class="btn btn-primary" type="submit" {% if not google_oauth_configured %}disabled{% endif %}>Connect Google</button></div>
           </form>
           {% if not google_oauth_configured %}<p class="empty-state">Google OAuth env vars are not configured yet.</p>{% endif %}
-          {% if google_integration %}<form method="post" action="{% url 'practice_settings:google_disconnect' %}">{% csrf_token %}<button class="inline-button-danger" type="submit">Disconnect Google</button></form>{% endif %}
+          {% if google_integration %}<div class="inline-actions"><a class="inline-link" href="{% url 'practice_settings:google_workspace' %}">Open Google workspace</a><form method="post" action="{% url 'practice_settings:google_disconnect' %}">{% csrf_token %}<button class="inline-button-danger" type="submit">Disconnect Google</button></form></div>{% endif %}
         </article>
 
         <article class="panel integration-panel">
