@@ -1,0 +1,34 @@
+<aside class="sidebar" aria-label="Primary navigation">
+  <a class="brand" href="{% url 'dashboard' %}" aria-label="NuviaMy dashboard">
+    <span class="logo-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+        <path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span>NuviaMy</span>
+  </a>
+
+  <nav class="nav-list">
+    <a class="nav-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
+    <a class="nav-item{% if request.resolver_match.namespace == 'appointments' %} active{% endif %}" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
+    <a class="nav-item{% if request.resolver_match.namespace == 'clients' %} active{% endif %}" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
+    <a class="nav-item{% if request.resolver_match.namespace == 'clinical' %} active{% endif %}" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
+    <a class="nav-item{% if request.resolver_match.namespace == 'billing' %} active{% endif %}" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
+    <a class="nav-item{% if request.resolver_match.namespace == 'documents' %} active{% endif %}" href="{% url 'documents:list' %}"><span>▣</span>Documents</a>
+    <a class="nav-item nav-item-with-badge{% if request.resolver_match.namespace == 'portal_requests' %} active{% endif %}" href="{% url 'portal_requests:list' %}"><span>◇</span>Requests{% if open_portal_request_count %}<strong class="nav-badge">{{ open_portal_request_count }}</strong>{% endif %}</a>
+    {% if google_workspace_connected %}<a class="nav-item{% if request.resolver_match.url_name == 'google_workspace' %} active{% endif %}" href="{% url 'practice_settings:google_workspace' %}"><span>G</span>My Google workspace</a>{% endif %}
+    <details class="sidebar-settings"{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' %} open{% endif %}>
+      <summary class="nav-item{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' %} active{% endif %}"><span>⚙</span>Settings</summary>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'package_templates' %} active{% endif %}" href="{% url 'settings:package_templates' %}">Session packages</a>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'insurance' %} active{% endif %}" href="{% url 'settings:insurance' %}">Insurance</a>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'integrations' %} active{% endif %}" href="{% url 'practice_settings:integrations' %}">Integrations</a>
+      <a class="nav-item subitem{% if request.resolver_match.namespace == 'portal_settings' %} active{% endif %}" href="{% url 'portal_settings:portal_access' %}">Client portal</a>
+    </details>
+  </nav>
+
+  <div class="sidebar-card">
+    <strong>{{ card_title }}</strong>
+    <p>{{ card_text }}</p>
+  </div>
+</aside>
