@@ -170,6 +170,12 @@ h1, h2, h3, p { margin-top: 0; }
 .package-card { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255, 255, 255, .86); box-shadow: var(--shadow-1); }
 .package-card strong { display: block; margin-bottom: 4px; }
 .package-card p { font-size: 14px; }
+.documents-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .5), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }
+.document-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.document-card { display: grid; gap: 10px; padding: 16px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255, 255, 255, .88); box-shadow: var(--shadow-1); }
+.document-card strong { display: block; margin-bottom: 4px; }
+.document-card p { color: var(--slate-500); font-size: 14px; overflow-wrap: anywhere; }
+.inline-button-danger { margin-top: 8px; border: 0; background: transparent; color: var(--danger); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
 .modal-dialog { width: min(860px, calc(100% - 28px)); max-height: min(82vh, 820px); padding: 0; border: 0; border-radius: 24px; background: transparent; color: var(--slate-800); }
 .modal-dialog::backdrop { background: rgba(17, 24, 39, .42); backdrop-filter: blur(3px); }
 .modal-card { max-height: min(82vh, 820px); overflow-y: auto; padding: 22px; border: 1px solid rgba(112, 82, 217, .16); border-radius: 24px; background: radial-gradient(circle at top right, rgba(204, 251, 245, .7), transparent 34%), linear-gradient(145deg, #fff, var(--brand-50)); box-shadow: 0 28px 80px rgba(15, 23, 42, .28); }
@@ -252,6 +258,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .sidebar-card { display: none; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .content-grid, .calendar-layout, .billing-grid, .login-shell { grid-template-columns: 1fr; }
+  .document-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .login-card { justify-self: start; }
 }
@@ -273,6 +280,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .calendar-event { padding: 5px 6px; font-size: 11px; }
   .client-card { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: 1fr; }
+  .document-grid { grid-template-columns: 1fr; }
   .client-meta div { grid-template-columns: 1fr; gap: 2px; }
   .modal-card { padding: 18px; }
   .login-shell { width: min(calc(100% - 24px), 1120px); padding: 24px 0; }

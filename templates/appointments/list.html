@@ -28,7 +28,7 @@
         <a class="nav-item" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
         <a class="nav-item" href="{% url 'clinical:list' %}"><span>✎</span>Clinical Notes</a>
         <a class="nav-item" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
-        <a class="nav-item" href="#"><span>▣</span>Documents</a>
+        <a class="nav-item" href="{% url 'documents:list' %}"><span>▣</span>Documents</a>
         <details class="sidebar-settings"><summary class="nav-item"><span>⚙</span>Settings</summary><a class="nav-item subitem" href="{% url 'settings:package_templates' %}">Session packages</a></details>
       </nav>
 

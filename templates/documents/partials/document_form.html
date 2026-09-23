@@ -1,0 +1,12 @@
+<form class="appointment-form" method="post" action="{% url action_url %}" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="field-grid two">
+    <div class="field"><label>Client</label><select name="client" required>{% for client in document_clients %}<option value="{{ client.pk }}">{{ client }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Document type</label><select name="document_type" required><option value="consent">Consent Form</option><option value="intake">Intake Form</option><option value="insurance">Insurance Document</option><option value="clinical">Clinical Document</option><option value="other">Other</option></select></div>
+    <div class="field"><label>Title</label><input name="title" required></div>
+    <div class="field"><label>File</label><input name="file" type="file" required></div>
+    <div class="field checkbox-field"><label><input name="visible_to_client" type="checkbox"> Visible in client portal</label></div>
+    <div class="field full"><label>Description</label><textarea name="description" rows="4"></textarea></div>
+  </div>
+  <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div>
+</form>

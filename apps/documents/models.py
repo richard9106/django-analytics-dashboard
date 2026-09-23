@@ -20,6 +20,10 @@ class ClientDocument(models.Model):
     document_type = models.CharField(max_length=20, choices=DocumentType.choices, default=DocumentType.OTHER)
     title = models.CharField(max_length=160)
     file = models.FileField(upload_to=client_document_upload_path)
+    original_filename = models.CharField(max_length=255, blank=True)
+    content_type = models.CharField(max_length=120, blank=True)
+    file_size = models.PositiveIntegerField(default=0)
+    visible_to_client = models.BooleanField(default=False)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -15,6 +15,7 @@ urlpatterns = [
     path('clinical-notes/', include('apps.clinical.urls')),
     path('billing/', include('apps.billing.urls')),
     path('settings/', include((settings_patterns, 'settings'), namespace='settings')),
+    path('documents/', include('apps.documents.urls')),
     path('login/', LoginView.as_view(template_name='dashboard/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('summernote/', include('django_summernote.urls')),
