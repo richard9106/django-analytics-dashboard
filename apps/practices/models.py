@@ -52,8 +52,7 @@ class TherapistProfile(models.Model):
 
 class ExternalIntegration(models.Model):
     class Provider(models.TextChoices):
-        GMAIL = "gmail", "Gmail"
-        GOOGLE_DRIVE = "google_drive", "Google Drive"
+        GOOGLE = "google", "Google"
         DROPBOX = "dropbox", "Dropbox"
 
     class Status(models.TextChoices):
@@ -65,8 +64,15 @@ class ExternalIntegration(models.Model):
     provider = models.CharField(max_length=30, choices=Provider.choices)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.DISCONNECTED)
     account_email = models.EmailField(blank=True)
+    enabled_scopes = models.JSONField(default=list, blank=True)
+    granted_scopes = models.JSONField(default=list, blank=True)
+    access_token = models.TextField(blank=True)
+    refresh_token = models.TextField(blank=True)
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    oauth_state = models.CharField(max_length=120, blank=True)
     send_email_enabled = models.BooleanField(default=False)
     read_email_enabled = models.BooleanField(default=False)
+    calendar_enabled = models.BooleanField(default=False)
     file_storage_enabled = models.BooleanField(default=False)
     default_folder = models.CharField(max_length=180, blank=True)
     notes = models.TextField(blank=True)
@@ -82,12 +88,21 @@ class ExternalIntegration(models.Model):
 
     def clean(self):
         errors = {}
-        if self.provider != self.Provider.GMAIL and (self.send_email_enabled or self.read_email_enabled):
-            errors["provider"] = "Only Gmail can be used for email sending or reading."
-        if self.provider == self.Provider.GMAIL and self.file_storage_enabled:
-            errors["file_storage_enabled"] = "Use Google Drive or Dropbox for file storage."
+        if self.provider != self.Provider.GOOGLE and (self.send_email_enabled or self.read_email_enabled or self.calendar_enabled):
+            errors["provider"] = "Only Google can be used for Gmail or Calendar features."
         if errors:
             raise ValidationError(errors)
+
+    def disconnect(self):
+        self.status = self.Status.DISCONNECTED
+        self.account_email = ""
+        self.enabled_scopes = []
+        self.granted_scopes = []
+        self.access_token = ""
+        self.refresh_token = ""
+        self.token_expires_at = None
+        self.oauth_state = ""
+        self.connected_at = None
 
     def __str__(self):
         return f"{self.practice.name} - {self.get_provider_display()}"

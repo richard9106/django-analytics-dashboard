@@ -35,7 +35,7 @@ admin.site.register(TherapistProfile, TherapistProfileAdmin)
 
 @admin.register(ExternalIntegration)
 class ExternalIntegrationAdmin(admin.ModelAdmin):
-    list_display = ("practice", "provider", "status", "account_email", "send_email_enabled", "read_email_enabled", "file_storage_enabled")
+    list_display = ("practice", "provider", "status", "account_email", "send_email_enabled", "read_email_enabled", "calendar_enabled", "file_storage_enabled")
     list_filter = ("practice", "provider", "status")
     search_fields = ("practice__name", "account_email", "default_folder")
     readonly_fields = ("created_at", "updated_at", "connected_at")

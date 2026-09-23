@@ -1,13 +1,18 @@
+import secrets
+
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
+from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
-from .forms import ExternalIntegrationForm
+from .forms import DropboxIntegrationForm, GoogleOAuthSelectionForm
+from .google_oauth import build_google_authorization_url, exchange_google_code, fetch_google_account_email, token_expiry_from_response
 from .models import ExternalIntegration
 
 
@@ -27,37 +32,112 @@ class IntegrationSettingsView(PracticeContextMixin, TemplateView):
             for integration in ExternalIntegration.objects.filter(practice=practice)
         } if practice else {}
         context['practice'] = practice
-        context['integration_cards'] = [
-            {
-                'provider': provider,
-                'label': label,
-                'integration': integrations.get(provider),
-                'form': ExternalIntegrationForm(
-                    instance=integrations.get(provider),
-                    practice=practice,
-                    provider=provider,
-                    prefix=provider,
-                ),
-            }
-            for provider, label in ExternalIntegration.Provider.choices
-        ]
+        context['google_integration'] = integrations.get(ExternalIntegration.Provider.GOOGLE)
+        context['dropbox_integration'] = integrations.get(ExternalIntegration.Provider.DROPBOX)
+        context['google_form'] = GoogleOAuthSelectionForm(instance=context['google_integration'])
+        context['dropbox_form'] = DropboxIntegrationForm(instance=context['dropbox_integration'], practice=practice)
+        context['google_oauth_configured'] = bool(settings.GOOGLE_OAUTH_CLIENT_ID and settings.GOOGLE_OAUTH_CLIENT_SECRET)
         return context
 
 
-class IntegrationUpdateView(PracticeContextMixin, View):
-    def post(self, request, provider):
-        valid_providers = {choice for choice, _label in ExternalIntegration.Provider.choices}
-        if provider not in valid_providers:
-            return redirect('practice_settings:integrations')
+class GoogleOAuthConnectView(PracticeContextMixin, View):
+    def post(self, request):
+        if not settings.GOOGLE_OAUTH_CLIENT_ID or not settings.GOOGLE_OAUTH_CLIENT_SECRET:
+            raise PermissionDenied('Google OAuth is not configured.')
+
         practice = self.get_practice()
-        integration = ExternalIntegration.objects.filter(practice=practice, provider=provider).first()
-        form = ExternalIntegrationForm(
-            request.POST,
-            instance=integration,
+        integration = ExternalIntegration.objects.filter(practice=practice, provider=ExternalIntegration.Provider.GOOGLE).first()
+        form = GoogleOAuthSelectionForm(request.POST, instance=integration)
+        if not form.is_valid():
+            return redirect('practice_settings:integrations')
+
+        integration = form.save(commit=False)
+        integration.practice = practice
+        integration.provider = ExternalIntegration.Provider.GOOGLE
+        integration.enabled_scopes = form.get_enabled_scopes()
+        integration.oauth_state = secrets.token_urlsafe(32)
+        integration.status = ExternalIntegration.Status.DISCONNECTED
+        integration.full_clean()
+        integration.save()
+        request.session['google_oauth_state'] = integration.oauth_state
+        request.session['google_oauth_integration_id'] = integration.pk
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'practices.ExternalIntegration',
+            integration.pk,
             practice=practice,
-            provider=provider,
-            prefix=provider,
+            metadata={'provider': 'google', 'connect_started': True, 'enabled_scopes': integration.enabled_scopes},
         )
+        return redirect(build_google_authorization_url(request, integration.enabled_scopes, integration.oauth_state))
+
+
+class GoogleOAuthCallbackView(PracticeContextMixin, View):
+    def get(self, request):
+        state = request.GET.get('state')
+        code = request.GET.get('code')
+        expected_state = request.session.get('google_oauth_state')
+        integration_id = request.session.get('google_oauth_integration_id')
+        if not state or not code or state != expected_state or not integration_id:
+            raise PermissionDenied('Invalid Google OAuth state.')
+
+        practice = self.get_practice()
+        integration = ExternalIntegration.objects.get(pk=integration_id, practice=practice, provider=ExternalIntegration.Provider.GOOGLE)
+        if integration.oauth_state != state:
+            raise PermissionDenied('Invalid Google OAuth state.')
+
+        token_response = exchange_google_code(request, code)
+        access_token = token_response.get('access_token', '')
+        integration.access_token = access_token
+        integration.refresh_token = token_response.get('refresh_token', integration.refresh_token)
+        integration.granted_scopes = token_response.get('scope', '').split()
+        integration.token_expires_at = token_expiry_from_response(token_response)
+        integration.account_email = fetch_google_account_email(access_token) if access_token else ''
+        integration.status = ExternalIntegration.Status.CONNECTED
+        integration.connected_at = timezone.now()
+        integration.oauth_state = ''
+        integration.full_clean()
+        integration.save()
+        request.session.pop('google_oauth_state', None)
+        request.session.pop('google_oauth_integration_id', None)
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'practices.ExternalIntegration',
+            integration.pk,
+            practice=practice,
+            metadata={'provider': 'google', 'connected': True, 'granted_scopes': integration.granted_scopes},
+        )
+        return redirect('practice_settings:integrations')
+
+
+class GoogleOAuthDisconnectView(PracticeContextMixin, View):
+    def post(self, request):
+        practice = self.get_practice()
+        integration = ExternalIntegration.objects.filter(practice=practice, provider=ExternalIntegration.Provider.GOOGLE).first()
+        if integration:
+            integration.disconnect()
+            integration.send_email_enabled = False
+            integration.read_email_enabled = False
+            integration.calendar_enabled = False
+            integration.file_storage_enabled = False
+            integration.save()
+            log_audit_event(
+                request,
+                AuditLog.Action.UPDATE,
+                'practices.ExternalIntegration',
+                integration.pk,
+                practice=practice,
+                metadata={'provider': 'google', 'disconnected': True},
+            )
+        return redirect('practice_settings:integrations')
+
+
+class DropboxIntegrationUpdateView(PracticeContextMixin, View):
+    def post(self, request):
+        practice = self.get_practice()
+        integration = ExternalIntegration.objects.filter(practice=practice, provider=ExternalIntegration.Provider.DROPBOX).first()
+        form = DropboxIntegrationForm(request.POST, instance=integration, practice=practice)
         if form.is_valid():
             integration = form.save()
             log_audit_event(
@@ -66,6 +146,6 @@ class IntegrationUpdateView(PracticeContextMixin, View):
                 'practices.ExternalIntegration',
                 integration.pk,
                 practice=practice,
-                metadata={'provider': integration.provider, 'status': integration.status},
+                metadata={'provider': 'dropbox', 'file_storage_enabled': integration.file_storage_enabled},
             )
         return redirect('practice_settings:integrations')

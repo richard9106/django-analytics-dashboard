@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from unittest.mock import patch
+
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.models import UserProfile
@@ -27,45 +29,124 @@ class IntegrationSettingsTests(TestCase):
         response = self.client.get(reverse("practice_settings:integrations"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Gmail")
-        self.assertContains(response, "Google Drive")
+        self.assertContains(response, "Connect Google")
+        self.assertContains(response, "Gmail: send email")
+        self.assertContains(response, "Google Calendar sync")
         self.assertContains(response, "Dropbox")
 
-    def test_gmail_integration_settings_save_to_practice(self):
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret", GOOGLE_OAUTH_REDIRECT_URI="https://example.com/settings/integrations/google/callback/")
+    def test_google_connect_builds_oauth_url_with_selected_scopes(self):
         user, practice = self.create_practice_user()
         self.client.force_login(user)
 
-        response = self.client.post(reverse("practice_settings:integration_update", args=[ExternalIntegration.Provider.GMAIL]), {
-            "gmail-account_email": "clinic@example.com",
-            "gmail-send_email_enabled": "on",
-            "gmail-read_email_enabled": "on",
-            "gmail-default_folder": "NuviaMy",
-            "gmail-notes": "Use for portal messages.",
+        response = self.client.post(reverse("practice_settings:google_connect"), {
+            "send_email_enabled": "on",
+            "calendar_enabled": "on",
+            "default_folder": "NuviaMy",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("accounts.google.com", response.url)
+        self.assertIn("gmail.send", response.url)
+        self.assertIn("calendar.events", response.url)
+        integration = ExternalIntegration.objects.get()
+        self.assertEqual(integration.practice, practice)
+        self.assertEqual(integration.provider, ExternalIntegration.Provider.GOOGLE)
+        self.assertTrue(integration.send_email_enabled)
+        self.assertTrue(integration.calendar_enabled)
+        self.assertIn("https://www.googleapis.com/auth/gmail.send", integration.enabled_scopes)
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret", GOOGLE_OAUTH_REDIRECT_URI="https://example.com/settings/integrations/google/callback/")
+    def test_google_callback_stores_tokens_and_account_email(self):
+        user, practice = self.create_practice_user()
+        self.client.force_login(user)
+        integration = ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            oauth_state="state-123",
+            enabled_scopes=["https://www.googleapis.com/auth/gmail.send"],
+        )
+        session = self.client.session
+        session["google_oauth_state"] = "state-123"
+        session["google_oauth_integration_id"] = integration.pk
+        session.save()
+
+        with patch("apps.practices.views.exchange_google_code") as exchange, patch("apps.practices.views.fetch_google_account_email") as fetch_email:
+            exchange.return_value = {
+                "access_token": "access-token",
+                "refresh_token": "refresh-token",
+                "expires_in": 3600,
+                "scope": "openid email https://www.googleapis.com/auth/gmail.send",
+            }
+            fetch_email.return_value = "clinic@example.com"
+            response = self.client.get(reverse("practice_settings:google_callback"), {"state": "state-123", "code": "code-123"})
+
+        self.assertRedirects(response, reverse("practice_settings:integrations"))
+        integration.refresh_from_db()
+        self.assertEqual(integration.status, ExternalIntegration.Status.CONNECTED)
+        self.assertEqual(integration.account_email, "clinic@example.com")
+        self.assertEqual(integration.access_token, "access-token")
+        self.assertEqual(integration.refresh_token, "refresh-token")
+
+    def test_google_callback_rejects_state_mismatch(self):
+        user, practice = self.create_practice_user()
+        self.client.force_login(user)
+        integration = ExternalIntegration.objects.create(practice=practice, provider=ExternalIntegration.Provider.GOOGLE, oauth_state="state-123")
+        session = self.client.session
+        session["google_oauth_state"] = "state-123"
+        session["google_oauth_integration_id"] = integration.pk
+        session.save()
+
+        response = self.client.get(reverse("practice_settings:google_callback"), {"state": "wrong", "code": "code-123"})
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_google_disconnect_clears_tokens(self):
+        user, practice = self.create_practice_user()
+        self.client.force_login(user)
+        integration = ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            account_email="clinic@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            send_email_enabled=True,
+        )
+
+        response = self.client.post(reverse("practice_settings:google_disconnect"))
+
+        self.assertRedirects(response, reverse("practice_settings:integrations"))
+        integration.refresh_from_db()
+        self.assertEqual(integration.status, ExternalIntegration.Status.DISCONNECTED)
+        self.assertEqual(integration.access_token, "")
+        self.assertFalse(integration.send_email_enabled)
+
+    def test_client_cannot_connect_google(self):
+        user, practice = self.create_practice_user()
+        user.nuvia_profile.role = UserProfile.Role.CLIENT
+        user.nuvia_profile.save(update_fields=["role"])
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("practice_settings:google_connect"), {"send_email_enabled": "on"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("portal:dashboard"))
+
+    def test_dropbox_integration_settings_save_to_practice(self):
+        user, practice = self.create_practice_user()
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("practice_settings:dropbox_update"), {
+            "file_storage_enabled": "on",
+            "default_folder": "NuviaMy Documents",
+            "notes": "Store selected files.",
         })
 
         self.assertRedirects(response, reverse("practice_settings:integrations"))
         integration = ExternalIntegration.objects.get()
         self.assertEqual(integration.practice, practice)
-        self.assertEqual(integration.provider, ExternalIntegration.Provider.GMAIL)
-        self.assertTrue(integration.send_email_enabled)
-        self.assertTrue(integration.read_email_enabled)
-        self.assertFalse(integration.file_storage_enabled)
-
-    def test_drive_integration_cannot_enable_email_flags(self):
-        user, _practice = self.create_practice_user()
-        self.client.force_login(user)
-
-        response = self.client.post(reverse("practice_settings:integration_update", args=[ExternalIntegration.Provider.GOOGLE_DRIVE]), {
-            "google_drive-account_email": "clinic@example.com",
-            "google_drive-send_email_enabled": "on",
-            "google_drive-read_email_enabled": "on",
-            "google_drive-file_storage_enabled": "on",
-            "google_drive-default_folder": "NuviaMy Documents",
-            "google_drive-notes": "Store selected files.",
-        })
-
-        self.assertRedirects(response, reverse("practice_settings:integrations"))
-        integration = ExternalIntegration.objects.get()
+        self.assertEqual(integration.provider, ExternalIntegration.Provider.DROPBOX)
         self.assertFalse(integration.send_email_enabled)
         self.assertFalse(integration.read_email_enabled)
         self.assertTrue(integration.file_storage_enabled)

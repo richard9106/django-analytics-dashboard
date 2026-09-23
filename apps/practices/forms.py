@@ -3,13 +3,21 @@ from django import forms
 from .models import ExternalIntegration
 
 
-class ExternalIntegrationForm(forms.ModelForm):
+GOOGLE_SCOPE_MAP = {
+    'send_email_enabled': 'https://www.googleapis.com/auth/gmail.send',
+    'read_email_enabled': 'https://www.googleapis.com/auth/gmail.readonly',
+    'calendar_enabled': 'https://www.googleapis.com/auth/calendar.events',
+    'file_storage_enabled': 'https://www.googleapis.com/auth/drive.file',
+}
+
+
+class GoogleOAuthSelectionForm(forms.ModelForm):
     class Meta:
         model = ExternalIntegration
         fields = [
-            'account_email',
             'send_email_enabled',
             'read_email_enabled',
+            'calendar_enabled',
             'file_storage_enabled',
             'default_folder',
             'notes',
@@ -18,29 +26,42 @@ class ExternalIntegrationForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, *args, practice=None, provider=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.provider = ExternalIntegration.Provider.GOOGLE
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not any(cleaned_data.get(field) for field in GOOGLE_SCOPE_MAP):
+            raise forms.ValidationError('Select at least one Google capability before connecting.')
+        return cleaned_data
+
+    def get_enabled_scopes(self):
+        return [scope for field, scope in GOOGLE_SCOPE_MAP.items() if self.cleaned_data.get(field)]
+
+
+class DropboxIntegrationForm(forms.ModelForm):
+    class Meta:
+        model = ExternalIntegration
+        fields = ['file_storage_enabled', 'default_folder', 'notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
-        self.provider = provider or getattr(self.instance, 'provider', None)
         self.instance.practice = practice
-        if self.provider:
-            self.instance.provider = self.provider
-        if self.provider != ExternalIntegration.Provider.GMAIL:
-            self.fields['send_email_enabled'].disabled = True
-            self.fields['read_email_enabled'].disabled = True
-        if self.provider == ExternalIntegration.Provider.GMAIL:
-            self.fields['file_storage_enabled'].disabled = True
+        self.instance.provider = ExternalIntegration.Provider.DROPBOX
 
     def save(self, commit=True):
         integration = super().save(commit=False)
         integration.practice = self.practice
-        integration.provider = self.provider
-        integration.status = ExternalIntegration.Status.DISCONNECTED
-        if integration.provider != ExternalIntegration.Provider.GMAIL:
-            integration.send_email_enabled = False
-            integration.read_email_enabled = False
-        if integration.provider == ExternalIntegration.Provider.GMAIL:
-            integration.file_storage_enabled = False
+        integration.provider = ExternalIntegration.Provider.DROPBOX
+        integration.send_email_enabled = False
+        integration.read_email_enabled = False
+        integration.calendar_enabled = False
+        integration.enabled_scopes = []
         if commit:
             integration.full_clean()
             integration.save()
