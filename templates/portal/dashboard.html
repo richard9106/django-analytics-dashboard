@@ -31,13 +31,22 @@
       <article class="stat-card"><span>Next appointment</span><strong>{% if next_appointment %}{{ next_appointment.starts_at|date:"M j" }}{% else %}None scheduled{% endif %}</strong><small>{% if next_appointment %}{{ next_appointment.starts_at|time:"g:i A" }}{% else %}Your practice will schedule future sessions here.{% endif %}</small></article>
       <article class="stat-card"><span>Open balance</span><strong>${{ open_invoice_total }}</strong><small>Open invoice total</small></article>
       <article class="stat-card"><span>Package sessions</span><strong>{{ remaining_sessions }}</strong><small>Remaining prepaid sessions</small></article>
-      <article class="stat-card"><span>Requests</span><strong>{{ open_request_count }}</strong><small>Open portal requests</small></article>
+      <article class="stat-card"><span>Intake packets</span><strong>{{ pending_intake_count }}</strong><small>Forms waiting for completion</small></article>
     </section>
 
     <section class="portal-grid">
       <article class="panel portal-request-panel">
         <div class="panel-head"><div><h2>Portal requests</h2><p>Message your practice about scheduling, billing, documents, or general questions.</p></div><button class="btn btn-primary" type="button" data-modal-target="portal-request-modal">Send a request</button></div>
         <p class="empty-state">Use requests for non-urgent practice questions. If this is an emergency, contact emergency services directly.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><h2>Intake packets</h2><p>Complete forms assigned by your practice.</p></div></div>
+        <div class="package-list">
+          {% for intake in pending_intakes %}
+            <div class="package-card"><div class="client-card-head"><strong>{{ intake.template.name }}</strong><span class="badge warning">Pending</span></div><p>{{ intake.template.description|default:'Please complete this packet before your next visit.' }}</p><a class="inline-link" href="{% url 'portal:intake_complete' intake.pk %}">Complete intake</a></div>
+          {% empty %}<p class="empty-state">No intake packets pending.</p>{% endfor %}
+        </div>
       </article>
 
       <article class="panel">

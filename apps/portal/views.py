@@ -6,7 +6,7 @@ from django.template.response import TemplateResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import View
-from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, FormView, ListView, TemplateView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, get_practice_for_user
 from apps.accounts.models import UserProfile
@@ -15,8 +15,16 @@ from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import Invoice, ServicePackage
 from apps.documents.models import ClientDocument
-from .forms import ClientPortalAccessForm, ClientPortalRequestForm, suggest_portal_password, suggest_portal_username
-from .models import ClientPortalAccess, ClientPortalRequest
+from .forms import (
+    ClientIntakeAssignmentForm,
+    ClientIntakeResponseForm,
+    ClientPortalAccessForm,
+    ClientPortalRequestForm,
+    IntakePacketTemplateForm,
+    suggest_portal_password,
+    suggest_portal_username,
+)
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
 
 
 class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
@@ -85,6 +93,11 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             practice=access.practice,
             client=access.client,
         )
+        pending_intakes = ClientIntakeAssignment.objects.filter(
+            practice=access.practice,
+            client=access.client,
+            status=ClientIntakeAssignment.Status.ASSIGNED,
+        ).select_related('template')
         context.update({
             'upcoming_appointments': upcoming_appointments[:6],
             'next_appointment': upcoming_appointments.first(),
@@ -97,6 +110,8 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'portal_request_form': ClientPortalRequestForm(portal_access=access),
             'portal_requests': portal_requests[:5],
             'open_request_count': portal_requests.exclude(status=ClientPortalRequest.Status.RESOLVED).count(),
+            'pending_intakes': pending_intakes,
+            'pending_intake_count': pending_intakes.count(),
         })
         return context
 
@@ -126,6 +141,11 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
             practice=access.practice,
             client=access.client,
         )
+        pending_intakes = ClientIntakeAssignment.objects.filter(
+            practice=access.practice,
+            client=access.client,
+            status=ClientIntakeAssignment.Status.ASSIGNED,
+        ).select_related('template')
         return {
             'portal_access': access,
             'portal_client': access.client,
@@ -141,6 +161,8 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
             'portal_request_form': form,
             'portal_requests': portal_requests[:5],
             'open_request_count': portal_requests.exclude(status=ClientPortalRequest.Status.RESOLVED).count(),
+            'pending_intakes': pending_intakes,
+            'pending_intake_count': pending_intakes.count(),
         }
 
     def post(self, request):
@@ -299,3 +321,100 @@ class PracticePortalRequestStatusView(PracticeContextMixin, View):
                 metadata={'client_id': portal_request.client_id, 'status': portal_request.status},
             )
         return redirect('portal_requests:list')
+
+
+class PracticeIntakeListView(PracticeContextMixin, TemplateView):
+    template_name = 'intake/list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        context['templates'] = IntakePacketTemplate.objects.filter(practice=practice)
+        context['assignments'] = ClientIntakeAssignment.objects.filter(practice=practice).select_related('client', 'template')
+        context['template_form'] = IntakePacketTemplateForm(practice=practice)
+        context['assignment_form'] = ClientIntakeAssignmentForm(practice=practice, assigned_by=self.request.user)
+        return context
+
+
+class IntakeTemplateCreateView(PracticeContextMixin, View):
+    def post(self, request):
+        practice = self.get_practice()
+        form = IntakePacketTemplateForm(request.POST, practice=practice)
+        if form.is_valid():
+            template = form.save()
+            log_audit_event(request, AuditLog.Action.CREATE, 'portal.IntakePacketTemplate', template.pk, practice=practice, metadata={'name': template.name})
+        return redirect('intake:list')
+
+
+class ClientIntakeAssignView(PracticeContextMixin, View):
+    def post(self, request):
+        practice = self.get_practice()
+        form = ClientIntakeAssignmentForm(request.POST, practice=practice, assigned_by=request.user)
+        if form.is_valid():
+            assignment = form.save()
+            log_audit_event(
+                request,
+                AuditLog.Action.CREATE,
+                'portal.ClientIntakeAssignment',
+                assignment.pk,
+                practice=practice,
+                metadata={'client_id': assignment.client_id, 'template_id': assignment.template_id},
+            )
+        return redirect('intake:list')
+
+
+class ClientIntakeReviewView(PracticeContextMixin, View):
+    def post(self, request, pk):
+        practice = self.get_practice()
+        assignment = get_object_or_404(ClientIntakeAssignment, pk=pk, practice=practice)
+        assignment.status = ClientIntakeAssignment.Status.REVIEWED
+        assignment.reviewed_at = timezone.now()
+        assignment.reviewed_by = request.user
+        assignment.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'updated_at'])
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'portal.ClientIntakeAssignment',
+            assignment.pk,
+            practice=practice,
+            metadata={'client_id': assignment.client_id, 'status': assignment.status},
+        )
+        return redirect('intake:list')
+
+
+class ClientIntakeCompleteView(ClientPortalAccessMixin, FormView):
+    template_name = 'portal/intake_form.html'
+    form_class = ClientIntakeResponseForm
+    success_url = reverse_lazy('portal:dashboard')
+
+    def get_assignment(self):
+        access = self.get_portal_access()
+        return get_object_or_404(
+            ClientIntakeAssignment.objects.select_related('template', 'client'),
+            pk=self.kwargs['pk'],
+            practice=access.practice,
+            client=access.client,
+            status=ClientIntakeAssignment.Status.ASSIGNED,
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['assignment'] = self.get_assignment()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['assignment'] = self.get_assignment()
+        return context
+
+    def form_valid(self, form):
+        assignment = form.save()
+        log_audit_event(
+            self.request,
+            AuditLog.Action.UPDATE,
+            'portal.ClientIntakeAssignment',
+            assignment.pk,
+            practice=assignment.practice,
+            metadata={'client_id': assignment.client_id, 'status': assignment.status},
+        )
+        return super().form_valid(form)

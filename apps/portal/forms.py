@@ -3,10 +3,11 @@ import secrets
 from django import forms
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.accounts.models import UserProfile
-from .models import ClientPortalAccess, ClientPortalRequest
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
 
 
 def suggest_portal_username(client):
@@ -140,3 +141,97 @@ class ClientPortalRequestForm(forms.ModelForm):
             portal_request.save()
             self.save_m2m()
         return portal_request
+
+
+class IntakePacketTemplateForm(forms.ModelForm):
+    question_lines = forms.CharField(
+        label='Questions',
+        widget=forms.Textarea(attrs={'rows': 8}),
+        help_text='Enter one client-facing intake question per line.',
+    )
+
+    class Meta:
+        model = IntakePacketTemplate
+        fields = ['name', 'description', 'active']
+        widgets = {'description': forms.Textarea(attrs={'rows': 3})}
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+        if self.instance.pk and not self.is_bound:
+            self.fields['question_lines'].initial = '\n'.join(self.instance.questions)
+
+    def clean_question_lines(self):
+        questions = [line.strip() for line in self.cleaned_data['question_lines'].splitlines() if line.strip()]
+        if not questions:
+            raise forms.ValidationError('Add at least one intake question.')
+        return questions
+
+    def _post_clean(self):
+        if 'question_lines' in self.cleaned_data:
+            self.instance.questions = self.cleaned_data['question_lines']
+        super()._post_clean()
+
+    def save(self, commit=True):
+        template = super().save(commit=False)
+        template.practice = self.practice
+        template.questions = self.cleaned_data['question_lines']
+        if commit:
+            template.full_clean()
+            template.save()
+            self.save_m2m()
+        return template
+
+
+class ClientIntakeAssignmentForm(forms.ModelForm):
+    class Meta:
+        model = ClientIntakeAssignment
+        fields = ['client', 'template']
+
+    def __init__(self, *args, practice=None, assigned_by=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.assigned_by = assigned_by
+        if practice:
+            self.fields['client'].queryset = practice.clients.all()
+            self.fields['template'].queryset = practice.intake_templates.filter(active=True)
+        else:
+            self.fields['client'].queryset = self.fields['client'].queryset.none()
+            self.fields['template'].queryset = self.fields['template'].queryset.none()
+
+    def save(self, commit=True):
+        assignment = super().save(commit=False)
+        assignment.practice = self.practice
+        assignment.assigned_by = self.assigned_by
+        assignment.status = ClientIntakeAssignment.Status.ASSIGNED
+        if commit:
+            assignment.full_clean()
+            assignment.save()
+            self.save_m2m()
+        return assignment
+
+
+class ClientIntakeResponseForm(forms.Form):
+    def __init__(self, *args, assignment=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.assignment = assignment
+        existing = assignment.answers if assignment else {}
+        for index, question in enumerate(assignment.template.questions):
+            key = f'question_{index}'
+            self.fields[key] = forms.CharField(
+                label=question,
+                initial=existing.get(key, ''),
+                widget=forms.Textarea(attrs={'rows': 3}),
+            )
+
+    def save(self):
+        answers = {}
+        for index, question in enumerate(self.assignment.template.questions):
+            key = f'question_{index}'
+            answers[key] = {'question': question, 'answer': self.cleaned_data[key]}
+        self.assignment.answers = answers
+        self.assignment.status = ClientIntakeAssignment.Status.SUBMITTED
+        self.assignment.submitted_at = timezone.now()
+        self.assignment.save(update_fields=['answers', 'status', 'submitted_at', 'updated_at'])
+        return self.assignment

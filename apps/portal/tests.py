@@ -12,7 +12,7 @@ from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, ServicePackage
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
-from apps.portal.models import ClientPortalAccess, ClientPortalRequest
+from apps.portal.models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -190,6 +190,92 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Visible request")
         self.assertNotContains(response, "Hidden request")
+
+    def test_practice_can_create_and_assign_intake_packet(self):
+        _portal_user, practice, _therapist, client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        self.client.force_login(practice_user)
+
+        response = self.client.post(reverse("intake:template_create"), {
+            "name": "New client intake",
+            "description": "Before first visit",
+            "active": "on",
+            "question_lines": "What brings you to therapy?\nEmergency contact name",
+        })
+
+        self.assertRedirects(response, reverse("intake:list"))
+        template = IntakePacketTemplate.objects.get()
+        self.assertEqual(template.practice, practice)
+        self.assertEqual(template.questions, ["What brings you to therapy?", "Emergency contact name"])
+
+        response = self.client.post(reverse("intake:assign"), {"client": client.pk, "template": template.pk})
+
+        self.assertRedirects(response, reverse("intake:list"))
+        assignment = ClientIntakeAssignment.objects.get()
+        self.assertEqual(assignment.practice, practice)
+        self.assertEqual(assignment.client, client)
+        self.assertEqual(assignment.status, ClientIntakeAssignment.Status.ASSIGNED)
+
+    def test_portal_client_can_complete_assigned_intake_packet(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        template = IntakePacketTemplate.objects.create(
+            practice=practice,
+            name="New client intake",
+            questions=["What brings you to therapy?", "Emergency contact name"],
+        )
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("portal:dashboard"))
+        self.assertContains(response, "New client intake")
+        self.assertContains(response, reverse("portal:intake_complete", args=[assignment.pk]))
+
+        response = self.client.post(reverse("portal:intake_complete", args=[assignment.pk]), {
+            "question_0": "Anxiety and stress.",
+            "question_1": "Sam Johnson",
+        })
+
+        self.assertRedirects(response, reverse("portal:dashboard"))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, ClientIntakeAssignment.Status.SUBMITTED)
+        self.assertEqual(assignment.answers["question_0"]["answer"], "Anxiety and stress.")
+        self.assertIsNotNone(assignment.submitted_at)
+
+    def test_portal_client_cannot_complete_other_clients_intake(self):
+        user, _practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        _other_user, other_practice, _other_therapist, other_client, _other_access = self.create_portal_user(
+            username="other-client",
+            practice_name="Other Practice",
+        )
+        template = IntakePacketTemplate.objects.create(practice=other_practice, name="Hidden intake", questions=["Hidden question"])
+        assignment = ClientIntakeAssignment.objects.create(practice=other_practice, client=other_client, template=template)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal:intake_complete", args=[assignment.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_practice_can_mark_submitted_intake_reviewed(self):
+        _portal_user, practice, _therapist, client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        template = IntakePacketTemplate.objects.create(practice=practice, name="New client intake", questions=["Question"])
+        assignment = ClientIntakeAssignment.objects.create(
+            practice=practice,
+            client=client,
+            template=template,
+            status=ClientIntakeAssignment.Status.SUBMITTED,
+            answers={"question_0": {"question": "Question", "answer": "Answer"}},
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("intake:review", args=[assignment.pk]))
+
+        self.assertRedirects(response, reverse("intake:list"))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, ClientIntakeAssignment.Status.REVIEWED)
+        self.assertEqual(assignment.reviewed_by, practice_user)
 
     def test_practice_dashboard_shows_portal_request_task(self):
         user, practice, _therapist, client, _access = self.create_portal_user()

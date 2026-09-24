@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intake | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    {% include 'partials/sidebar.html' with card_title='Client intake' card_text='Assign intake packets and review submitted client forms.' %}
+    <main class="app-main">
+      <section class="action-bar"><div class="quick-actions"><button class="btn btn-primary" type="button" data-modal-target="template-create-modal">+ Intake template</button><button class="btn btn-secondary" type="button" data-modal-target="assignment-create-modal">Assign packet</button></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Intake</p><h1>Client Intake</h1><p>Create reusable intake packets, assign them to clients, and review portal submissions.</p></div></header>
+
+      <section class="billing-grid">
+        <article class="panel">
+          <div class="panel-head"><div><h2>Assignments</h2><p>Client-facing packets and submission status.</p></div><span class="badge brand">{{ assignments|length }}</span></div>
+          <div class="package-list">
+            {% for assignment in assignments %}
+              <div class="package-card">
+                <div class="client-card-head"><strong>{{ assignment.client }}</strong><span class="badge {% if assignment.status == 'submitted' %}warning{% elif assignment.status == 'reviewed' %}success{% else %}brand{% endif %}">{{ assignment.get_status_display }}</span></div>
+                <p>{{ assignment.template.name }} · Assigned {{ assignment.created_at|date:"M j, Y" }}{% if assignment.submitted_at %} · Submitted {{ assignment.submitted_at|date:"M j, Y" }}{% endif %}</p>
+                {% if assignment.answers %}<div class="sync-panel">{% for key, item in assignment.answers.items %}<p><strong>{{ item.question }}</strong><br>{{ item.answer }}</p>{% endfor %}</div>{% endif %}
+                {% if assignment.status == 'submitted' %}<form method="post" action="{% url 'intake:review' assignment.pk %}">{% csrf_token %}<button class="inline-button" type="submit">Mark reviewed</button></form>{% endif %}
+              </div>
+            {% empty %}<p class="empty-state">No intake packets assigned yet.</p>{% endfor %}
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Templates</h2><p>Reusable question sets for onboarding and consent workflows.</p></div><span class="badge brand">{{ templates|length }}</span></div>
+          <div class="package-list">
+            {% for template in templates %}
+              <div class="package-card"><div class="client-card-head"><strong>{{ template.name }}</strong><span class="badge {% if template.active %}success{% else %}brand{% endif %}">{% if template.active %}Active{% else %}Inactive{% endif %}</span></div><p>{{ template.description|default:'No description' }}</p><p>{{ template.questions|length }} questions</p></div>
+            {% empty %}<p class="empty-state">No intake templates yet.</p>{% endfor %}
+          </div>
+        </article>
+      </section>
+
+      <dialog class="modal-dialog" id="template-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Intake</p><h2>New intake template</h2></div><button class="modal-close" type="button" data-modal-close>×</button></div><form class="appointment-form" method="post" action="{% url 'intake:template_create' %}">{% csrf_token %}<div class="field-grid"><div class="field"><label>Name</label>{{ template_form.name }}</div><div class="field checkbox-field"><label>{{ template_form.active }} Active</label></div><div class="field full"><label>Description</label>{{ template_form.description }}</div><div class="field full"><label>Questions</label>{{ template_form.question_lines }}<small>{{ template_form.question_lines.help_text }}</small></div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create template</button></div></form></div></dialog>
+      <dialog class="modal-dialog" id="assignment-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Intake</p><h2>Assign packet</h2></div><button class="modal-close" type="button" data-modal-close>×</button></div><form class="appointment-form" method="post" action="{% url 'intake:assign' %}">{% csrf_token %}<div class="field-grid"><div class="field"><label>Client</label>{{ assignment_form.client }}</div><div class="field"><label>Template</label>{{ assignment_form.template }}</div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Assign packet</button></div></form></div></dialog>
+    </main>
+  </div>
+  <script>document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});</script>
+</body>
+</html>
