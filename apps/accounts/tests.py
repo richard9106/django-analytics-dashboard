@@ -41,7 +41,6 @@ class PracticeSignupViewTests(TestCase):
             "practice_phone": "555-0100",
             "first_name": "Jane",
             "last_name": "Smith",
-            "username": "drsmith",
             "email": "drsmith@example.com",
             "password1": "StrongPass123!",
             "password2": "StrongPass123!",
@@ -57,12 +56,14 @@ class PracticeSignupViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Create your therapy practice account")
+        self.assertContains(response, "Back to home")
+        self.assertNotContains(response, "Username")
 
     def test_signup_creates_practice_user_therapist_and_owner_profile(self):
         response = self.client.post(reverse("signup"), data=self.valid_payload())
 
         self.assertRedirects(response, reverse("dashboard"))
-        user = get_user_model().objects.get(username="drsmith")
+        user = get_user_model().objects.get(email="drsmith@example.com")
         practice = Practice.objects.get(name="NuviaMy Wellness")
         therapist = TherapistProfile.objects.get(user=user)
         profile = UserProfile.objects.get(user=user)
@@ -71,13 +72,22 @@ class PracticeSignupViewTests(TestCase):
         self.assertEqual(profile.role, UserProfile.Role.OWNER)
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.id)
 
-    def test_signup_rejects_duplicate_username(self):
-        get_user_model().objects.create_user(username="drsmith")
+    def test_signup_rejects_duplicate_email(self):
+        get_user_model().objects.create_user(username="drsmith", email="drsmith@example.com")
 
         response = self.client.post(reverse("signup"), data=self.valid_payload())
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "A user with this username already exists")
+        self.assertContains(response, "A user with this email already exists")
+
+    def test_signup_generates_unique_internal_username_from_email(self):
+        get_user_model().objects.create_user(username="drsmith")
+
+        response = self.client.post(reverse("signup"), data=self.valid_payload())
+
+        self.assertRedirects(response, reverse("dashboard"))
+        user = get_user_model().objects.get(email="drsmith@example.com")
+        self.assertEqual(user.username, "drsmith-2")
 
     def test_signup_rejects_license_duplicate_in_same_state(self):
         practice = Practice.objects.create(name="Existing Practice")

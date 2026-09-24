@@ -30,6 +30,7 @@
         <span>Practice-scoped data</span>
         <span>Built for clinical workflows</span>
       </div>
+      <div class="hero-actions"><a class="btn btn-secondary" href="{% url 'home' %}">← Back to home</a></div>
     </section>
 
     <section class="signup-card">
@@ -77,11 +78,6 @@
               <label for="id_last_name">Last name</label>
               {{ form.last_name }}
               {{ form.last_name.errors }}
-            </div>
-            <div class="field">
-              <label for="id_username">Username</label>
-              {{ form.username }}
-              {{ form.username.errors }}
             </div>
             <div class="field">
               <label for="id_email">Email</label>

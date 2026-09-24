@@ -50,6 +50,7 @@ class ClientPortalViewTests(TestCase):
         client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")
         user = get_user_model().objects.create_user(
             username=username,
+            email=f"{username}@example.com",
             password="StrongPass123!",
             first_name="Maya",
         )
@@ -580,7 +581,7 @@ class ClientPortalViewTests(TestCase):
         UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT, must_change_password=True)
 
         response = self.client.post(reverse("login"), {
-            "username": user.username,
+            "username": user.email,
             "password": "StrongPass123!",
         })
 

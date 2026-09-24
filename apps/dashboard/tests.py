@@ -17,6 +17,7 @@ class DashboardTests(TestCase):
     def create_practice_user(self, username='laura', practice_name='Nuvia Therapy'):
         user = get_user_model().objects.create_user(
             username=username,
+            email=f'{username}@example.com',
             password='StrongPass123!',
             first_name='Laura',
             last_name='Chen',
@@ -70,6 +71,8 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse('login'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Sign in to your dashboard')
+        self.assertContains(response, 'Email')
+        self.assertContains(response, 'Back to home')
         self.assertContains(response, 'Create a practice account')
         self.assertNotContains(response, 'Use Django admin instead')
 
@@ -89,12 +92,12 @@ class DashboardTests(TestCase):
     def test_client_login_redirects_to_portal(self):
         practice = Practice.objects.create(name='Nuvia Therapy')
         portal_client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
-        user = get_user_model().objects.create_user(username='maya', password='StrongPass123!')
+        user = get_user_model().objects.create_user(username='maya', email='maya@example.com', password='StrongPass123!')
         UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.CLIENT)
         ClientPortalAccess.objects.create(user=user, practice=practice, client=portal_client, is_active=True)
 
         response = self.client.post(reverse('login'), {
-            'username': 'maya',
+            'username': 'maya@example.com',
             'password': 'StrongPass123!',
         })
 

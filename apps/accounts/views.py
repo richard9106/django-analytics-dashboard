@@ -6,11 +6,12 @@ from django.views.generic.edit import FormView
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .access import is_client_user, must_change_password
-from .forms import ForcePasswordChangeForm, PracticeSignupForm
+from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm
 
 
 class RoleAwareLoginView(LoginView):
     template_name = "dashboard/login.html"
+    authentication_form = EmailAuthenticationForm
 
     def get_success_url(self):
         if must_change_password(self.request.user):

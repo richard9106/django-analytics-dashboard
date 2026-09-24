@@ -30,6 +30,7 @@
         <span>HIPAA-aware architecture</span>
         <span>Accessible UI system</span>
       </div>
+      <div class="hero-actions"><a class="btn btn-secondary" href="{% url 'home' %}">← Back to home</a></div>
     </section>
 
     <section class="login-card">
@@ -38,14 +39,14 @@
       <p class="login-copy">Access your protected NuviaMy practice workspace.</p>
 
       {% if form.errors %}
-        <p class="form-error">Your username and password did not match. Please try again.</p>
+        <p class="form-error">Your email and password did not match. Please try again.</p>
       {% endif %}
 
       <form method="post" class="login-form">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next }}">
 
-        <label for="id_username">Username</label>
+        <label for="id_username">Email</label>
         {{ form.username }}
 
         <label for="id_password">Password</label>

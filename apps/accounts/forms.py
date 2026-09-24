@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -16,7 +16,6 @@ class PracticeSignupForm(forms.Form):
     practice_phone = forms.CharField(max_length=20, required=False)
     first_name = forms.CharField(max_length=150)
     last_name = forms.CharField(max_length=150)
-    username = forms.CharField(max_length=150)
     email = forms.EmailField()
     password1 = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(widget=forms.PasswordInput)
@@ -24,17 +23,23 @@ class PracticeSignupForm(forms.Form):
     license_state = forms.CharField(max_length=60)
     specialty = forms.CharField(max_length=140, required=False)
 
-    def clean_username(self):
-        username = self.cleaned_data["username"]
-        if get_user_model().objects.filter(username__iexact=username).exists():
-            raise ValidationError("A user with this username already exists.")
-        return username
-
     def clean_email(self):
         email = self.cleaned_data["email"]
         if get_user_model().objects.filter(email__iexact=email).exists():
             raise ValidationError("A user with this email already exists.")
         return email
+
+    def build_username(self):
+        User = get_user_model()
+        base = self.cleaned_data["email"].split("@", 1)[0].strip().lower() or "user"
+        base = "".join(char for char in base if char.isalnum() or char in "._+-")[:140] or "user"
+        username = base
+        counter = 2
+        while User.objects.filter(username__iexact=username).exists():
+            suffix = f"-{counter}"
+            username = f"{base[:150 - len(suffix)]}{suffix}"
+            counter += 1
+        return username
 
     def clean(self):
         cleaned_data = super().clean()
@@ -64,7 +69,7 @@ class PracticeSignupForm(forms.Form):
     def save(self):
         User = get_user_model()
         user = User.objects.create_user(
-            username=self.cleaned_data["username"],
+            username=self.build_username(),
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password1"],
             first_name=self.cleaned_data["first_name"],
@@ -94,3 +99,23 @@ class PracticeSignupForm(forms.Form):
 
 class ForcePasswordChangeForm(SetPasswordForm):
     pass
+
+
+class EmailAuthenticationForm(AuthenticationForm):
+    username = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"autofocus": True, "autocomplete": "email"}),
+    )
+
+    error_messages = {
+        "invalid_login": "Please enter a correct email and password.",
+        "inactive": "This account is inactive.",
+    }
+
+    def clean(self):
+        email = self.cleaned_data.get("username")
+        if email:
+            user = get_user_model().objects.filter(email__iexact=email).first()
+            if user:
+                self.cleaned_data["username"] = user.get_username()
+        return super().clean()

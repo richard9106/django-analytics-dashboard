@@ -14,7 +14,7 @@ from apps.practices.models import Practice, TherapistProfile
 class AuditLogViewTests(TestCase):
     def setUp(self):
         self.practice = Practice.objects.create(name='Nuvia Therapy')
-        self.user = get_user_model().objects.create_user(username='owner', password='StrongPass123!')
+        self.user = get_user_model().objects.create_user(username='owner', email='owner@example.com', password='StrongPass123!')
         self.therapist = TherapistProfile.objects.create(
             user=self.user,
             practice=self.practice,
@@ -30,7 +30,7 @@ class AuditLogViewTests(TestCase):
         )
 
     def test_login_creates_audit_log(self):
-        response = self.client.post(reverse('login'), {'username': 'owner', 'password': 'StrongPass123!'})
+        response = self.client.post(reverse('login'), {'username': 'owner@example.com', 'password': 'StrongPass123!'})
 
         self.assertEqual(response.status_code, 302)
         log = AuditLog.objects.get(action=AuditLog.Action.LOGIN)
