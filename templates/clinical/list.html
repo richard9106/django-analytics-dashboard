@@ -38,7 +38,9 @@
                 <div><h3>{{ note.get_note_type_display }} for {{ note.client }}</h3><p>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</p></div>
                 <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
               </div>
+              {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
               <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
+              {% if note.treatment_progress %}<p class="note-preview"><strong>Plan progress:</strong> {{ note.treatment_progress|truncatechars:160 }}</p>{% endif %}
               <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
             </article>
           {% empty %}
@@ -52,14 +54,16 @@
           <div class="modal-head"><div><p class="eyebrow">New Clinical Note</p><h2>Document a client session</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
           <form class="appointment-form" method="post" action="{% url 'clinical:create' %}">
             {% csrf_token %}
-            <div class="field-grid two">
-              <div class="field"><label for="note-create-client">Client</label><select id="note-create-client" name="client" required>{% for client in note_clients %}<option value="{{ client.pk }}">{{ client }}</option>{% endfor %}</select></div>
-              <div class="field"><label for="note-create-therapist">Therapist</label><select id="note-create-therapist" name="therapist" required>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}</select></div>
-              <div class="field"><label for="note-create-appointment">Appointment</label><select id="note-create-appointment" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}">{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
-              <div class="field"><label for="note-create-type">Note type</label><select id="note-create-type" name="note_type" required><option value="progress_note">Progress Note</option><option value="intake_note">Intake Note</option><option value="treatment_plan">Treatment Plan</option><option value="general_note">General Note</option></select></div>
-              <div class="field full"><label for="note-create-content">Content</label><textarea id="note-create-content" name="content" rows="8"></textarea></div>
-              <div class="field checkbox-field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
-            </div>
+              <div class="field-grid two">
+                <div class="field"><label for="note-create-client">Client</label><select id="note-create-client" name="client" required>{% for client in note_clients %}<option value="{{ client.pk }}">{{ client }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-create-therapist">Therapist</label><select id="note-create-therapist" name="therapist" required>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-create-appointment">Appointment</label><select id="note-create-appointment" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}">{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-create-treatment-plan">Treatment plan</label><select id="note-create-treatment-plan" name="treatment_plan"><option value="">No treatment plan</option>{% for plan in note_treatment_plans %}<option value="{{ plan.pk }}">{{ plan.client }} · {{ plan.title }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-create-type">Note type</label><select id="note-create-type" name="note_type" required><option value="progress_note">Progress Note</option><option value="intake_note">Intake Note</option><option value="treatment_plan">Treatment Plan</option><option value="general_note">General Note</option></select></div>
+                <div class="field full"><label for="note-create-content">Content</label><textarea id="note-create-content" name="content" rows="8"></textarea></div>
+                <div class="field full"><label for="note-create-treatment-progress">Treatment plan progress</label><textarea id="note-create-treatment-progress" name="treatment_progress" rows="4" placeholder="Document progress against plan goals or objectives."></textarea></div>
+                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
+              </div>
             <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create note</button></div>
           </form>
         </div>
@@ -75,8 +79,10 @@
                 <div class="field"><label for="note-client-{{ note.pk }}">Client</label><select id="note-client-{{ note.pk }}" name="client" required>{% for client in note_clients %}<option value="{{ client.pk }}" {% if client.pk == note.client_id %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
                 <div class="field"><label for="note-therapist-{{ note.pk }}">Therapist</label><select id="note-therapist-{{ note.pk }}" name="therapist" required>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}" {% if therapist.pk == note.therapist_id %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>
                 <div class="field"><label for="note-appointment-{{ note.pk }}">Appointment</label><select id="note-appointment-{{ note.pk }}" name="appointment"><option value="">No appointment</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}" {% if note.appointment_id == appointment.pk %}selected{% endif %}>{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="note-treatment-plan-{{ note.pk }}">Treatment plan</label><select id="note-treatment-plan-{{ note.pk }}" name="treatment_plan"><option value="">No treatment plan</option>{% for plan in note_treatment_plans %}<option value="{{ plan.pk }}" {% if note.treatment_plan_id == plan.pk %}selected{% endif %}>{{ plan.client }} · {{ plan.title }}</option>{% endfor %}</select></div>
                 <div class="field"><label for="note-type-{{ note.pk }}">Note type</label><select id="note-type-{{ note.pk }}" name="note_type" required><option value="progress_note" {% if note.note_type == 'progress_note' %}selected{% endif %}>Progress Note</option><option value="intake_note" {% if note.note_type == 'intake_note' %}selected{% endif %}>Intake Note</option><option value="treatment_plan" {% if note.note_type == 'treatment_plan' %}selected{% endif %}>Treatment Plan</option><option value="general_note" {% if note.note_type == 'general_note' %}selected{% endif %}>General Note</option></select></div>
                 <div class="field full"><label for="note-content-{{ note.pk }}">Content</label><textarea id="note-content-{{ note.pk }}" name="content" rows="8">{{ note.content }}</textarea></div>
+                <div class="field full"><label for="note-treatment-progress-{{ note.pk }}">Treatment plan progress</label><textarea id="note-treatment-progress-{{ note.pk }}" name="treatment_progress" rows="4">{{ note.treatment_progress }}</textarea></div>
                 <div class="field checkbox-field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock note</label></div>
               </div>
               <div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:delete' note.pk %}">Delete note</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>

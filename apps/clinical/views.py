@@ -22,10 +22,12 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
             context['note_clients'] = practice.clients.all()
             context['note_therapists'] = practice.therapists.select_related('user')
             context['note_appointments'] = practice.appointments.select_related('client', 'therapist__user')
+            context['note_treatment_plans'] = practice.treatment_plans.select_related('client')
         else:
             context['note_clients'] = []
             context['note_therapists'] = []
             context['note_appointments'] = []
+            context['note_treatment_plans'] = []
         return context
 
 
@@ -59,7 +61,7 @@ class SessionNoteListView(LoginRequiredMixin, PracticeContextMixin, ListView):
 
         return (
             SessionNote.objects.filter(practice=practice)
-            .select_related('client', 'therapist__user', 'appointment')
+            .select_related('client', 'therapist__user', 'appointment', 'treatment_plan')
             .order_by('-created_at')
         )
 
@@ -90,7 +92,11 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
             'clinical.SessionNote',
             self.object.pk,
             practice=self.object.practice,
-            metadata={'client_id': self.object.client_id, 'appointment_id': self.object.appointment_id},
+            metadata={
+                'client_id': self.object.client_id,
+                'appointment_id': self.object.appointment_id,
+                'treatment_plan_id': self.object.treatment_plan_id,
+            },
         )
         return response
 
@@ -129,7 +135,12 @@ class SessionNoteUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView
             'clinical.SessionNote',
             self.object.pk,
             practice=self.object.practice,
-            metadata={'client_id': self.object.client_id, 'appointment_id': self.object.appointment_id, 'is_locked': self.object.is_locked},
+            metadata={
+                'client_id': self.object.client_id,
+                'appointment_id': self.object.appointment_id,
+                'treatment_plan_id': self.object.treatment_plan_id,
+                'is_locked': self.object.is_locked,
+            },
         )
         return response
 
@@ -148,7 +159,11 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
     def form_valid(self, form):
         note_id = self.object.pk
         practice = self.object.practice
-        metadata = {'client_id': self.object.client_id, 'appointment_id': self.object.appointment_id}
+        metadata = {
+            'client_id': self.object.client_id,
+            'appointment_id': self.object.appointment_id,
+            'treatment_plan_id': self.object.treatment_plan_id,
+        }
         response = super().form_valid(form)
         log_audit_event(
             self.request,

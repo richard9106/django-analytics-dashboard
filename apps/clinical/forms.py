@@ -11,12 +11,15 @@ class SessionNoteForm(forms.ModelForm):
             'client',
             'therapist',
             'appointment',
+            'treatment_plan',
             'note_type',
             'content',
+            'treatment_progress',
             'is_locked',
         ]
         widgets = {
             'content': forms.Textarea(attrs={'rows': 8}),
+            'treatment_progress': forms.Textarea(attrs={'rows': 4}),
         }
 
     def __init__(self, *args, practice=None, **kwargs):
@@ -28,10 +31,20 @@ class SessionNoteForm(forms.ModelForm):
             self.fields['client'].queryset = practice.clients.all()
             self.fields['therapist'].queryset = practice.therapists.select_related('user')
             self.fields['appointment'].queryset = practice.appointments.select_related('client', 'therapist__user')
+            self.fields['treatment_plan'].queryset = practice.treatment_plans.select_related('client')
         else:
             self.fields['client'].queryset = self.fields['client'].queryset.none()
             self.fields['therapist'].queryset = self.fields['therapist'].queryset.none()
             self.fields['appointment'].queryset = self.fields['appointment'].queryset.none()
+            self.fields['treatment_plan'].queryset = self.fields['treatment_plan'].queryset.none()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        client = cleaned_data.get('client')
+        treatment_plan = cleaned_data.get('treatment_plan')
+        if client and treatment_plan and treatment_plan.client_id != client.pk:
+            self.add_error('treatment_plan', 'Selected treatment plan must belong to the note client.')
+        return cleaned_data
 
     def save(self, commit=True):
         note = super().save(commit=False)

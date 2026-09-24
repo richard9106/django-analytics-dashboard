@@ -10,6 +10,7 @@ class SessionNoteAdmin(admin.ModelAdmin):
         "therapist",
         "practice",
         "appointment",
+        "treatment_plan",
         "note_type",
         "is_locked",
         "created_at",

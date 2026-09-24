@@ -125,6 +125,54 @@ class SessionNoteModelTests(TestCase):
         with self.assertRaisesMessage(ValidationError, "The appointment client must match"):
             note.full_clean()
 
+    def test_session_note_accepts_matching_treatment_plan(self):
+        plan = TreatmentPlan.objects.create(
+            practice=self.practice,
+            client=self.client,
+            therapist=self.therapist,
+            title="Anxiety care plan",
+            goals="Reduce anxiety symptoms.",
+        )
+        note = self.build_note(treatment_plan=plan, treatment_progress="Practiced grounding skills.")
+
+        note.full_clean()
+
+    def test_session_note_rejects_treatment_plan_from_other_practice(self):
+        other_practice = Practice.objects.create(name="Other Clinic")
+        other_user = get_user_model().objects.create_user(username="otherplantherapist")
+        other_therapist = TherapistProfile.objects.create(
+            user=other_user,
+            practice=other_practice,
+            license_number="OTHER123",
+            license_state="NY",
+        )
+        other_client = Client.objects.create(practice=other_practice, first_name="Kai", last_name="Lee")
+        plan = TreatmentPlan.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            title="Hidden care plan",
+            goals="Hidden goals.",
+        )
+        note = self.build_note(treatment_plan=plan)
+
+        with self.assertRaisesMessage(ValidationError, "treatment plan must belong to the same practice"):
+            note.full_clean()
+
+    def test_session_note_rejects_treatment_plan_for_different_client(self):
+        other_client = Client.objects.create(practice=self.practice, first_name="Lucia", last_name="Garcia")
+        plan = TreatmentPlan.objects.create(
+            practice=self.practice,
+            client=other_client,
+            therapist=self.therapist,
+            title="Other client care plan",
+            goals="Other goals.",
+        )
+        note = self.build_note(treatment_plan=plan)
+
+        with self.assertRaisesMessage(ValidationError, "treatment plan client must match"):
+            note.full_clean()
+
     def test_session_note_lock_sets_locked_at(self):
         note = self.build_note()
 
@@ -257,8 +305,10 @@ class SessionNoteViewTests(TestCase):
             "client": client.pk,
             "therapist": therapist.pk,
             "appointment": appointment.pk if appointment else "",
+            "treatment_plan": "",
             "note_type": SessionNote.NoteType.PROGRESS_NOTE,
             "content": "Client reported improved sleep and lower anxiety.",
+            "treatment_progress": "",
         }
         data.update(overrides)
         return data
@@ -306,6 +356,78 @@ class SessionNoteViewTests(TestCase):
         self.assertContains(response, 'id="note-create-modal"')
         self.assertContains(response, f'id="note-modal-{note.pk}"')
         self.assertContains(response, reverse("clinical:edit", args=[note.pk]))
+
+    def test_note_create_links_treatment_plan_and_progress(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Anxiety care plan",
+            goals="Reduce anxiety symptoms.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:create"),
+            self.note_payload(
+                therapist,
+                client,
+                appointment,
+                treatment_plan=plan.pk,
+                treatment_progress="Client used breathing technique twice this week.",
+            ),
+        )
+
+        self.assertRedirects(response, reverse("clinical:list"))
+        note = SessionNote.objects.get()
+        self.assertEqual(note.treatment_plan, plan)
+        self.assertEqual(note.treatment_progress, "Client used breathing technique twice this week.")
+
+    def test_note_create_rejects_treatment_plan_for_different_client(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        other_client = Client.objects.create(practice=practice, first_name="Other", last_name="Client")
+        plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=other_client,
+            therapist=therapist,
+            title="Other client care plan",
+            goals="Other goals.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:create"),
+            self.note_payload(therapist, client, appointment, treatment_plan=plan.pk),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Selected treatment plan must belong")
+        self.assertEqual(SessionNote.objects.count(), 0)
+
+    def test_note_create_rejects_treatment_plan_from_another_practice(self):
+        user, _practice, therapist, client, appointment = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        plan = TreatmentPlan.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            title="Hidden care plan",
+            goals="Hidden goals.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:create"),
+            self.note_payload(therapist, client, appointment, treatment_plan=plan.pk),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Select a valid choice")
+        self.assertEqual(SessionNote.objects.count(), 0)
 
     def test_note_create_saves_to_user_practice(self):
         user, practice, therapist, client, appointment = self.create_practice_user()

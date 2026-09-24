@@ -34,12 +34,20 @@ class SessionNote(models.Model):
         blank=True,
         related_name="session_notes",
     )
+    treatment_plan = models.ForeignKey(
+        "clinical.TreatmentPlan",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="session_notes",
+    )
     note_type = models.CharField(
         max_length=30,
         choices=NoteType.choices,
         default=NoteType.GENERAL_NOTE,
     )
     content = models.TextField(blank=True)
+    treatment_progress = models.TextField(blank=True)
     is_locked = models.BooleanField(default=False)
     locked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,6 +78,16 @@ class SessionNote(models.Model):
             if self.therapist_id and self.appointment.therapist_id != self.therapist_id:
                 errors.setdefault("appointment", []).append(
                     "The appointment therapist must match the note therapist."
+                )
+
+        if self.treatment_plan_id:
+            if self.practice_id and self.treatment_plan.practice_id != self.practice_id:
+                errors.setdefault("treatment_plan", []).append(
+                    "The treatment plan must belong to the same practice as the note."
+                )
+            if self.client_id and self.treatment_plan.client_id != self.client_id:
+                errors.setdefault("treatment_plan", []).append(
+                    "The treatment plan client must match the note client."
                 )
 
         if self.locked_at and not self.is_locked:
