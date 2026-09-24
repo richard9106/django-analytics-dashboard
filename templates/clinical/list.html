@@ -11,7 +11,7 @@
 </head>
 <body class="app-page">
   <div class="app-shell">
-    {% include 'partials/sidebar.html' with card_title='Clinical documentation' card_text='Notes are scoped by practice and can be locked when complete.' %}
+    {% include 'partials/sidebar.html' with card_title='Notes & treatment' card_text='Document sessions and connect progress to active care plans.' %}
 
     <main class="app-main">
       <section class="action-bar" aria-label="Workspace actions">
@@ -24,7 +24,12 @@
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
-      <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Notes</p><h1>Notes Workspace</h1></div></header>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Notes & Treatment</p><h1>Notes</h1></div></header>
+
+      <section class="inline-actions" aria-label="Notes and treatment navigation">
+        <a class="btn btn-primary" href="{% url 'clinical:list' %}">Notes</a>
+        <a class="btn btn-soft" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
+      </section>
 
       <section class="panel notes-panel">
         <div class="panel-head">

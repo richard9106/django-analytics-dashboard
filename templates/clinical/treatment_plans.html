@@ -11,19 +11,24 @@
 </head>
 <body class="app-page">
   <div class="app-shell">
-    {% include 'partials/sidebar.html' with card_title='Treatment planning' card_text='Track diagnoses, goals, objectives, and review dates for active clients.' %}
+    {% include 'partials/sidebar.html' with card_title='Notes & treatment' card_text='Document sessions and connect progress to active care plans.' %}
 
     <main class="app-main">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           <a class="btn btn-primary" href="{% url 'clinical:treatment_plan_create' %}" data-modal-target="plan-create-modal">+ New plan</a>
           <a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}" data-modal-target="diagnosis-create-modal">+ Diagnosis</a>
-          <a class="btn btn-soft" href="{% url 'clinical:list' %}">Clinical notes</a>
+          <a class="btn btn-soft" href="{% url 'clinical:list' %}">Notes</a>
         </div>
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
-      <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Care Plans</p><h1>Treatment Plans</h1></div></header>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Notes & Treatment</p><h1>Treatment Plans</h1></div></header>
+
+      <section class="inline-actions" aria-label="Notes and treatment navigation">
+        <a class="btn btn-soft" href="{% url 'clinical:list' %}">Notes</a>
+        <a class="btn btn-primary" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
+      </section>
 
       <section class="content-grid">
         <div class="panel notes-panel">
