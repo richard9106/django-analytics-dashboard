@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.views import LogoutView
 from django.urls import path, include
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -34,6 +34,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('robots.txt', TemplateView.as_view(template_name='marketing/robots.txt', content_type='text/plain'), name='robots_txt'),
     path('sitemap.xml', TemplateView.as_view(template_name='marketing/sitemap.xml', content_type='application/xml'), name='sitemap_xml'),
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True), name='favicon'),
     path('', HomePageView.as_view(), name='home'),
 ] 
 

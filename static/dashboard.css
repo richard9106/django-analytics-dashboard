@@ -35,6 +35,7 @@
 }
 
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body { margin: 0; min-height: 100vh; background: var(--slate-50); }
 button, input, textarea, select { font: inherit; }
 a { color: inherit; text-decoration: none; }
@@ -276,19 +277,19 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-nav { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 20px 0; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .marketing-nav nav { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--slate-600); font-size: 14px; font-weight: 800; }
 .marketing-nav nav a:hover { color: var(--brand-700); }
-.marketing-hero { width: min(1180px, calc(100% - 32px)); margin: 18px auto 0; min-height: 620px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 28px; align-items: center; }
-.hero-copy h1 { max-width: 780px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(44px, 7vw, 76px); line-height: 1.01; letter-spacing: -.06em; }
-.hero-copy p:not(.eyebrow) { max-width: 760px; color: var(--slate-600); font-size: 18px; line-height: 1.7; }
+.marketing-hero { width: min(1180px, calc(100% - 32px)); margin: 18px auto 0; min-height: 560px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; align-items: center; }
+.hero-copy h1 { max-width: 760px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(40px, 5.8vw, 62px); line-height: 1.04; letter-spacing: -.055em; }
+.hero-copy p:not(.eyebrow) { max-width: 720px; color: var(--slate-600); font-size: 17px; line-height: 1.68; }
 .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 24px 0 18px; }
 .hero-card { display: grid; gap: 14px; padding: 24px; border: 1px solid rgba(112, 82, 217, .16); border-radius: 30px; background: radial-gradient(circle at top right, rgba(204, 251, 245, .92), transparent 36%), linear-gradient(145deg, #fff, var(--brand-50)); box-shadow: var(--shadow-2); }
 .hero-card-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; color: var(--slate-900); }
 .hero-metric { padding: 18px; border: 1px solid rgba(112, 82, 217, .12); border-radius: 20px; background: rgba(255, 255, 255, .82); box-shadow: var(--shadow-1); }
 .hero-metric span { display: block; color: var(--slate-500); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
-.hero-metric strong { display: block; margin: 6px 0 2px; color: var(--brand-700); font-size: 42px; line-height: 1; letter-spacing: -.05em; }
+.hero-metric strong { display: block; margin: 6px 0 2px; color: var(--brand-700); font-size: 36px; line-height: 1; letter-spacing: -.05em; }
 .hero-metric small { color: var(--slate-500); font-weight: 700; }
 .marketing-section, .marketing-band, .marketing-cta { width: min(1180px, calc(100% - 32px)); margin: 28px auto; }
 .marketing-section { padding: 36px 0; }
-.marketing-section h2, .marketing-band h2, .marketing-cta h2 { max-width: 780px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(32px, 5vw, 52px); line-height: 1.06; letter-spacing: -.05em; }
+.marketing-section h2, .marketing-band h2, .marketing-cta h2 { max-width: 760px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(28px, 4.2vw, 42px); line-height: 1.1; letter-spacing: -.045em; }
 .marketing-grid { display: grid; gap: 16px; margin-top: 20px; }
 .marketing-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .marketing-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -303,6 +304,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-cta h2 { color: #fff; }
 .marketing-cta p { max-width: 760px; color: rgba(255, 255, 255, .78); }
 .marketing-cta .btn-primary { background: #fff; color: var(--brand-700); }
+.back-to-top { position: fixed; right: 18px; bottom: 18px; z-index: 20; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; border-radius: 999px; background: rgba(255, 255, 255, .94); border: 1px solid rgba(112, 82, 217, .2); color: var(--brand-700); font-size: 13px; font-weight: 900; box-shadow: var(--shadow-2); backdrop-filter: blur(10px); }
+.back-to-top:hover { background: var(--brand-600); color: #fff; }
 
 @media (max-width: 1024px) {
   .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
@@ -351,7 +354,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .marketing-nav { display: grid; }
   .marketing-nav nav { gap: 10px; }
   .marketing-hero { min-height: 0; padding: 22px 0; }
-  .hero-copy h1 { font-size: 40px; }
+  .hero-copy h1 { font-size: 36px; }
   .marketing-band, .marketing-cta { padding: 22px; border-radius: 22px; }
 }
 

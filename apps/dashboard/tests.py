@@ -48,6 +48,8 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'therapy practice management software')
         self.assertContains(response, 'application/ld+json')
         self.assertContains(response, 'https://nuviamy.com/')
+        self.assertContains(response, '/static/favicon.svg')
+        self.assertContains(response, 'Back to top')
 
     def test_robots_and_sitemap_load(self):
         robots = self.client.get(reverse('robots_txt'))
@@ -57,6 +59,12 @@ class DashboardTests(TestCase):
         self.assertContains(robots, 'Sitemap: https://nuviamy.com/sitemap.xml')
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, '<loc>https://nuviamy.com/</loc>')
+
+    def test_favicon_redirects_to_svg_icon(self):
+        response = self.client.get(reverse('favicon'))
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.url, '/static/favicon.svg')
 
     def test_login_page_loads(self):
         response = self.client.get(reverse('login'))

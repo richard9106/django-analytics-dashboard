@@ -15,6 +15,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="NuviaMy | Therapy Practice Management Software">
   <meta name="twitter:description" content="Practice management software for therapists, counselors, psychologists, and mental health clinics.">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +34,7 @@
   }
   </script>
 </head>
-<body class="marketing-page">
+<body id="top" class="marketing-page">
   <header class="marketing-nav" aria-label="NuviaMy navigation">
     <a class="brand" href="{% url 'home' %}" aria-label="NuviaMy home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
     <nav><a href="#features">Features</a><a href="#workflows">Workflows</a><a href="#security">Security</a><a href="{% url 'login' %}">Sign in</a><a class="btn btn-primary" href="{% url 'signup' %}">Start your practice workspace</a></nav>
@@ -90,5 +91,6 @@
       <a class="btn btn-primary" href="{% url 'signup' %}">Start with NuviaMy</a>
     </section>
   </main>
+  <a class="back-to-top" href="#top" aria-label="Back to top">↑ Top</a>
 </body>
 </html>
