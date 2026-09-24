@@ -1,5 +1,35 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
+
+
+class PracticeWorkingHour(models.Model):
+    class Weekday(models.IntegerChoices):
+        MONDAY = 0, "Monday"
+        TUESDAY = 1, "Tuesday"
+        WEDNESDAY = 2, "Wednesday"
+        THURSDAY = 3, "Thursday"
+        FRIDAY = 4, "Friday"
+        SATURDAY = 5, "Saturday"
+        SUNDAY = 6, "Sunday"
+
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="working_hours")
+    weekday = models.PositiveSmallIntegerField(choices=Weekday.choices)
+    starts_at = models.TimeField()
+    ends_at = models.TimeField()
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["weekday", "starts_at"]
+
+    def clean(self):
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            raise ValidationError({"ends_at": "Working hours must end after they start."})
+
+    def __str__(self):
+        return f"{self.practice} {self.get_weekday_display()} {self.starts_at}-{self.ends_at}"
 
 
 class Appointment(models.Model):
@@ -101,11 +131,31 @@ class Appointment(models.Model):
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
             errors["ends_at"] = "The appointment must end after it starts."
 
+        if self.practice_id and self.starts_at and self.ends_at:
+            local_start = timezone.localtime(self.starts_at)
+            local_end = timezone.localtime(self.ends_at)
+            working_hours = self.practice.working_hours.filter(active=True, weekday=local_start.weekday())
+            if working_hours.exists() and not working_hours.filter(starts_at__lte=local_start.time(), ends_at__gte=local_end.time()).exists():
+                errors["starts_at"] = "Appointment must be within practice working hours."
+
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
             errors["client"] = "The client must belong to the same practice as the appointment."
 
         if self.therapist_id and self.practice_id and self.therapist.practice_id != self.practice_id:
             errors["therapist"] = "The therapist must belong to the same practice as the appointment."
+
+        if self.therapist_id and self.starts_at and self.ends_at and self.status == self.Status.SCHEDULED:
+            overlapping = Appointment.objects.filter(
+                practice_id=self.practice_id,
+                therapist_id=self.therapist_id,
+                status=self.Status.SCHEDULED,
+                starts_at__lt=self.ends_at,
+                ends_at__gt=self.starts_at,
+            )
+            if self.pk:
+                overlapping = overlapping.exclude(pk=self.pk)
+            if overlapping.exists():
+                errors["starts_at"] = "This therapist already has an overlapping scheduled appointment."
 
         if not self.sync_enabled and self.sync_status not in {
             self.SyncStatus.NOT_SYNCED,

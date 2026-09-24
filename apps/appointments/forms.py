@@ -1,9 +1,17 @@
 from django import forms
 
-from .models import Appointment
+from .models import Appointment, PracticeWorkingHour
 
 
 class AppointmentForm(forms.ModelForm):
+    repeat_weekly_count = forms.IntegerField(
+        min_value=1,
+        max_value=52,
+        required=False,
+        label='Repeat weekly',
+        help_text='Total number of weekly appointments to create, including this one.',
+    )
+
     class Meta:
         model = Appointment
         fields = [
@@ -26,6 +34,8 @@ class AppointmentForm(forms.ModelForm):
     def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
+        if self.instance.pk:
+            self.fields.pop('repeat_weekly_count', None)
         self.fields['starts_at'].input_formats = ['%Y-%m-%dT%H:%M']
         self.fields['ends_at'].input_formats = ['%Y-%m-%dT%H:%M']
 
@@ -44,3 +54,29 @@ class AppointmentForm(forms.ModelForm):
             appointment.save()
             self.save_m2m()
         return appointment
+
+
+class PracticeWorkingHourForm(forms.ModelForm):
+    class Meta:
+        model = PracticeWorkingHour
+        fields = ['weekday', 'starts_at', 'ends_at', 'active']
+        widgets = {
+            'starts_at': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+            'ends_at': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+        self.fields['starts_at'].input_formats = ['%H:%M']
+        self.fields['ends_at'].input_formats = ['%H:%M']
+
+    def save(self, commit=True):
+        working_hour = super().save(commit=False)
+        working_hour.practice = self.practice
+        if commit:
+            working_hour.full_clean()
+            working_hour.save()
+            self.save_m2m()
+        return working_hour

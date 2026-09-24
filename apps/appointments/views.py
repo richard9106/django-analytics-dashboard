@@ -10,8 +10,8 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
-from .models import Appointment
-from .forms import AppointmentForm
+from .models import Appointment, PracticeWorkingHour
+from .forms import AppointmentForm, PracticeWorkingHourForm
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -126,6 +126,25 @@ class AppointmentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
     def form_valid(self, form):
         response = super().form_valid(form)
         sync_appointment_to_google(self.object)
+        repeat_count = form.cleaned_data.get('repeat_weekly_count') or 1
+        if repeat_count > 1:
+            delta = self.object.ends_at - self.object.starts_at
+            for index in range(1, repeat_count):
+                appointment = Appointment(
+                    practice=self.object.practice,
+                    client=self.object.client,
+                    therapist=self.object.therapist,
+                    starts_at=self.object.starts_at + timedelta(weeks=index),
+                    ends_at=self.object.starts_at + timedelta(weeks=index) + delta,
+                    status=self.object.status,
+                    appointment_type=self.object.appointment_type,
+                    location=self.object.location,
+                    meeting_url=self.object.meeting_url,
+                    notes=self.object.notes,
+                )
+                appointment.full_clean()
+                appointment.save()
+                sync_appointment_to_google(appointment)
         return response
 
 
@@ -188,3 +207,39 @@ class AppointmentGoogleSyncView(LoginRequiredMixin, PracticeContextMixin, View):
         appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
         sync_appointment_to_google(appointment)
         return redirect('appointments:list')
+
+
+class AvailabilitySettingsView(LoginRequiredMixin, PracticeContextMixin, ListView):
+    model = PracticeWorkingHour
+    template_name = 'settings/availability.html'
+    context_object_name = 'working_hours'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        return PracticeWorkingHour.objects.filter(practice=practice) if practice else PracticeWorkingHour.objects.none()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['working_hour_form'] = PracticeWorkingHourForm(practice=self.get_practice())
+        return context
+
+
+class WorkingHourCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+    model = PracticeWorkingHour
+    form_class = PracticeWorkingHourForm
+    template_name = 'settings/availability_form.html'
+    success_url = reverse_lazy('practice_settings:availability')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+
+class WorkingHourDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+    model = PracticeWorkingHour
+    success_url = reverse_lazy('practice_settings:availability')
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        return PracticeWorkingHour.objects.filter(practice=practice) if practice else PracticeWorkingHour.objects.none()

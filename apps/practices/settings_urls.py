@@ -9,6 +9,7 @@ from .views import (
     GmailSendView,
     IntegrationSettingsView,
 )
+from apps.appointments.views import AvailabilitySettingsView, WorkingHourCreateView, WorkingHourDeleteView
 
 app_name = 'practice_settings'
 
@@ -20,4 +21,7 @@ urlpatterns = [
     path('integrations/google/workspace/', GoogleWorkspaceView.as_view(), name='google_workspace'),
     path('integrations/google/send-email/', GmailSendView.as_view(), name='gmail_send'),
     path('integrations/dropbox/', DropboxIntegrationUpdateView.as_view(), name='dropbox_update'),
+    path('availability/', AvailabilitySettingsView.as_view(), name='availability'),
+    path('availability/new/', WorkingHourCreateView.as_view(), name='working_hour_create'),
+    path('availability/<int:pk>/delete/', WorkingHourDeleteView.as_view(), name='working_hour_delete'),
 ]

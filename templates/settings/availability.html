@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Availability | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    {% include 'partials/sidebar.html' with card_title='Availability' card_text='Define practice working hours used to validate scheduling.' %}
+    <main class="app-main">
+      <section class="action-bar"><div class="quick-actions"><button class="btn btn-primary" type="button" data-modal-target="working-hour-modal">+ Working hours</button><a class="btn btn-secondary" href="{% url 'appointments:list' %}">Calendar</a></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Settings</p><h1>Availability</h1><p>If no working hours are configured, NuviaMy allows scheduling at any time. Once configured, appointments must fit within active hours.</p></div></header>
+      <section class="panel"><div class="panel-head"><div><h2>Working hours</h2><p>Practice-wide availability for scheduling validation.</p></div><span class="badge brand">{{ working_hours|length }}</span></div><div class="package-list">{% for hour in working_hours %}<div class="package-card"><div class="client-card-head"><strong>{{ hour.get_weekday_display }}</strong><span class="badge {% if hour.active %}success{% else %}brand{% endif %}">{% if hour.active %}Active{% else %}Inactive{% endif %}</span></div><p>{{ hour.starts_at|time:"g:i A" }} to {{ hour.ends_at|time:"g:i A" }}</p><form method="post" action="{% url 'practice_settings:working_hour_delete' hour.pk %}">{% csrf_token %}<button class="inline-button-danger" type="submit">Delete</button></form></div>{% empty %}<p class="empty-state">No working hours configured yet.</p>{% endfor %}</div></section>
+      <dialog class="modal-dialog" id="working-hour-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Availability</p><h2>Add working hours</h2></div><button class="modal-close" type="button" data-modal-close>×</button></div><form class="appointment-form" method="post" action="{% url 'practice_settings:working_hour_create' %}">{% csrf_token %}<div class="field-grid two">{% for field in working_hour_form %}<div class="field{% if field.name == 'active' %} checkbox-field{% endif %}"><label>{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save hours</button></div></form></div></dialog>
+    </main>
+  </div>
+  <script>document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});</script>
+</body>
+</html>

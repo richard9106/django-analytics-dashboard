@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import UserProfile
-from apps.appointments.models import Appointment
+from apps.appointments.models import Appointment, PracticeWorkingHour
 from apps.appointments.reminders import due_reminder_appointments, send_appointment_reminder
 from apps.clients.models import Client
 from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
@@ -124,6 +124,31 @@ class AppointmentModelTests(TestCase):
 
         with self.assertRaisesMessage(ValidationError, "Disabled reminders cannot be marked"):
             appointment.full_clean()
+
+    def test_appointment_rejects_time_outside_configured_working_hours(self):
+        PracticeWorkingHour.objects.create(
+            practice=self.practice,
+            weekday=self.starts_at.weekday(),
+            starts_at="09:00",
+            ends_at="17:00",
+        )
+        starts_at = timezone.localtime(self.starts_at).replace(hour=18, minute=0, second=0, microsecond=0)
+        appointment = self.build_appointment(starts_at=starts_at, ends_at=starts_at + timedelta(minutes=50))
+
+        with self.assertRaisesMessage(ValidationError, "working hours"):
+            appointment.full_clean()
+
+    def test_appointment_allows_time_inside_configured_working_hours(self):
+        PracticeWorkingHour.objects.create(
+            practice=self.practice,
+            weekday=self.starts_at.weekday(),
+            starts_at="09:00",
+            ends_at="17:00",
+        )
+        starts_at = timezone.localtime(self.starts_at).replace(hour=10, minute=0, second=0, microsecond=0)
+        appointment = self.build_appointment(starts_at=starts_at, ends_at=starts_at + timedelta(minutes=50))
+
+        appointment.full_clean()
 
     def test_send_appointment_reminder_uses_connected_gmail(self):
         self.client.email = "client@example.com"
@@ -293,6 +318,47 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(appointment.practice, practice)
         self.assertEqual(appointment.client, client)
         self.assertEqual(appointment.therapist, therapist)
+
+    def test_appointment_create_can_create_weekly_recurring_series(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        ends_at = starts_at + timedelta(minutes=50)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:create'), {
+            'client': client.pk,
+            'therapist': therapist.pk,
+            'starts_at': starts_at.strftime('%Y-%m-%dT%H:%M'),
+            'ends_at': ends_at.strftime('%Y-%m-%dT%H:%M'),
+            'appointment_type': Appointment.AppointmentType.VIDEO,
+            'status': Appointment.Status.SCHEDULED,
+            'location': '',
+            'meeting_url': '',
+            'notes': 'Weekly session.',
+            'repeat_weekly_count': '3',
+        })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointments = list(Appointment.objects.filter(practice=practice).order_by('starts_at'))
+        self.assertEqual(len(appointments), 3)
+        self.assertEqual(appointments[1].starts_at, appointments[0].starts_at + timedelta(weeks=1))
+        self.assertEqual(appointments[2].starts_at, appointments[0].starts_at + timedelta(weeks=2))
+
+    def test_availability_settings_create_working_hour(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        self.client.force_login(user)
+
+        response = self.client.post(reverse('practice_settings:working_hour_create'), {
+            'weekday': PracticeWorkingHour.Weekday.MONDAY,
+            'starts_at': '09:00',
+            'ends_at': '17:00',
+            'active': 'on',
+        })
+
+        self.assertRedirects(response, reverse('practice_settings:availability'))
+        working_hour = PracticeWorkingHour.objects.get()
+        self.assertEqual(working_hour.practice, practice)
+        self.assertTrue(working_hour.active)
 
     def test_appointment_create_syncs_to_google_calendar_when_enabled(self):
         user, practice, therapist, client = self.create_practice_user()
