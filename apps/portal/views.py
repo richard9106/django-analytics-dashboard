@@ -18,6 +18,7 @@ from apps.documents.models import ClientDocument
 from .forms import (
     ClientIntakeAssignmentForm,
     ClientIntakeResponseForm,
+    AppointmentChangeRequestForm,
     ClientPortalAccessForm,
     ClientPortalRequestForm,
     IntakePacketTemplateForm,
@@ -189,6 +190,35 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
         return TemplateResponse(request, 'portal/dashboard.html', context, status=400)
 
 
+class AppointmentChangeRequestCreateView(ClientPortalAccessMixin, View):
+    def post(self, request, pk):
+        access = self.get_portal_access()
+        appointment = get_object_or_404(
+            Appointment,
+            pk=pk,
+            practice=access.practice,
+            client=access.client,
+            status=Appointment.Status.SCHEDULED,
+        )
+        form = AppointmentChangeRequestForm(request.POST, portal_access=access, appointment=appointment)
+        if form.is_valid():
+            portal_request = form.save()
+            log_audit_event(
+                request,
+                AuditLog.Action.CREATE,
+                'portal.ClientPortalRequest',
+                portal_request.pk,
+                practice=portal_request.practice,
+                metadata={
+                    'client_id': portal_request.client_id,
+                    'appointment_id': appointment.pk,
+                    'category': portal_request.category,
+                    'status': portal_request.status,
+                },
+            )
+        return redirect('portal:dashboard')
+
+
 class PortalAccessListView(PracticeContextMixin, ListView):
     model = ClientPortalAccess
     template_name = 'settings/portal_access.html'
@@ -300,7 +330,7 @@ class PracticePortalRequestListView(PracticeContextMixin, ListView):
         practice = self.get_practice()
         if not practice:
             return ClientPortalRequest.objects.none()
-        return ClientPortalRequest.objects.filter(practice=practice).select_related('client', 'submitted_by')
+        return ClientPortalRequest.objects.filter(practice=practice).select_related('client', 'submitted_by', 'appointment')
 
 
 class PracticePortalRequestStatusView(PracticeContextMixin, View):

@@ -103,6 +103,11 @@
               {% if object.external_event_url %}<a class="inline-link" href="{{ object.external_event_url }}" target="_blank" rel="noopener">Open Google event</a>{% endif %}
               {% if object.sync_error %}<p class="form-error">{{ object.sync_error }}</p>{% endif %}
             </div>
+            <div class="sync-panel">
+              <strong>Reminder: {{ object.get_reminder_status_display }}</strong>
+              {% if object.reminder_sent_at %}<p>Sent {{ object.reminder_sent_at|date:"M j, Y g:i A" }}</p>{% endif %}
+              {% if object.reminder_error %}<p class="form-error">{{ object.reminder_error }}</p>{% endif %}
+            </div>
           {% endif %}
 
         </form>

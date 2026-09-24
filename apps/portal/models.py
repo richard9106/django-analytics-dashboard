@@ -36,6 +36,7 @@ class ClientPortalRequest(models.Model):
 
     practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="portal_requests")
     client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="portal_requests")
+    appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="portal_requests")
     submitted_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="portal_requests")
     category = models.CharField(max_length=30, choices=Category.choices)
     subject = models.CharField(max_length=160)
@@ -50,6 +51,11 @@ class ClientPortalRequest(models.Model):
     def clean(self):
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
             raise ValidationError({"client": "Portal request client must belong to the same practice."})
+        if self.appointment_id:
+            if self.appointment.practice_id != self.practice_id:
+                raise ValidationError({"appointment": "Portal request appointment must belong to the same practice."})
+            if self.appointment.client_id != self.client_id:
+                raise ValidationError({"appointment": "Portal request appointment must belong to the same client."})
 
     def __str__(self):
         return f"{self.get_category_display()} from {self.client}"

@@ -101,6 +101,7 @@
                   <h3>{{ appointment.client }}</h3>
                   <p>{{ appointment.get_appointment_type_display }} with {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p>
                   <p class="sync-meta">Google Calendar: {{ appointment.get_sync_status_display }}{% if appointment.sync_error %} · {{ appointment.sync_error|truncatechars:80 }}{% endif %}</p>
+                  <p class="sync-meta">Reminder: {{ appointment.get_reminder_status_display }}{% if appointment.reminder_error %} · {{ appointment.reminder_error|truncatechars:80 }}{% endif %}</p>
                   <a class="inline-link" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">Edit appointment</a>
                 </div>
                 <span class="badge success">{{ appointment.get_status_display }}</span>

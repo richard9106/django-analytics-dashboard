@@ -27,6 +27,13 @@ class Appointment(models.Model):
         FAILED = "failed", "Failed"
         DISABLED = "disabled", "Disabled"
 
+    class ReminderStatus(models.TextChoices):
+        NOT_SCHEDULED = "not_scheduled", "Not Scheduled"
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+        DISABLED = "disabled", "Disabled"
+
     practice = models.ForeignKey(
         "practices.Practice",
         on_delete=models.CASCADE,
@@ -76,6 +83,10 @@ class Appointment(models.Model):
         default=SyncStatus.NOT_SYNCED,
     )
     sync_error = models.TextField(blank=True)
+    reminder_enabled = models.BooleanField(default=True)
+    reminder_status = models.CharField(max_length=20, choices=ReminderStatus.choices, default=ReminderStatus.PENDING)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_error = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -101,6 +112,12 @@ class Appointment(models.Model):
             self.SyncStatus.DISABLED,
         }:
             errors["sync_status"] = "Disabled calendar sync cannot be marked pending, synced, or failed."
+
+        if not self.reminder_enabled and self.reminder_status not in {
+            self.ReminderStatus.NOT_SCHEDULED,
+            self.ReminderStatus.DISABLED,
+        }:
+            errors["reminder_status"] = "Disabled reminders cannot be marked pending, sent, or failed."
 
         if errors:
             raise ValidationError(errors)

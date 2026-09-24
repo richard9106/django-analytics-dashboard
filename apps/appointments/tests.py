@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
+from apps.appointments.reminders import due_reminder_appointments, send_appointment_reminder
 from apps.clients.models import Client
 from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
@@ -90,6 +91,8 @@ class AppointmentModelTests(TestCase):
         self.assertFalse(appointment.sync_enabled)
         self.assertEqual(appointment.sync_status, Appointment.SyncStatus.NOT_SYNCED)
         self.assertEqual(appointment.external_calendar_provider, Appointment.CalendarProvider.NONE)
+        self.assertTrue(appointment.reminder_enabled)
+        self.assertEqual(appointment.reminder_status, Appointment.ReminderStatus.PENDING)
 
     def test_appointment_can_store_google_calendar_metadata(self):
         appointment = self.build_appointment(
@@ -112,6 +115,48 @@ class AppointmentModelTests(TestCase):
 
         with self.assertRaisesMessage(ValidationError, "Disabled calendar sync cannot be marked"):
             appointment.full_clean()
+
+    def test_disabled_reminder_cannot_be_marked_sent(self):
+        appointment = self.build_appointment(
+            reminder_enabled=False,
+            reminder_status=Appointment.ReminderStatus.SENT,
+        )
+
+        with self.assertRaisesMessage(ValidationError, "Disabled reminders cannot be marked"):
+            appointment.full_clean()
+
+    def test_send_appointment_reminder_uses_connected_gmail(self):
+        self.client.email = "client@example.com"
+        self.client.save(update_fields=["email"])
+        appointment = self.build_appointment(starts_at=timezone.now() + timedelta(hours=23), ends_at=timezone.now() + timedelta(hours=24))
+        appointment.save()
+        ExternalIntegration.objects.create(
+            practice=self.practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            send_email_enabled=True,
+            access_token="access-token",
+            refresh_token="refresh-token",
+        )
+
+        with patch("apps.appointments.reminders.send_gmail_message") as send_email:
+            sent = send_appointment_reminder(appointment)
+
+        self.assertTrue(sent)
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.reminder_status, Appointment.ReminderStatus.SENT)
+        self.assertIsNotNone(appointment.reminder_sent_at)
+        send_email.assert_called_once()
+        self.assertEqual(send_email.call_args.args[1], "client@example.com")
+
+    def test_due_reminder_appointments_returns_next_24_hours_only(self):
+        due = self.build_appointment(starts_at=timezone.now() + timedelta(hours=23), ends_at=timezone.now() + timedelta(hours=24))
+        due.save()
+        later = self.build_appointment(starts_at=timezone.now() + timedelta(days=3), ends_at=timezone.now() + timedelta(days=3, minutes=50))
+        later.save()
+
+        self.assertIn(due, list(due_reminder_appointments()))
+        self.assertNotIn(later, list(due_reminder_appointments()))
 
 
 class AppointmentViewTests(TestCase):

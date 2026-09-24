@@ -165,6 +165,54 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(log.metadata["client_id"], client.pk)
         self.assertEqual(log.metadata["category"], ClientPortalRequest.Category.RESCHEDULE)
 
+    def test_portal_client_can_request_appointment_change(self):
+        user, practice, therapist, client, _access = self.create_portal_user()
+        starts_at = timezone.now() + timedelta(days=2)
+        appointment = Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("portal:appointment_change_request", args=[appointment.pk]), {
+            "category": ClientPortalRequest.Category.RESCHEDULE,
+            "message": "Can we move this to Friday afternoon?",
+        })
+
+        self.assertRedirects(response, reverse("portal:dashboard"))
+        portal_request = ClientPortalRequest.objects.get()
+        self.assertEqual(portal_request.appointment, appointment)
+        self.assertEqual(portal_request.practice, practice)
+        self.assertEqual(portal_request.client, client)
+        self.assertIn("Appointment change request", portal_request.subject)
+
+    def test_portal_client_cannot_request_change_for_other_client_appointment(self):
+        user, _practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        _other_user, other_practice, other_therapist, other_client, _other_access = self.create_portal_user(
+            username="other-client",
+            practice_name="Other Practice",
+        )
+        starts_at = timezone.now() + timedelta(days=2)
+        appointment = Appointment.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("portal:appointment_change_request", args=[appointment.pk]), {
+            "category": ClientPortalRequest.Category.RESCHEDULE,
+            "message": "Should not work.",
+        })
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(ClientPortalRequest.objects.count(), 0)
+
     def test_portal_dashboard_shows_only_linked_client_requests(self):
         user, practice, _therapist, client, _access = self.create_portal_user()
         other_client = Client.objects.create(practice=practice, first_name="Hidden", last_name="Client")

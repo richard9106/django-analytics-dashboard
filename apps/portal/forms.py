@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.accounts.models import UserProfile
+from apps.appointments.models import Appointment
 from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
 
 
@@ -136,6 +137,46 @@ class ClientPortalRequestForm(forms.ModelForm):
         portal_request.practice = self.portal_access.practice
         portal_request.client = self.portal_access.client
         portal_request.submitted_by = self.portal_access.user
+        if commit:
+            portal_request.full_clean()
+            portal_request.save()
+            self.save_m2m()
+        return portal_request
+
+
+class AppointmentChangeRequestForm(forms.ModelForm):
+    class Meta:
+        model = ClientPortalRequest
+        fields = ['category', 'message']
+        widgets = {'message': forms.Textarea(attrs={'rows': 4})}
+
+    def __init__(self, *args, portal_access=None, appointment=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.portal_access = portal_access
+        self.appointment = appointment
+        self.fields['category'].choices = [
+            (ClientPortalRequest.Category.RESCHEDULE, ClientPortalRequest.Category.RESCHEDULE.label),
+            (ClientPortalRequest.Category.GENERAL, 'Cancel appointment request'),
+        ]
+        if portal_access and appointment:
+            self.instance.practice = portal_access.practice
+            self.instance.client = portal_access.client
+            self.instance.submitted_by = portal_access.user
+            self.instance.appointment = appointment
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.appointment and self.appointment.status != Appointment.Status.SCHEDULED:
+            raise forms.ValidationError('Only scheduled appointments can be changed from the portal.')
+        return cleaned_data
+
+    def save(self, commit=True):
+        portal_request = super().save(commit=False)
+        portal_request.practice = self.portal_access.practice
+        portal_request.client = self.portal_access.client
+        portal_request.submitted_by = self.portal_access.user
+        portal_request.appointment = self.appointment
+        portal_request.subject = f'Appointment change request for {timezone.localtime(self.appointment.starts_at):%b %-d, %-I:%M %p}'
         if commit:
             portal_request.full_clean()
             portal_request.save()
