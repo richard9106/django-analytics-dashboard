@@ -33,17 +33,27 @@
           </div>
           <div class="notes-list">
             {% for plan in plans %}
-              <article class="note-card">
+              <article class="note-card{% if plan.is_review_due %} review-due-card{% endif %}">
                 <div class="note-card-head">
                   <div><h3>{{ plan.title }}</h3><p>{{ plan.client }} with {{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }} · Started {{ plan.start_date|date:"M j, Y" }}</p></div>
-                  <span class="badge {% if plan.status == 'active' %}success{% elif plan.status == 'review_due' %}warning{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{{ plan.get_status_display }}</span>
+                  <span class="badge {% if plan.is_review_due or plan.status == 'review_due' %}warning{% elif plan.status == 'active' %}success{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{% if plan.is_review_due %}Review due{% else %}{{ plan.get_status_display }}{% endif %}</span>
                 </div>
                 <p class="note-preview"><strong>Goals:</strong> {{ plan.goals|truncatechars:190 }}</p>
                 {% if plan.review_date %}<p class="sync-meta">Review date: {{ plan.review_date|date:"M j, Y" }}</p>{% endif %}
                 {% if plan.diagnoses.all %}
                   <p class="sync-meta">Diagnoses: {% for diagnosis in plan.diagnoses.all %}{{ diagnosis.code }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
                 {% endif %}
-                <a class="inline-link" href="{% url 'clinical:treatment_plan_edit' plan.pk %}" data-modal-target="plan-modal-{{ plan.pk }}">Edit plan</a>
+                <div class="inline-actions">
+                  <a class="inline-link" href="{% url 'clinical:treatment_plan_edit' plan.pk %}" data-modal-target="plan-modal-{{ plan.pk }}">Edit plan</a>
+                  {% if plan.is_review_due %}
+                    <form class="inline-review-form" method="post" action="{% url 'clinical:treatment_plan_complete_review' plan.pk %}">
+                      {% csrf_token %}
+                      <label for="next-review-{{ plan.pk }}">Next review</label>
+                      <input id="next-review-{{ plan.pk }}" name="next_review_date" type="date" value="{{ default_next_review_date|date:'Y-m-d' }}" required>
+                      <button class="inline-button" type="submit">Complete review</button>
+                    </form>
+                  {% endif %}
+                </div>
               </article>
             {% empty %}
               <p class="empty-state">No treatment plans have been created yet.</p>

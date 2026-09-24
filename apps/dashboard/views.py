@@ -8,7 +8,7 @@ from apps.accounts.access import get_practice_for_user, is_client_user
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice
 from apps.clients.models import Client
-from apps.clinical.models import SessionNote
+from apps.clinical.models import SessionNote, TreatmentPlan
 from apps.notifications.models import Notification
 from apps.portal.models import ClientPortalRequest
 
@@ -59,6 +59,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             practice=practice,
             status__in=[ClientPortalRequest.Status.NEW, ClientPortalRequest.Status.REVIEWED],
         ).count()
+        due_treatment_plan_count = TreatmentPlan.objects.filter(
+            practice=practice,
+            status__in=[TreatmentPlan.Status.ACTIVE, TreatmentPlan.Status.REVIEW_DUE],
+            review_date__lte=timezone.localdate(),
+        ).count()
 
         tasks = []
         if open_note_count:
@@ -88,6 +93,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'label': 'Client portal requests',
                 'detail': f'{open_portal_request_count} portal request{suffix} awaiting follow-up',
                 'tone': 'brand',
+            })
+        if due_treatment_plan_count:
+            suffix = '' if due_treatment_plan_count == 1 else 's'
+            tasks.append({
+                'label': 'Treatment plan reviews',
+                'detail': f'{due_treatment_plan_count} treatment plan{suffix} due for review',
+                'tone': 'warning',
             })
 
         return tasks

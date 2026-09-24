@@ -169,3 +169,11 @@ class TreatmentPlan(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.client}"
+
+    @property
+    def is_review_due(self):
+        return (
+            self.status in {self.Status.ACTIVE, self.Status.REVIEW_DUE}
+            and self.review_date is not None
+            and self.review_date <= timezone.localdate()
+        )

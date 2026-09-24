@@ -169,6 +169,7 @@ h1, h2, h3, p { margin-top: 0; }
 .notes-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .58), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }
 .notes-list { display: grid; gap: 12px; }
 .note-card { padding: 16px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255, 255, 255, .86); box-shadow: var(--shadow-1); }
+.note-card.review-due-card { border-color: rgba(200, 117, 19, .28); background: radial-gradient(circle at top right, rgba(255, 246, 231, .9), transparent 36%), rgba(255, 255, 255, .9); }
 .note-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
 .note-card h3 { margin: 0 0 4px; font-size: 18px; letter-spacing: -.03em; }
 .note-card p { font-size: 14px; }
@@ -189,6 +190,8 @@ h1, h2, h3, p { margin-top: 0; }
 .document-card p { color: var(--slate-500); font-size: 14px; overflow-wrap: anywhere; }
 .inline-button-danger { margin-top: 8px; border: 0; background: transparent; color: var(--danger); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
 .inline-button { border: 0; background: transparent; color: var(--brand-700); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; padding: 0; }
+.inline-review-form { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--slate-500); font-size: 13px; font-weight: 800; }
+.inline-review-form input { min-height: 34px; border: 1px solid #cbd5e1; border-radius: 9px; padding: 0 10px; color: var(--slate-800); }
 .credential-panel { border-color: rgba(20, 184, 166, .25); background: radial-gradient(circle at top right, rgba(204, 251, 245, .72), transparent 32%), #fff; }
 .credential-box { white-space: pre-line; overflow-wrap: anywhere; padding: 14px; border: 1px dashed rgba(112, 82, 217, .35); border-radius: 16px; background: rgba(255,255,255,.8); color: var(--slate-800); font-weight: 800; line-height: 1.7; }
 .credential-hint { padding: 12px 14px; border-radius: 14px; background: var(--slate-50); color: var(--slate-600); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

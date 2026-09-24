@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
+from apps.clinical.models import TreatmentPlan
 from apps.clients.models import Client
 from apps.portal.models import ClientPortalAccess
 from apps.practices.models import Practice, TherapistProfile
@@ -173,6 +174,57 @@ class DashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'No appointments scheduled for today.')
+
+    def test_dashboard_shows_treatment_plan_reviews_due_task(self):
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(
+            practice=practice,
+            primary_therapist=therapist,
+            first_name='Maya',
+            last_name='Johnson',
+        )
+        TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title='Due care plan',
+            goals='Review goals.',
+            review_date=timezone.localdate(),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Treatment plan reviews')
+        self.assertContains(response, '1 treatment plan due for review')
+
+    def test_dashboard_scopes_treatment_plan_reviews_to_user_practice(self):
+        user, _practice, _therapist = self.create_practice_user()
+        _other_user, other_practice, other_therapist = self.create_practice_user(
+            username='other',
+            practice_name='Other Practice',
+        )
+        other_client = Client.objects.create(
+            practice=other_practice,
+            primary_therapist=other_therapist,
+            first_name='Hidden',
+            last_name='Client',
+        )
+        TreatmentPlan.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            title='Hidden due plan',
+            goals='Hidden goals.',
+            review_date=timezone.localdate(),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Treatment plan reviews')
 
     def test_staff_user_can_see_admin_link(self):
         user = get_user_model().objects.create_user(

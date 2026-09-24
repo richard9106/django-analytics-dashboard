@@ -1,6 +1,10 @@
+from datetime import date, timedelta
+
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
@@ -197,6 +201,7 @@ class TreatmentPlanListView(LoginRequiredMixin, TreatmentPlanContextMixin, ListV
         context['diagnoses'] = (
             practice.diagnoses.select_related('client').all() if practice else Diagnosis.objects.none()
         )
+        context['default_next_review_date'] = timezone.localdate() + timedelta(days=90)
         return context
 
 
@@ -289,6 +294,32 @@ class TreatmentPlanDeleteView(LoginRequiredMixin, TreatmentPlanContextMixin, Del
             metadata=metadata,
         )
         return response
+
+
+class TreatmentPlanCompleteReviewView(LoginRequiredMixin, TreatmentPlanContextMixin, View):
+    def post(self, request, *args, **kwargs):
+        practice = self.get_practice()
+        if not practice:
+            return redirect('clinical:treatment_plans')
+
+        plan = get_object_or_404(TreatmentPlan, pk=kwargs['pk'], practice=practice)
+        next_review_date = request.POST.get('next_review_date')
+        plan.status = TreatmentPlan.Status.ACTIVE
+        if next_review_date:
+            plan.review_date = date.fromisoformat(next_review_date)
+        else:
+            plan.review_date = timezone.localdate() + timedelta(days=90)
+        plan.full_clean()
+        plan.save(update_fields=['status', 'review_date', 'updated_at'])
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'clinical.TreatmentPlan',
+            plan.pk,
+            practice=plan.practice,
+            metadata={'client_id': plan.client_id, 'status': plan.status, 'review_date': plan.review_date.isoformat()},
+        )
+        return redirect('clinical:treatment_plans')
 
 
 class DiagnosisCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, CreateView):
