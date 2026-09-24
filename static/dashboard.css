@@ -306,6 +306,23 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-cta .btn-primary { background: #fff; color: var(--brand-700); }
 .back-to-top { position: fixed; right: 18px; bottom: 18px; z-index: 20; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; border-radius: 999px; background: rgba(255, 255, 255, .94); border: 1px solid rgba(112, 82, 217, .2); color: var(--brand-700); font-size: 13px; font-weight: 900; box-shadow: var(--shadow-2); backdrop-filter: blur(10px); }
 .back-to-top:hover { background: var(--brand-600); color: #fff; }
+.pricing-hero { width: min(980px, calc(100% - 32px)); margin: 58px auto 24px; text-align: center; }
+.pricing-hero h1 { margin-bottom: 16px; color: var(--slate-900); font-size: clamp(36px, 5.2vw, 58px); line-height: 1.05; letter-spacing: -.055em; }
+.pricing-hero p { color: var(--slate-600); font-size: 17px; line-height: 1.7; }
+.billing-note { width: fit-content; margin: 20px auto 0; padding: 11px 14px; border: 1px solid rgba(20, 184, 166, .24); border-radius: 999px; background: rgba(204, 251, 245, .52); color: var(--slate-800); font-size: 14px; }
+.pricing-grid { width: min(1180px, calc(100% - 32px)); margin: 24px auto 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+.pricing-card { position: relative; display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 12px; padding: 24px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 26px; background: rgba(255, 255, 255, .9); box-shadow: var(--shadow-1); }
+.pricing-card.featured { border-color: rgba(112, 82, 217, .36); background: radial-gradient(circle at top right, rgba(204, 251, 245, .86), transparent 34%), linear-gradient(145deg, #fff, var(--brand-50)); box-shadow: var(--shadow-2); transform: translateY(-8px); }
+.pricing-card .badge { width: fit-content; margin-bottom: 4px; }
+.pricing-card h2 { margin: 0; color: var(--slate-900); font-size: 42px; line-height: 1; letter-spacing: -.05em; }
+.pricing-card h2 span { color: var(--slate-500); font-size: 15px; letter-spacing: 0; }
+.pricing-card p { color: var(--slate-600); line-height: 1.6; }
+.annual-price { color: var(--brand-700) !important; font-size: 14px; font-weight: 900; }
+.pricing-card ul { display: grid; gap: 10px; margin: 4px 0 8px; padding: 0; list-style: none; }
+.pricing-card li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; color: var(--slate-700); font-size: 14px; line-height: 1.45; }
+.pricing-card li::before { content: "✓"; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: var(--success-bg); color: var(--success); font-size: 12px; font-weight: 900; }
+.pricing-advice { align-items: start; }
+.pricing-faq { padding-top: 18px; }
 
 @media (max-width: 1024px) {
   .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
@@ -321,7 +338,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .document-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .portal-grid { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .marketing-hero, .marketing-band, .marketing-grid.three, .marketing-grid.two { grid-template-columns: 1fr; }
+  .marketing-hero, .marketing-band, .marketing-grid.three, .marketing-grid.two, .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-card.featured { transform: none; }
   .login-card { justify-self: start; }
 }
 

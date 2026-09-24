@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pricing | NuviaMy Therapy Practice Management Software</title>
+  <meta name="description" content="Simple monthly and yearly pricing for NuviaMy therapy practice management software. Plans for solo therapists, group practices, and clinics with 10% off annual subscriptions.">
+  <meta name="keywords" content="therapy practice management software pricing, therapist software subscription, mental health practice management pricing, counseling practice software cost, therapy EHR monthly subscription, private practice software pricing">
+  <link rel="canonical" href="https://nuviamy.com/pricing/">
+  <meta property="og:title" content="NuviaMy Pricing | Therapy Practice Management Software">
+  <meta property="og:description" content="Monthly and yearly subscription plans for therapists, counselors, psychologists, and mental health practices. Save 10% annually.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nuviamy.com/pricing/">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "NuviaMy",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "url": "https://nuviamy.com/pricing/",
+        "description": "Therapy practice management software with monthly and yearly subscription plans.",
+        "offers": [
+          {"@type": "Offer", "name": "Solo Therapist", "price": "39", "priceCurrency": "USD", "billingDuration": "P1M"},
+          {"@type": "Offer", "name": "Group Practice", "price": "79", "priceCurrency": "USD", "billingDuration": "P1M"},
+          {"@type": "Offer", "name": "Clinic", "price": "149", "priceCurrency": "USD", "billingDuration": "P1M"}
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {"@type": "Question", "name": "Does NuviaMy offer monthly and yearly subscriptions?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. NuviaMy offers monthly subscriptions and annual subscriptions with a 10% discount."}},
+          {"@type": "Question", "name": "Which plan is best for a solo therapist?", "acceptedAnswer": {"@type": "Answer", "text": "The Solo Therapist plan is designed for independent therapists and private practices that need scheduling, notes, treatment plans, billing, documents, intake, reminders, and client portal workflows."}},
+          {"@type": "Question", "name": "Is NuviaMy HIPAA certified?", "acceptedAnswer": {"@type": "Answer", "text": "NuviaMy is built with HIPAA-aware architecture patterns, tenant isolation, and secure workflow defaults, but practices should complete their own compliance review before production clinical use."}}
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body id="top" class="marketing-page">
+  <header class="marketing-nav" aria-label="NuviaMy navigation">
+    <a class="brand" href="{% url 'home' %}" aria-label="NuviaMy home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
+    <nav><a href="{% url 'home' %}#features">Features</a><a href="{% url 'pricing' %}">Pricing</a><a href="{% url 'home' %}#security">Security</a><a href="{% url 'login' %}">Sign in</a><a class="btn btn-primary" href="{% url 'signup' %}">Start your practice workspace</a></nav>
+  </header>
+
+  <main>
+    <section class="pricing-hero">
+      <p class="eyebrow">Simple SaaS Pricing</p>
+      <h1>Subscription pricing for therapists, group practices, and clinics.</h1>
+      <p>Start monthly, or choose yearly billing and save 10%. Every plan includes the core therapy practice management workflows: scheduling, clinical notes, treatment plans, billing, documents, intake, portal access, reminders, and Google integrations.</p>
+      <div class="billing-note"><strong>Annual discount:</strong> yearly plans are priced at 10% off monthly billing.</div>
+    </section>
+
+    <section class="pricing-grid" aria-label="NuviaMy subscription plans">
+      <article class="pricing-card">
+        <p class="eyebrow">Solo Therapist</p>
+        <h2>$39<span>/month</span></h2>
+        <p class="annual-price">$421/year with 10% annual discount</p>
+        <p>For independent therapists, counselors, psychologists, and private practices launching a professional workspace.</p>
+        <ul>
+          <li>1 therapist workspace</li>
+          <li>Client records and appointment scheduling</li>
+          <li>Clinical notes and treatment plans</li>
+          <li>Billing, invoices, superbills, and documents</li>
+          <li>Client portal, intake packets, and reminders</li>
+        </ul>
+        <a class="btn btn-secondary" href="{% url 'signup' %}">Start Solo</a>
+      </article>
+
+      <article class="pricing-card featured">
+        <span class="badge success">Most popular</span>
+        <p class="eyebrow">Group Practice</p>
+        <h2>$79<span>/month</span></h2>
+        <p class="annual-price">$853/year with 10% annual discount</p>
+        <p>For growing practices that need shared workflows, team visibility, therapist scheduling, and stronger operations.</p>
+        <ul>
+          <li>Up to 5 therapist/admin users</li>
+          <li>Practice-wide dashboard and client management</li>
+          <li>Recurring appointments and availability controls</li>
+          <li>Treatment plan review workflow</li>
+          <li>Google Calendar, Gmail, and Drive integrations</li>
+        </ul>
+        <a class="btn btn-primary" href="{% url 'signup' %}">Start Group</a>
+      </article>
+
+      <article class="pricing-card">
+        <p class="eyebrow">Clinic</p>
+        <h2>$149<span>/month</span></h2>
+        <p class="annual-price">$1,609/year with 10% annual discount</p>
+        <p>For clinics and multi-provider mental health teams that need broader workflows and operational control.</p>
+        <ul>
+          <li>Up to 15 users</li>
+          <li>Priority setup guidance</li>
+          <li>Expanded client portal workflows</li>
+          <li>Insurance payer and reimbursement settings</li>
+          <li>Custom workflow planning for larger teams</li>
+        </ul>
+        <a class="btn btn-secondary" href="{% url 'signup' %}">Start Clinic</a>
+      </article>
+    </section>
+
+    <section class="marketing-band pricing-advice">
+      <div><p class="eyebrow">Pricing recommendation</p><h2>Start with clear monthly pricing, then validate with real therapists.</h2></div>
+      <p>These prices position NuviaMy below many established EHR platforms while still valuing clinical documentation, billing, intake, portal, reminders, and Google workspace features. If conversion is strong, raise prices after you add payments, subscription billing, and production compliance documentation.</p>
+    </section>
+
+    <section class="marketing-section pricing-faq" id="faq">
+      <p class="eyebrow">Pricing FAQ</p>
+      <h2>Questions therapists ask before choosing practice management software.</h2>
+      <div class="marketing-grid two">
+        <article><h3>Can I pay monthly?</h3><p>Yes. Monthly subscriptions are available for solo therapists, group practices, and clinics.</p></article>
+        <article><h3>Do yearly plans include a discount?</h3><p>Yes. Yearly billing includes a 10% discount compared with paying monthly for 12 months.</p></article>
+        <article><h3>Is this for solo therapists or clinics?</h3><p>NuviaMy supports solo private practices, group therapy practices, counselors, psychologists, behavioral health providers, and mental health clinics.</p></article>
+        <article><h3>Is NuviaMy HIPAA certified?</h3><p>NuviaMy is HIPAA-aware and built around tenant isolation and secure defaults, but practices should complete their own compliance review before using it for production clinical operations.</p></article>
+      </div>
+    </section>
+
+    <section class="marketing-cta">
+      <p class="eyebrow">Start monthly or save yearly</p>
+      <h2>Choose the plan that fits your therapy practice today.</h2>
+      <p>You can start with a simple monthly subscription and move to annual billing when the workflow fits your practice.</p>
+      <a class="btn btn-primary" href="{% url 'signup' %}">Create your practice workspace</a>
+    </section>
+  </main>
+  <a class="back-to-top" href="#top" aria-label="Back to top">↑ Top</a>
+</body>
+</html>

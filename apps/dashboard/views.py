@@ -164,3 +164,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 class HomePageView(TemplateView):
     template_name = 'marketing/home.html'
+
+
+class PricingPageView(TemplateView):
+    template_name = 'marketing/pricing.html'

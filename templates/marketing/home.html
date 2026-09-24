@@ -37,7 +37,7 @@
 <body id="top" class="marketing-page">
   <header class="marketing-nav" aria-label="NuviaMy navigation">
     <a class="brand" href="{% url 'home' %}" aria-label="NuviaMy home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
-    <nav><a href="#features">Features</a><a href="#workflows">Workflows</a><a href="#security">Security</a><a href="{% url 'login' %}">Sign in</a><a class="btn btn-primary" href="{% url 'signup' %}">Start your practice workspace</a></nav>
+    <nav><a href="#features">Features</a><a href="{% url 'pricing' %}">Pricing</a><a href="#workflows">Workflows</a><a href="#security">Security</a><a href="{% url 'login' %}">Sign in</a><a class="btn btn-primary" href="{% url 'signup' %}">Start your practice workspace</a></nav>
   </header>
 
   <main>
@@ -46,7 +46,7 @@
         <p class="eyebrow">Therapy Practice Management SaaS</p>
         <h1>Practice management software for therapists who want calmer clinical operations.</h1>
         <p>NuviaMy helps therapists, counselors, psychologists, behavioral health providers, and mental health practices manage appointments, clinical notes, treatment plans, client intake, billing, documents, reminders, and portal workflows from one polished workspace.</p>
-        <div class="hero-actions"><a class="btn btn-primary" href="{% url 'signup' %}">Create a practice account</a><a class="btn btn-secondary" href="#features">Explore features</a></div>
+        <div class="hero-actions"><a class="btn btn-primary" href="{% url 'signup' %}">Create a practice account</a><a class="btn btn-secondary" href="{% url 'pricing' %}">View pricing</a></div>
         <div class="trust-list"><span>HIPAA-aware architecture</span><span>Practice-scoped data</span><span>Server-rendered Django SaaS</span><span>Built for therapists</span></div>
       </div>
       <aside class="hero-card" aria-label="NuviaMy product overview">

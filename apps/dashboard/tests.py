@@ -51,6 +51,21 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'https://nuviamy.com/')
         self.assertContains(response, '/static/favicon.svg')
         self.assertContains(response, 'Back to top')
+        self.assertContains(response, reverse('pricing'))
+
+    def test_pricing_page_is_public_and_shows_subscription_plans(self):
+        response = self.client.get(reverse('pricing'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Subscription pricing')
+        self.assertContains(response, 'Solo Therapist')
+        self.assertContains(response, '$39')
+        self.assertContains(response, 'Group Practice')
+        self.assertContains(response, '$79')
+        self.assertContains(response, 'Clinic')
+        self.assertContains(response, '$149')
+        self.assertContains(response, '10% annual discount')
+        self.assertContains(response, 'FAQPage')
 
     def test_robots_and_sitemap_load(self):
         robots = self.client.get(reverse('robots_txt'))
@@ -60,6 +75,7 @@ class DashboardTests(TestCase):
         self.assertContains(robots, 'Sitemap: https://nuviamy.com/sitemap.xml')
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, '<loc>https://nuviamy.com/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/pricing/</loc>')
 
     def test_favicon_redirects_to_svg_icon(self):
         response = self.client.get(reverse('favicon'))
