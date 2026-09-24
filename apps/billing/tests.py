@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
+from apps.audit.models import AuditLog
 from apps.billing.models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, ServicePackage
 from apps.billing.models import SessionPackageTemplate
 from apps.clients.models import Client
@@ -259,6 +260,61 @@ class BillingViewTests(TestCase):
         invoice = Invoice.objects.get()
         expected_prefix = f"PKG-{package.pk}-{timezone.localdate():%Y%m%d}-"
         self.assertEqual(invoice.invoice_number, f"{expected_prefix}0001")
+
+    def test_invoice_print_view_is_scoped_and_audited(self):
+        user, practice, _therapist, client, appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=client,
+            appointment=appointment,
+            invoice_number="INV-PRINT",
+            amount=Decimal("150.00"),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:invoice_print", args=[invoice.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "INV-PRINT")
+        self.assertContains(response, "Print / Save PDF")
+        log = AuditLog.objects.get(action=AuditLog.Action.EXPORT, object_type="billing.Invoice")
+        self.assertEqual(log.metadata["document_type"], "invoice")
+
+    def test_invoice_superbill_view_includes_service_details(self):
+        user, practice, _therapist, client, appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=client,
+            appointment=appointment,
+            invoice_number="INV-SUPER",
+            amount=Decimal("150.00"),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:invoice_superbill", args=[invoice.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Superbill")
+        self.assertContains(response, "Provider / Service Information")
+        self.assertContains(response, appointment.get_appointment_type_display())
+
+    def test_invoice_print_view_rejects_other_practice_invoice(self):
+        user, _practice, _therapist, _client, _appointment = self.create_practice_user()
+        _other_user, other_practice, _other_therapist, other_client, _other_appointment = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        invoice = Invoice.objects.create(
+            practice=other_practice,
+            client=other_client,
+            invoice_number="INV-HIDDEN",
+            amount=Decimal("150.00"),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:invoice_print", args=[invoice.pk]))
+
+        self.assertEqual(response.status_code, 404)
 
     def test_invoice_create_autofills_client_and_amount_from_package(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()

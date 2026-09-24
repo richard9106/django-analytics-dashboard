@@ -33,7 +33,7 @@
               <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>For</th></tr></thead>
               <tbody>
                 {% for invoice in invoices %}
-                  <tr><td><a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a></td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td></tr>
+                  <tr><td><a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a><br><a class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<br><a class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td></tr>
                 {% empty %}
                   <tr><td colspan="5">No invoices yet.</td></tr>
                 {% endfor %}

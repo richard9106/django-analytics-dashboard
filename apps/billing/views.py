@@ -1,6 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.audit.models import AuditLog
@@ -105,6 +106,38 @@ class InvoiceDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
         response = super().form_valid(form)
         log_audit_event(self.request, AuditLog.Action.DELETE, 'billing.Invoice', invoice_id, practice=practice, metadata=metadata)
         return response
+
+
+class InvoicePrintableView(LoginRequiredMixin, PracticeContextMixin, TemplateView):
+    template_name = 'billing/printable_invoice.html'
+    document_type = 'invoice'
+
+    def get_invoice(self):
+        practice = self.get_practice()
+        return get_object_or_404(
+            Invoice.objects.filter(practice=practice).select_related('practice', 'client', 'appointment__therapist__user', 'package'),
+            pk=self.kwargs['pk'],
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        invoice = self.get_invoice()
+        context['invoice'] = invoice
+        context['document_type'] = self.document_type
+        context['is_superbill'] = self.document_type == 'superbill'
+        log_audit_event(
+            self.request,
+            AuditLog.Action.EXPORT,
+            'billing.Invoice',
+            invoice.pk,
+            practice=invoice.practice,
+            metadata={'invoice_number': invoice.invoice_number, 'document_type': self.document_type},
+        )
+        return context
+
+
+class InvoiceSuperbillView(InvoicePrintableView):
+    document_type = 'superbill'
 
 
 class PackageCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
