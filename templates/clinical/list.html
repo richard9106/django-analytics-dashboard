@@ -17,6 +17,7 @@
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           <a class="btn btn-primary" href="{% url 'clinical:create' %}" data-modal-target="note-create-modal">+ New note</a>
+          <a class="btn btn-secondary" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
           <a class="btn btn-secondary" href="{% url 'clients:create' %}">+ New client</a>
           <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
         </div>

@@ -1,12 +1,13 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
-from .forms import SessionNoteForm
-from .models import SessionNote
+from .forms import DiagnosisForm, SessionNoteForm, TreatmentPlanForm
+from .models import Diagnosis, SessionNote, TreatmentPlan
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -25,6 +26,24 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
             context['note_clients'] = []
             context['note_therapists'] = []
             context['note_appointments'] = []
+        return context
+
+
+class TreatmentPlanContextMixin(PracticeContextMixin):
+    success_url = reverse_lazy('clinical:treatment_plans')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        if practice:
+            context['plan_clients'] = practice.clients.all()
+            context['plan_therapists'] = practice.therapists.select_related('user')
+            context['diagnosis_options'] = practice.diagnoses.select_related('client').filter(active=True)
+        else:
+            context['plan_clients'] = []
+            context['plan_therapists'] = []
+            context['diagnosis_options'] = []
+        context['today'] = timezone.localdate()
         return context
 
 
@@ -136,6 +155,212 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
             AuditLog.Action.DELETE,
             'clinical.SessionNote',
             note_id,
+            practice=practice,
+            metadata=metadata,
+        )
+        return response
+
+
+class TreatmentPlanListView(LoginRequiredMixin, TreatmentPlanContextMixin, ListView):
+    model = TreatmentPlan
+    template_name = 'clinical/treatment_plans.html'
+    context_object_name = 'plans'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return TreatmentPlan.objects.none()
+        return (
+            TreatmentPlan.objects.filter(practice=practice)
+            .select_related('client', 'therapist__user')
+            .prefetch_related('diagnoses')
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        context['diagnoses'] = (
+            practice.diagnoses.select_related('client').all() if practice else Diagnosis.objects.none()
+        )
+        return context
+
+
+class TreatmentPlanCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, CreateView):
+    model = TreatmentPlan
+    form_class = TreatmentPlanForm
+    template_name = 'clinical/form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'New Treatment Plan'
+        context['form_heading'] = 'Create a care plan'
+        context['submit_label'] = 'Create plan'
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.CREATE,
+            'clinical.TreatmentPlan',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'status': self.object.status},
+        )
+        return response
+
+
+class TreatmentPlanUpdateView(LoginRequiredMixin, TreatmentPlanContextMixin, UpdateView):
+    model = TreatmentPlan
+    form_class = TreatmentPlanForm
+    template_name = 'clinical/form.html'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return TreatmentPlan.objects.none()
+        return TreatmentPlan.objects.filter(practice=practice)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'Edit Treatment Plan'
+        context['form_heading'] = 'Edit care plan details'
+        context['submit_label'] = 'Save changes'
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.UPDATE,
+            'clinical.TreatmentPlan',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'status': self.object.status},
+        )
+        return response
+
+
+class TreatmentPlanDeleteView(LoginRequiredMixin, TreatmentPlanContextMixin, DeleteView):
+    model = TreatmentPlan
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return TreatmentPlan.objects.none()
+        return TreatmentPlan.objects.filter(practice=practice)
+
+    def form_valid(self, form):
+        plan_id = self.object.pk
+        practice = self.object.practice
+        metadata = {'client_id': self.object.client_id, 'status': self.object.status}
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.DELETE,
+            'clinical.TreatmentPlan',
+            plan_id,
+            practice=practice,
+            metadata=metadata,
+        )
+        return response
+
+
+class DiagnosisCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, CreateView):
+    model = Diagnosis
+    form_class = DiagnosisForm
+    template_name = 'clinical/form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'New Diagnosis'
+        context['form_heading'] = 'Add client diagnosis'
+        context['submit_label'] = 'Add diagnosis'
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.CREATE,
+            'clinical.Diagnosis',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'code': self.object.code},
+        )
+        return response
+
+
+class DiagnosisUpdateView(LoginRequiredMixin, TreatmentPlanContextMixin, UpdateView):
+    model = Diagnosis
+    form_class = DiagnosisForm
+    template_name = 'clinical/form.html'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Diagnosis.objects.none()
+        return Diagnosis.objects.filter(practice=practice)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = 'Edit Diagnosis'
+        context['form_heading'] = 'Edit diagnosis details'
+        context['submit_label'] = 'Save changes'
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.UPDATE,
+            'clinical.Diagnosis',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'client_id': self.object.client_id, 'code': self.object.code, 'active': self.object.active},
+        )
+        return response
+
+
+class DiagnosisDeleteView(LoginRequiredMixin, TreatmentPlanContextMixin, DeleteView):
+    model = Diagnosis
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Diagnosis.objects.none()
+        return Diagnosis.objects.filter(practice=practice)
+
+    def form_valid(self, form):
+        diagnosis_id = self.object.pk
+        practice = self.object.practice
+        metadata = {'client_id': self.object.client_id, 'code': self.object.code}
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request,
+            AuditLog.Action.DELETE,
+            'clinical.Diagnosis',
+            diagnosis_id,
             practice=practice,
             metadata=metadata,
         )

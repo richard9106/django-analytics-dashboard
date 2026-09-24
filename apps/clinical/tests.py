@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
-from apps.clinical.models import SessionNote
+from apps.clinical.models import Diagnosis, SessionNote, TreatmentPlan
 from apps.clients.models import Client
 from apps.practices.models import Practice, TherapistProfile
 
@@ -139,6 +139,85 @@ class SessionNoteModelTests(TestCase):
 
         with self.assertRaisesMessage(ValidationError, "cannot have locked_at set unless it is locked"):
             note.full_clean()
+
+
+class TreatmentPlanModelTests(TestCase):
+    def setUp(self):
+        self.practice = Practice.objects.create(name="NuviaMy Wellness")
+        self.user = get_user_model().objects.create_user(username="drsmith")
+        self.therapist = TherapistProfile.objects.create(
+            user=self.user,
+            practice=self.practice,
+            license_number="ABC123",
+            license_state="CA",
+        )
+        self.client = Client.objects.create(
+            practice=self.practice,
+            primary_therapist=self.therapist,
+            first_name="Ana",
+            last_name="Perez",
+        )
+
+    def test_diagnosis_rejects_client_from_other_practice(self):
+        other_practice = Practice.objects.create(name="Other Clinic")
+        other_client = Client.objects.create(practice=other_practice, first_name="Kai", last_name="Lee")
+        diagnosis = Diagnosis(
+            practice=self.practice,
+            client=other_client,
+            code="F41.1",
+            label="Generalized anxiety disorder",
+        )
+
+        with self.assertRaisesMessage(ValidationError, "Diagnosis client must belong to the same practice"):
+            diagnosis.full_clean()
+
+    def test_treatment_plan_accepts_matching_practice_relationships(self):
+        plan = TreatmentPlan(
+            practice=self.practice,
+            client=self.client,
+            therapist=self.therapist,
+            title="Anxiety care plan",
+            goals="Reduce anxiety symptoms.",
+            start_date=timezone.localdate(),
+        )
+
+        plan.full_clean()
+
+    def test_treatment_plan_rejects_therapist_from_other_practice(self):
+        other_practice = Practice.objects.create(name="Other Clinic")
+        other_user = get_user_model().objects.create_user(username="othertherapist")
+        other_therapist = TherapistProfile.objects.create(
+            user=other_user,
+            practice=other_practice,
+            license_number="XYZ789",
+            license_state="NY",
+        )
+        plan = TreatmentPlan(
+            practice=self.practice,
+            client=self.client,
+            therapist=other_therapist,
+            title="Mismatched plan",
+            goals="Improve mood.",
+            start_date=timezone.localdate(),
+        )
+
+        with self.assertRaisesMessage(ValidationError, "Treatment plan therapist must belong to the same practice"):
+            plan.full_clean()
+
+    def test_treatment_plan_rejects_review_date_before_start_date(self):
+        today = timezone.localdate()
+        plan = TreatmentPlan(
+            practice=self.practice,
+            client=self.client,
+            therapist=self.therapist,
+            title="Review plan",
+            goals="Improve mood.",
+            start_date=today,
+            review_date=today - timedelta(days=1),
+        )
+
+        with self.assertRaisesMessage(ValidationError, "Review date cannot be before"):
+            plan.full_clean()
 
 
 class SessionNoteViewTests(TestCase):
@@ -341,3 +420,195 @@ class SessionNoteViewTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(SessionNote.objects.count(), 1)
+
+
+class TreatmentPlanViewTests(TestCase):
+    def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
+        user = get_user_model().objects.create_user(
+            username=username,
+            password="StrongPass123!",
+            first_name="Laura",
+            last_name="Smith",
+        )
+        practice = Practice.objects.create(name=practice_name)
+        therapist = TherapistProfile.objects.create(
+            user=user,
+            practice=practice,
+            license_number=f"{username}-12345",
+            license_state="CA",
+        )
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.OWNER)
+        client = Client.objects.create(
+            practice=practice,
+            primary_therapist=therapist,
+            first_name="Maya",
+            last_name="Johnson",
+        )
+        return user, practice, therapist, client
+
+    def diagnosis_payload(self, client, **overrides):
+        data = {
+            "client": client.pk,
+            "code": "F41.1",
+            "label": "Generalized anxiety disorder",
+            "diagnosed_at": timezone.localdate().isoformat(),
+            "active": "on",
+            "notes": "Initial diagnosis.",
+        }
+        data.update(overrides)
+        return data
+
+    def plan_payload(self, therapist, client, diagnoses=None, **overrides):
+        data = {
+            "client": client.pk,
+            "therapist": therapist.pk,
+            "diagnoses": [diagnosis.pk for diagnosis in diagnoses or []],
+            "title": "Anxiety care plan",
+            "status": TreatmentPlan.Status.ACTIVE,
+            "goals": "Reduce anxiety symptoms and improve sleep.",
+            "objectives": "Practice grounding skills weekly.",
+            "interventions": "CBT and psychoeducation.",
+            "start_date": timezone.localdate().isoformat(),
+            "review_date": "",
+            "completed_at": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_treatment_plan_list_requires_login(self):
+        response = self.client.get(reverse("clinical:treatment_plans"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clinical:treatment_plans')}")
+
+    def test_treatment_plan_list_is_scoped_to_user_practice(self):
+        user, practice, therapist, client = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Visible care plan",
+            goals="Visible goals.",
+        )
+        TreatmentPlan.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            title="Hidden care plan",
+            goals="Hidden goals.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clinical:treatment_plans"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Visible care plan")
+        self.assertNotContains(response, "Hidden care plan")
+        self.assertContains(response, 'id="plan-create-modal"')
+        self.assertContains(response, 'id="diagnosis-create-modal"')
+
+    def test_diagnosis_create_saves_to_user_practice(self):
+        user, practice, _therapist, client = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clinical:diagnosis_create"), self.diagnosis_payload(client))
+
+        self.assertRedirects(response, reverse("clinical:treatment_plans"))
+        diagnosis = Diagnosis.objects.get()
+        self.assertEqual(diagnosis.practice, practice)
+        self.assertEqual(diagnosis.client, client)
+        self.assertEqual(diagnosis.code, "F41.1")
+
+    def test_diagnosis_create_rejects_client_from_another_practice(self):
+        user, _practice, _therapist, _client = self.create_practice_user()
+        _other_user, _other_practice, _other_therapist, other_client = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clinical:diagnosis_create"), self.diagnosis_payload(other_client))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Select a valid choice")
+        self.assertEqual(Diagnosis.objects.count(), 0)
+
+    def test_treatment_plan_create_saves_linked_diagnosis(self):
+        user, practice, therapist, client = self.create_practice_user()
+        diagnosis = Diagnosis.objects.create(
+            practice=practice,
+            client=client,
+            code="F41.1",
+            label="Generalized anxiety disorder",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:treatment_plan_create"),
+            self.plan_payload(therapist, client, [diagnosis]),
+        )
+
+        self.assertRedirects(response, reverse("clinical:treatment_plans"))
+        plan = TreatmentPlan.objects.get()
+        self.assertEqual(plan.practice, practice)
+        self.assertEqual(plan.client, client)
+        self.assertEqual(plan.diagnoses.get(), diagnosis)
+
+    def test_treatment_plan_create_rejects_diagnosis_for_different_client(self):
+        user, practice, therapist, client = self.create_practice_user()
+        other_client = Client.objects.create(practice=practice, first_name="Other", last_name="Client")
+        diagnosis = Diagnosis.objects.create(
+            practice=practice,
+            client=other_client,
+            code="F32.1",
+            label="Major depressive disorder",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:treatment_plan_create"),
+            self.plan_payload(therapist, client, [diagnosis]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Selected diagnoses must belong")
+        self.assertEqual(TreatmentPlan.objects.count(), 0)
+
+    def test_treatment_plan_update_is_scoped_to_user_practice(self):
+        user, _practice, _therapist, _client = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client = self.create_practice_user(
+            username="otherdoc",
+            practice_name="Other Practice",
+        )
+        plan = TreatmentPlan.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            title="Hidden care plan",
+            goals="Hidden goals.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clinical:treatment_plan_edit", args=[plan.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_treatment_plan_delete_removes_plan(self):
+        user, practice, therapist, client = self.create_practice_user()
+        plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Delete me",
+            goals="Short term goals.",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("clinical:treatment_plan_delete", args=[plan.pk]))
+
+        self.assertRedirects(response, reverse("clinical:treatment_plans"))
+        self.assertEqual(TreatmentPlan.objects.count(), 0)

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treatment Plans | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    {% include 'partials/sidebar.html' with card_title='Treatment planning' card_text='Track diagnoses, goals, objectives, and review dates for active clients.' %}
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Workspace actions">
+        <div class="quick-actions">
+          <a class="btn btn-primary" href="{% url 'clinical:treatment_plan_create' %}" data-modal-target="plan-create-modal">+ New plan</a>
+          <a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}" data-modal-target="diagnosis-create-modal">+ Diagnosis</a>
+          <a class="btn btn-soft" href="{% url 'clinical:list' %}">Clinical notes</a>
+        </div>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      </section>
+
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Care Plans</p><h1>Treatment Plans</h1></div></header>
+
+      <section class="content-grid">
+        <div class="panel notes-panel">
+          <div class="panel-head">
+            <div><h2>Active planning workspace</h2><p>Manage clinical goals, objectives, interventions, and upcoming reviews.</p></div>
+            <span class="badge brand">{{ plans|length }} plans</span>
+          </div>
+          <div class="notes-list">
+            {% for plan in plans %}
+              <article class="note-card">
+                <div class="note-card-head">
+                  <div><h3>{{ plan.title }}</h3><p>{{ plan.client }} with {{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }} · Started {{ plan.start_date|date:"M j, Y" }}</p></div>
+                  <span class="badge {% if plan.status == 'active' %}success{% elif plan.status == 'review_due' %}warning{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{{ plan.get_status_display }}</span>
+                </div>
+                <p class="note-preview"><strong>Goals:</strong> {{ plan.goals|truncatechars:190 }}</p>
+                {% if plan.review_date %}<p class="sync-meta">Review date: {{ plan.review_date|date:"M j, Y" }}</p>{% endif %}
+                {% if plan.diagnoses.all %}
+                  <p class="sync-meta">Diagnoses: {% for diagnosis in plan.diagnoses.all %}{{ diagnosis.code }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                {% endif %}
+                <a class="inline-link" href="{% url 'clinical:treatment_plan_edit' plan.pk %}" data-modal-target="plan-modal-{{ plan.pk }}">Edit plan</a>
+              </article>
+            {% empty %}
+              <p class="empty-state">No treatment plans have been created yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <aside class="panel">
+          <div class="panel-head compact">
+            <div><h2>Diagnoses</h2><p>Practice-scoped client diagnoses available for treatment plans.</p></div>
+          </div>
+          <div class="package-list">
+            {% for diagnosis in diagnoses %}
+              <article class="package-card">
+                <div class="client-card-head">
+                  <div><strong>{{ diagnosis.code }} · {{ diagnosis.label }}</strong><p>{{ diagnosis.client }} · {{ diagnosis.diagnosed_at|date:"M j, Y" }}</p></div>
+                  <span class="badge {% if diagnosis.active %}success{% else %}danger{% endif %}">{% if diagnosis.active %}Active{% else %}Inactive{% endif %}</span>
+                </div>
+                {% if diagnosis.notes %}<p>{{ diagnosis.notes|truncatechars:120 }}</p>{% endif %}
+                <a class="inline-link" href="{% url 'clinical:diagnosis_edit' diagnosis.pk %}" data-modal-target="diagnosis-modal-{{ diagnosis.pk }}">Edit diagnosis</a>
+              </article>
+            {% empty %}
+              <p class="empty-state">No diagnoses have been added yet.</p>
+            {% endfor %}
+          </div>
+        </aside>
+      </section>
+
+      <dialog class="modal-dialog" id="plan-create-modal">
+        <div class="modal-card">
+          <div class="modal-head"><div><p class="eyebrow">New Treatment Plan</p><h2>Create a care plan</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+          <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_create' %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix='plan-create' %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create plan</button></div></form>
+        </div>
+      </dialog>
+
+      {% for plan in plans %}
+        <dialog class="modal-dialog" id="plan-modal-{{ plan.pk }}">
+          <div class="modal-card">
+            <div class="modal-head"><div><p class="eyebrow">Edit Treatment Plan</p><h2>{{ plan.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_edit' plan.pk %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix=plan.pk plan=plan %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:treatment_plan_delete' plan.pk %}">Delete plan</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
+          </div>
+        </dialog>
+      {% endfor %}
+
+      <dialog class="modal-dialog" id="diagnosis-create-modal">
+        <div class="modal-card">
+          <div class="modal-head"><div><p class="eyebrow">New Diagnosis</p><h2>Add client diagnosis</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+          <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_create' %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix='diagnosis-create' %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Add diagnosis</button></div></form>
+        </div>
+      </dialog>
+
+      {% for diagnosis in diagnoses %}
+        <dialog class="modal-dialog" id="diagnosis-modal-{{ diagnosis.pk }}">
+          <div class="modal-card">
+            <div class="modal-head"><div><p class="eyebrow">Edit Diagnosis</p><h2>{{ diagnosis.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_edit' diagnosis.pk %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix=diagnosis.pk diagnosis=diagnosis %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:diagnosis_delete' diagnosis.pk %}">Delete diagnosis</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
+          </div>
+        </dialog>
+      {% endfor %}
+    </main>
+  </div>
+  <script>
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
+  </script>
+</body>
+</html>

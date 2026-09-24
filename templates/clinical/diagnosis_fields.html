@@ -1,0 +1,8 @@
+<div class="field-grid two">
+  <div class="field"><label for="diagnosis-client-{{ prefix }}">Client</label><select id="diagnosis-client-{{ prefix }}" name="client" required>{% for client in plan_clients %}<option value="{{ client.pk }}" {% if diagnosis.client_id == client.pk %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="diagnosis-code-{{ prefix }}">Code</label><input id="diagnosis-code-{{ prefix }}" name="code" value="{{ diagnosis.code }}" placeholder="F41.1" required></div>
+  <div class="field"><label for="diagnosis-label-{{ prefix }}">Label</label><input id="diagnosis-label-{{ prefix }}" name="label" value="{{ diagnosis.label }}" placeholder="Generalized anxiety disorder" required></div>
+  <div class="field"><label for="diagnosis-date-{{ prefix }}">Diagnosed date</label><input id="diagnosis-date-{{ prefix }}" name="diagnosed_at" type="date" value="{% if diagnosis %}{{ diagnosis.diagnosed_at|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" required></div>
+  <div class="field checkbox-field"><label><input name="active" type="checkbox" {% if diagnosis.active or not diagnosis %}checked{% endif %}> Active diagnosis</label></div>
+  <div class="field full"><label for="diagnosis-notes-{{ prefix }}">Notes</label><textarea id="diagnosis-notes-{{ prefix }}" name="notes" rows="4">{{ diagnosis.notes }}</textarea></div>
+</div>
