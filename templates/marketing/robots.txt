@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /portal/
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /clinical-notes/
+Disallow: /billing/
+Disallow: /clients/
+Disallow: /appointments/
+Disallow: /documents/
+Sitemap: https://nuviamy.com/sitemap.xml

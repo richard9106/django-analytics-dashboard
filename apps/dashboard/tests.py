@@ -40,6 +40,24 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f"{reverse('login')}?next={reverse('dashboard')}")
 
+    def test_home_page_is_public_and_seo_optimized(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Therapy Practice Management Software')
+        self.assertContains(response, 'therapy practice management software')
+        self.assertContains(response, 'application/ld+json')
+        self.assertContains(response, 'https://nuviamy.com/')
+
+    def test_robots_and_sitemap_load(self):
+        robots = self.client.get(reverse('robots_txt'))
+        sitemap = self.client.get(reverse('sitemap_xml'))
+
+        self.assertEqual(robots.status_code, 200)
+        self.assertContains(robots, 'Sitemap: https://nuviamy.com/sitemap.xml')
+        self.assertEqual(sitemap.status_code, 200)
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/</loc>')
+
     def test_login_page_loads(self):
         response = self.client.get(reverse('login'))
         self.assertEqual(response.status_code, 200)

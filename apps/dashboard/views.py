@@ -160,3 +160,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'practice_therapists': practice_therapists,
         })
         return context
+
+
+class HomePageView(TemplateView):
+    template_name = 'marketing/home.html'
