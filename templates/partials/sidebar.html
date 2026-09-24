@@ -13,7 +13,11 @@
     <a class="nav-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
     <a class="nav-item{% if request.resolver_match.namespace == 'appointments' %} active{% endif %}" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>
     <a class="nav-item{% if request.resolver_match.namespace == 'clients' %} active{% endif %}" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>
-    <a class="nav-item{% if request.resolver_match.namespace == 'clinical' %} active{% endif %}" href="{% url 'clinical:list' %}"><span>✎</span>Notes &amp; Treatment</a>
+    <details class="sidebar-settings"{% if request.resolver_match.namespace == 'clinical' %} open{% endif %}>
+      <summary class="nav-item{% if request.resolver_match.namespace == 'clinical' %} active{% endif %}"><span>✎</span>Notes &amp; Treatment</summary>
+      <a class="nav-item subitem{% if request.resolver_match.namespace == 'clinical' and request.resolver_match.url_name == 'list' %} active{% endif %}" href="{% url 'clinical:list' %}">Notes</a>
+      <a class="nav-item subitem{% if request.resolver_match.namespace == 'clinical' and request.resolver_match.url_name == 'treatment_plans' %} active{% endif %}" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
+    </details>
     <a class="nav-item{% if request.resolver_match.namespace == 'billing' %} active{% endif %}" href="{% url 'billing:list' %}"><span>□</span>Billing</a>
     <a class="nav-item{% if request.resolver_match.namespace == 'documents' %} active{% endif %}" href="{% url 'documents:list' %}"><span>▣</span>Documents</a>
     <a class="nav-item{% if request.resolver_match.namespace == 'intake' %} active{% endif %}" href="{% url 'intake:list' %}"><span>◌</span>Intake</a>
