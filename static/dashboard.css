@@ -64,7 +64,14 @@ h1, h2, h3, p { margin-top: 0; }
 
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
 .sidebar { background: #fff; border-right: 1px solid var(--border); padding: 20px 14px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; }
+.sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sidebar .brand { padding: 0 8px; }
+.mobile-menu-button { display: none; }
+.mobile-nav-check { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.mobile-nav-check:focus-visible + .sidebar-head .mobile-menu-button { outline: 3px solid rgba(112, 82, 217, .22); outline-offset: 2px; }
+.menu-bars { width: 18px; height: 12px; display: inline-grid; align-content: space-between; }
+.menu-bars::before, .menu-bars::after, .menu-bars { border-top: 2px solid currentColor; }
+.menu-bars::before, .menu-bars::after { content: ""; display: block; }
 .nav-list { display: grid; gap: 3px; }
 .nav-item { min-height: 44px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 10px; color: var(--slate-600); font-size: 14px; font-weight: 700; }
 .nav-item-with-badge { justify-content: flex-start; }
@@ -347,12 +354,25 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 
 @media (max-width: 720px) {
   .app-shell { display: block; }
-  .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar { position: sticky; top: 0; z-index: 30; height: auto; padding: 12px; border-right: 0; border-bottom: 1px solid rgba(229, 231, 235, .92); gap: 0; box-shadow: 0 14px 30px rgba(15, 23, 42, .08); }
+  .sidebar-head { min-height: 48px; }
   .sidebar .brand span:not(.logo-mark) { display: inline; }
-  .nav-list { grid-template-columns: repeat(3, 1fr); }
-  .nav-item { font-size: 0; }
-  .app-main { padding: 16px; }
+  .sidebar .brand { padding: 0; font-size: 19px; }
+  .sidebar .logo-mark { width: 34px; height: 34px; border-radius: 11px; }
+  .mobile-menu-button { min-height: 40px; padding: 0 12px; border: 1px solid rgba(112, 82, 217, .2); border-radius: 12px; display: inline-flex; align-items: center; gap: 9px; background: var(--brand-50); color: var(--brand-700); font-size: 13px; font-weight: 900; cursor: pointer; }
+  .nav-list { max-height: 0; overflow: hidden; grid-template-columns: 1fr; gap: 4px; opacity: 0; transform: translateY(-4px); transition: max-height .24s ease, opacity .2s ease, transform .2s ease, padding .2s ease; }
+  .mobile-nav-check:checked ~ .nav-list { max-height: min(72vh, 680px); overflow-y: auto; padding-top: 12px; opacity: 1; transform: translateY(0); }
+  .nav-item { min-height: 46px; padding: 0 12px; justify-content: flex-start; border-radius: 14px; font-size: 14px; }
+  .nav-item span { font-size: 16px; }
+  .sidebar-settings .subitem { margin-left: 0; padding-left: 40px; min-height: 40px; font-size: 13px; }
+  .sidebar-card { display: none; }
+  .app-main { padding: 14px; gap: 14px; }
   .topbar, .welcome-panel, .panel-head, .action-bar { display: grid; grid-template-columns: 1fr; }
+  .topbar { padding: 16px; border-radius: 16px; }
+  .topbar h1 { font-size: 26px; }
+  .action-bar { padding: 10px; }
+  .quick-actions, .topbar-actions, .form-actions { width: 100%; display: grid; grid-template-columns: 1fr; }
+  .quick-actions .btn, .topbar-actions .btn, .form-actions .btn { width: 100%; }
   .profile-menu-panel { left: 0; right: auto; }
   .stats { grid-template-columns: 1fr; }
   .appointment-card { grid-template-columns: 1fr; align-items: start; }
@@ -371,8 +391,10 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .signup-shell { width: min(calc(100% - 24px), 1180px); grid-template-columns: 1fr; }
   .signup-intro { position: static; }
   .field-grid.two { grid-template-columns: 1fr; }
-  .marketing-nav { display: grid; }
-  .marketing-nav nav { gap: 10px; }
+  .marketing-nav { width: min(calc(100% - 24px), 1180px); display: grid; gap: 14px; padding: 14px 0; }
+  .marketing-nav nav { margin-inline: -4px; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .marketing-nav nav a { min-height: 40px; padding: 0 10px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.82); text-align: center; }
+  .marketing-nav nav .btn { grid-column: 1 / -1; }
   .marketing-hero { min-height: 0; padding: 22px 0; }
   .hero-copy h1 { font-size: 36px; }
   .marketing-band, .marketing-cta { padding: 22px; border-radius: 22px; }
