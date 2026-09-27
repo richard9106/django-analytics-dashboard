@@ -590,6 +590,18 @@ class BillingViewTests(TestCase):
 
         self.assertRedirects(response, reverse("pricing"))
 
+    def test_subscribe_success_and_cancel_pages_render(self):
+        user, _practice, _therapist, _client, _appointment = self.create_practice_user()
+
+        self.client.force_login(user)
+        success_response = self.client.get(reverse("billing:subscribe_success"))
+        cancel_response = self.client.get(reverse("billing:subscribe_cancel"))
+
+        self.assertEqual(success_response.status_code, 200)
+        self.assertContains(success_response, "Your 15-day trial is starting")
+        self.assertEqual(cancel_response.status_code, 200)
+        self.assertContains(cancel_response, "Checkout was canceled")
+
     @override_settings(
         STRIPE_SECRET_KEY="stripe-secret-placeholder",
         STRIPE_PRICE_IDS={
