@@ -211,6 +211,16 @@ h1, h2, h3, p { margin-top: 0; }
 .credential-panel { border-color: rgba(20, 184, 166, .25); background: radial-gradient(circle at top right, rgba(204, 251, 245, .72), transparent 32%), #fff; }
 .credential-box { white-space: pre-line; overflow-wrap: anywhere; padding: 14px; border: 1px dashed rgba(112, 82, 217, .35); border-radius: 16px; background: rgba(255,255,255,.8); color: var(--slate-800); font-weight: 800; line-height: 1.7; }
 .credential-hint { padding: 12px 14px; border-radius: 14px; background: var(--slate-50); color: var(--slate-600); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.profile-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 18px; align-items: start; }
+.profile-detail-list { display: grid; gap: 12px; margin: 0; }
+.profile-detail-list div { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--slate-100); }
+.profile-detail-list dt { color: var(--slate-500); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.profile-detail-list dd { margin: 0; color: var(--slate-800); font-weight: 800; overflow-wrap: anywhere; }
+.subscription-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .56), transparent 32%), #fff; }
+.subscription-summary { display: grid; gap: 8px; margin-bottom: 18px; padding: 18px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.78); }
+.subscription-summary h3 { margin: 0; color: var(--slate-900); font-size: 28px; letter-spacing: -.04em; }
+.subscription-summary p { margin: 0; color: var(--slate-600); }
+.muted-subscription { background: linear-gradient(145deg, #fff, var(--warning-bg)); }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }
 .portal-stats .stat-card { background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(244,240,255,.82)); }
@@ -402,6 +412,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .client-card { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: 1fr; }
   .document-grid { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-detail-list div { grid-template-columns: 1fr; gap: 4px; }
   .client-meta div { grid-template-columns: 1fr; gap: 2px; }
   .modal-card { padding: 18px; }
   .login-shell { width: min(calc(100% - 24px), 1120px); padding: 24px 0; }

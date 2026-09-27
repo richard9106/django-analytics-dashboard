@@ -13,7 +13,7 @@
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='Google workspace' card_text='Read Gmail, send email, and view Calendar events from your connected Google account.' %}
     <main class="app-main">
-      <section class="action-bar"><div class="quick-actions"><a class="btn btn-secondary" href="{% url 'practice_settings:integrations' %}">Back to integrations</a></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
+      <section class="action-bar"><div class="quick-actions"><a class="btn btn-secondary" href="{% url 'practice_settings:integrations' %}">Back to integrations</a></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
       <header class="topbar compact-topbar"><div><p class="eyebrow">Google</p><h1>Workspace</h1><p>{% if google_integration %}Connected as {{ google_integration.account_email }}{% else %}Google is not connected.{% endif %}</p></div></header>
       {% if google_error %}<section class="panel"><p class="form-error">{{ google_error }}</p></section>{% endif %}
       <section class="billing-grid">

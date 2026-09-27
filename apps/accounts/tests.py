@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.accounts.models import UserProfile
+from apps.billing.models import PracticeSubscription
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -105,3 +106,54 @@ class PracticeSignupViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "A therapist profile with this license already exists")
+
+
+class ProfileSettingsViewTests(TestCase):
+    def create_practice_user(self):
+        user = get_user_model().objects.create_user(
+            username="drsmith",
+            email="drsmith@example.com",
+            password="StrongPass123!",
+            first_name="Jane",
+            last_name="Smith",
+        )
+        practice = Practice.objects.create(name="NuviaMy Wellness")
+        TherapistProfile.objects.create(user=user, practice=practice, license_number="ABC123", license_state="CA")
+        UserProfile.objects.create(user=user, practice=practice, role=UserProfile.Role.OWNER)
+        return user, practice
+
+    def test_profile_settings_requires_login(self):
+        response = self.client.get(reverse("profile_settings"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('profile_settings')}")
+
+    def test_profile_settings_shows_subscription(self):
+        user, practice = self.create_practice_user()
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.GROUP,
+            billing_period=PracticeSubscription.BillingPeriod.YEARLY,
+            status="trialing",
+            stripe_customer_id="cus_test",
+            stripe_subscription_id="sub_test",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("profile_settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Profile & subscription")
+        self.assertContains(response, "Group Practice")
+        self.assertContains(response, "Yearly billing")
+        self.assertContains(response, "Up to 5 users")
+        self.assertContains(response, "cus_test")
+
+    def test_dashboard_profile_menu_links_to_profile_settings(self):
+        user, _practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("profile_settings"))

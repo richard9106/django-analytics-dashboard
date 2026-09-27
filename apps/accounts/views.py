@@ -1,12 +1,14 @@
 from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.urls import reverse, reverse_lazy
+from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
 
+from .access import get_practice_for_user, is_client_user, must_change_password
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
-from .access import is_client_user, must_change_password
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm
 
 
@@ -57,6 +59,35 @@ class ForcePasswordChangeView(FormView):
             metadata={"password_changed_by_user": True},
         )
         return super().form_valid(form)
+
+
+class ProfileSettingsView(LoginRequiredMixin, TemplateView):
+    template_name = "accounts/profile_settings.html"
+
+    plan_limits = {
+        PracticeSubscription.Plan.SOLO: "1 user",
+        PracticeSubscription.Plan.GROUP: "Up to 5 users",
+        PracticeSubscription.Plan.CLINIC: "Up to 15 users",
+    }
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and is_client_user(request.user):
+            from django.shortcuts import redirect
+
+            return redirect("portal:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = get_practice_for_user(self.request.user)
+        subscription = getattr(practice, "subscription", None) if practice else None
+        context.update({
+            "practice": practice,
+            "subscription": subscription,
+            "subscription_limit": self.plan_limits.get(subscription.plan, "") if subscription else "",
+            "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
+        })
+        return context
 
 
 class PracticeSignupView(FormView):

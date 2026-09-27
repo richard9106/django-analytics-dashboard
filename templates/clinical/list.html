@@ -20,7 +20,7 @@
           <a class="btn btn-secondary" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
           <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
         </div>
-        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
       <header class="topbar compact-topbar"><div><p class="eyebrow">Notes & Treatment</p><h1>Notes</h1></div></header>

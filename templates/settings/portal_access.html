@@ -16,7 +16,7 @@
     <main class="app-main">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions"><a class="btn btn-primary" href="{% url 'portal_settings:portal_access_create' %}" data-modal-target="portal-access-create-modal">+ Enable portal access</a><a class="btn btn-secondary" href="{% url 'portal:dashboard' %}">Portal preview</a></div>
-        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="#">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
       <header class="topbar compact-topbar"><div><p class="eyebrow">Settings</p><h1>Client Portal Access</h1></div></header>
