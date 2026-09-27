@@ -611,6 +611,8 @@ class BillingViewTests(TestCase):
         mock_create.assert_called_once()
         kwargs = mock_create.call_args.kwargs
         self.assertEqual(kwargs["line_items"], [{"price": "price_solo_monthly", "quantity": 1}])
+        self.assertEqual(kwargs["payment_method_collection"], "always")
+        self.assertEqual(kwargs["subscription_data"]["trial_period_days"], 15)
         self.assertEqual(kwargs["metadata"]["practice_id"], str(practice.pk))
         subscription = PracticeSubscription.objects.get(practice=practice)
         self.assertEqual(subscription.plan, PracticeSubscription.Plan.SOLO)

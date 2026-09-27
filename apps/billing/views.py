@@ -480,12 +480,16 @@ class StripeSubscribeView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
         customer_id = subscription.stripe_customer_id if subscription else ''
         session_kwargs = {
             'mode': 'subscription',
+            'payment_method_collection': 'always',
             'line_items': [{'price': price_id, 'quantity': 1}],
             'success_url': request.build_absolute_uri(reverse('billing:subscribe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url': request.build_absolute_uri(reverse('billing:subscribe_cancel')),
             'client_reference_id': str(practice.pk),
             'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period},
-            'subscription_data': {'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period}},
+            'subscription_data': {
+                'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period},
+                'trial_period_days': 15,
+            },
         }
         if customer_id:
             session_kwargs['customer'] = customer_id

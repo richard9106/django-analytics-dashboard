@@ -1,10 +1,11 @@
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.views import LoginView
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.generic.edit import FormView
 
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
+from apps.billing.models import PracticeSubscription
 from .access import is_client_user, must_change_password
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm
 
@@ -61,7 +62,17 @@ class ForcePasswordChangeView(FormView):
 class PracticeSignupView(FormView):
     form_class = PracticeSignupForm
     template_name = "accounts/signup.html"
-    success_url = reverse_lazy("dashboard")
+    default_plan = PracticeSubscription.Plan.SOLO
+    default_period = PracticeSubscription.BillingPeriod.MONTHLY
+
+    def get_plan_period(self):
+        plan = self.request.POST.get("plan") or self.request.GET.get("plan") or self.default_plan
+        period = self.request.POST.get("period") or self.request.GET.get("period") or self.default_period
+        if plan not in PracticeSubscription.Plan.values:
+            plan = self.default_plan
+        if period not in PracticeSubscription.BillingPeriod.values:
+            period = self.default_period
+        return plan, period
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -69,8 +80,22 @@ class PracticeSignupView(FormView):
 
             if is_client_user(request.user):
                 return redirect("portal:dashboard")
-            return redirect("dashboard")
+            plan, period = self.get_plan_period()
+            return redirect("billing:subscribe", plan=plan, period=period)
         return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        plan, period = self.get_plan_period()
+        context["selected_plan"] = plan
+        context["selected_period"] = period
+        context["selected_plan_label"] = PracticeSubscription.Plan(plan).label
+        context["selected_period_label"] = PracticeSubscription.BillingPeriod(period).label
+        return context
+
+    def get_success_url(self):
+        plan, period = self.get_plan_period()
+        return reverse("billing:subscribe", kwargs={"plan": plan, "period": period})
 
     def form_valid(self, form):
         user = form.save()

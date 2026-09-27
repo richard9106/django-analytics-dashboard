@@ -24,11 +24,12 @@
       </a>
       <p class="eyebrow">Start your workspace</p>
       <h1>Create your therapy practice account.</h1>
-      <p>NuviaMy creates your practice, owner account, therapist profile, and secure workspace in one guided flow.</p>
+      <p>NuviaMy creates your practice, owner account, therapist profile, and secure workspace in one guided flow. Then you will start a 15-day free trial in Stripe Checkout and add your card before billing begins.</p>
       <div class="trust-list dark">
-        <span>Solo or clinic-ready</span>
+        <span>{{ selected_plan_label }}</span>
+        <span>{{ selected_period_label }} billing</span>
+        <span>15 days free</span>
         <span>Practice-scoped data</span>
-        <span>Built for clinical workflows</span>
       </div>
       <div class="hero-actions"><a class="btn btn-secondary" href="{% url 'home' %}">← Back to home</a></div>
     </section>
@@ -36,9 +37,16 @@
     <section class="signup-card">
       <form method="post" class="signup-form" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="plan" value="{{ selected_plan }}">
+        <input type="hidden" name="period" value="{{ selected_period }}">
         {% if form.non_field_errors %}
           <div class="form-error">{{ form.non_field_errors }}</div>
         {% endif %}
+
+        <div class="sync-panel">
+          <strong>Selected plan: {{ selected_plan_label }} · {{ selected_period_label }}</strong>
+          <p>After creating your account, you will continue to Stripe Checkout. Your first charge starts after the 15-day free trial unless you cancel.</p>
+        </div>
 
         <fieldset>
           <legend>Practice details</legend>
@@ -118,7 +126,7 @@
           </div>
         </fieldset>
 
-        <button class="btn btn-primary signup-submit" type="submit">Create practice workspace</button>
+        <button class="btn btn-primary signup-submit" type="submit">Create account and continue to checkout</button>
         <p class="signup-footnote">Already have an account? <a href="{% url 'login' %}">Sign in</a>.</p>
       </form>
     </section>
