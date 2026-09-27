@@ -599,6 +599,7 @@ class BillingViewTests(TestCase):
 
         self.assertEqual(success_response.status_code, 200)
         self.assertContains(success_response, "Your 15-day trial is starting")
+        self.assertContains(success_response, f"{reverse('dashboard')}?tour=1")
         self.assertEqual(cancel_response.status_code, 200)
         self.assertContains(cancel_response, "Checkout was canceled")
 

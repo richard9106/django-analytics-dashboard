@@ -105,6 +105,18 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Sign out')
         self.assertNotContains(response, 'href="/admin/"')
 
+    def test_dashboard_tour_can_open_after_checkout(self):
+        user, _practice, _therapist = self.create_practice_user()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard'), {'tour': '1'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Start guided tour')
+        self.assertContains(response, 'Guided setup')
+        self.assertContains(response, 'Set up your practice in about 10 minutes')
+        self.assertContains(response, 'show-dashboard-tour')
+
     def test_client_login_redirects_to_portal(self):
         practice = Practice.objects.create(name='Nuvia Therapy')
         portal_client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')

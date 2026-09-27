@@ -148,6 +148,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'dashboard_greeting': self.get_greeting(now.hour),
             'dashboard_display_name': display_name,
             'dashboard_date_label': self.get_date_label(now),
+            'show_dashboard_tour': self.request.GET.get('tour') == '1',
             'practice': practice,
             'monthly_revenue': monthly_revenue,
             'active_client_count': active_client_count,

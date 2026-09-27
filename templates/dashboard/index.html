@@ -40,6 +40,21 @@
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
           <p>{{ dashboard_date_label }}</p>
         </div>
+        <button class="btn btn-secondary" type="button" data-tour-open>Start guided tour</button>
+      </section>
+
+      <section class="onboarding-panel" aria-label="Recommended first steps">
+        <div>
+          <p class="eyebrow">First steps</p>
+          <h2>Set up your practice in about 10 minutes.</h2>
+          <p>Follow this order to make the workspace useful on day one: add clients, define availability, schedule sessions, then activate portal/intake workflows.</p>
+        </div>
+        <div class="onboarding-steps">
+          <a href="{% url 'clients:list' %}"><strong>1</strong><span>Add your first client</span></a>
+          <a href="{% url 'practice_settings:availability' %}"><strong>2</strong><span>Set availability</span></a>
+          <a href="{% url 'appointments:list' %}"><strong>3</strong><span>Schedule a session</span></a>
+          <a href="{% url 'portal_settings:portal_access' %}"><strong>4</strong><span>Invite the client portal</span></a>
+        </div>
       </section>
 
       <section class="stats" aria-label="Practice metrics">
@@ -200,9 +215,88 @@
           </form>
         </div>
       </dialog>
+
+      <div class="tour-overlay" data-tour-overlay hidden>
+        <section class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+          <button class="modal-close tour-close" type="button" data-tour-close aria-label="Close guided tour">×</button>
+          <div class="tour-progress" aria-hidden="true"><span data-tour-progress></span></div>
+          <p class="eyebrow">Guided setup</p>
+          <h2 id="tour-title" data-tour-title>Welcome to NuviaMy</h2>
+          <p data-tour-copy>Your practice workspace is active. Start with the workflows that get you ready for real sessions.</p>
+          <div class="tour-route" data-tour-route></div>
+          <div class="split-actions">
+            <button class="btn btn-secondary" type="button" data-tour-prev>Back</button>
+            <button class="btn btn-primary" type="button" data-tour-next>Next</button>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
+  {{ show_dashboard_tour|json_script:"show-dashboard-tour" }}
   <script>
+    const tourSteps = [
+      {
+        title: 'Welcome to your practice command center',
+        copy: 'The dashboard summarizes revenue, active clients, today\'s sessions, and tasks that need attention. Use it as your morning check-in.',
+        route: 'Dashboard → Metrics → Tasks',
+      },
+      {
+        title: 'Add clients before anything else',
+        copy: 'Create client profiles first. Every appointment, document, invoice, note, and portal account is safely scoped back to a client and practice.',
+        route: 'Clients → New client',
+      },
+      {
+        title: 'Set availability and schedule sessions',
+        copy: 'Define working hours, then create appointments. NuviaMy validates practice, therapist, and client relationships before saving.',
+        route: 'Settings → Availability → Appointments',
+      },
+      {
+        title: 'Use notes, treatment plans, and billing together',
+        copy: 'After sessions, document notes, connect treatment plans, and create invoices or superbills from the billing workspace.',
+        route: 'Notes & Treatment → Billing',
+      },
+      {
+        title: 'Activate the client-facing workflow',
+        copy: 'When you are ready, enable portal access, assign intake packets, and connect Google for reminders, calendar sync, and Drive exports.',
+        route: 'Client portal → Intake → Integrations',
+      },
+    ];
+    const tourOverlay = document.querySelector('[data-tour-overlay]');
+    const tourTitle = document.querySelector('[data-tour-title]');
+    const tourCopy = document.querySelector('[data-tour-copy]');
+    const tourRoute = document.querySelector('[data-tour-route]');
+    const tourProgress = document.querySelector('[data-tour-progress]');
+    const tourPrev = document.querySelector('[data-tour-prev]');
+    const tourNext = document.querySelector('[data-tour-next]');
+    const tourShouldOpen = JSON.parse(document.getElementById('show-dashboard-tour').textContent);
+    let tourIndex = 0;
+
+    function renderTourStep() {
+      const step = tourSteps[tourIndex];
+      tourTitle.textContent = step.title;
+      tourCopy.textContent = step.copy;
+      tourRoute.textContent = step.route;
+      tourProgress.style.width = `${((tourIndex + 1) / tourSteps.length) * 100}%`;
+      tourPrev.disabled = tourIndex === 0;
+      tourNext.textContent = tourIndex === tourSteps.length - 1 ? 'Finish tour' : 'Next';
+    }
+
+    function openTour(force = false) {
+      if (!tourOverlay) return;
+      if (!force && localStorage.getItem('nuviamy.dashboardTourComplete') === '1') return;
+      tourIndex = 0;
+      renderTourStep();
+      tourOverlay.hidden = false;
+      document.body.classList.add('tour-active');
+      tourNext.focus();
+    }
+
+    function closeTour() {
+      localStorage.setItem('nuviamy.dashboardTourComplete', '1');
+      tourOverlay.hidden = true;
+      document.body.classList.remove('tour-active');
+    }
+
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-modal-target]');
       if (!trigger) return;
@@ -215,6 +309,24 @@
       const trigger = event.target.closest('[data-modal-close]');
       if (trigger) trigger.closest('dialog')?.close();
     });
+    document.querySelector('[data-tour-open]')?.addEventListener('click', () => openTour(true));
+    document.querySelector('[data-tour-close]')?.addEventListener('click', closeTour);
+    tourPrev?.addEventListener('click', () => {
+      if (tourIndex > 0) tourIndex -= 1;
+      renderTourStep();
+    });
+    tourNext?.addEventListener('click', () => {
+      if (tourIndex === tourSteps.length - 1) {
+        closeTour();
+        return;
+      }
+      tourIndex += 1;
+      renderTourStep();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && tourOverlay && !tourOverlay.hidden) closeTour();
+    });
+    if (tourShouldOpen) openTour();
   </script>
 </body>
 </html>
