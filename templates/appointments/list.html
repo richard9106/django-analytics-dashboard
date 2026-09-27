@@ -46,39 +46,90 @@
         <article class="panel calendar-panel">
           <div class="panel-head calendar-head">
             <div>
-              <h2>{{ calendar_month_label }}</h2>
-              <p>Use + to add an appointment, or click a session to edit it.</p>
+              <h2>{{ calendar_period_label }}</h2>
+              <p>Switch between day, week, month, and year views. Use + to add an appointment, or click a session to edit it.</p>
             </div>
             <div class="calendar-actions">
-              <a class="btn btn-secondary" href="?month={{ previous_month }}">Previous</a>
-              <a class="btn btn-secondary" href="?month={{ next_month }}">Next</a>
+              <a class="btn btn-secondary" href="{{ previous_period_url }}">Previous</a>
+              <a class="btn btn-soft" href="{{ today_period_url }}">Today</a>
+              <a class="btn btn-secondary" href="{{ next_period_url }}">Next</a>
             </div>
           </div>
 
-          <div class="calendar-grid" aria-label="Appointment calendar">
-            {% for label in weekday_labels %}
-              <div class="calendar-weekday">{{ label }}</div>
-            {% endfor %}
+          <nav class="calendar-view-tabs" aria-label="Calendar views">
+            <a class="{% if calendar_view == 'day' %}active{% endif %}" href="{{ day_view_url }}">Day</a>
+            <a class="{% if calendar_view == 'week' %}active{% endif %}" href="{{ week_view_url }}">Week</a>
+            <a class="{% if calendar_view == 'month' %}active{% endif %}" href="{{ month_view_url }}">Month</a>
+            <a class="{% if calendar_view == 'year' %}active{% endif %}" href="{{ year_view_url }}">Year</a>
+          </nav>
 
-            {% for week in calendar_weeks %}
-              {% for day in week %}
-                <div class="calendar-day{% if not day.in_month %} muted{% endif %}{% if day.is_today %} today{% endif %}">
-                  <div class="calendar-day-head">
-                    <span class="calendar-date">{{ day.date|date:"j" }}</span>
+          {% if calendar_view == 'day' %}
+            <div class="day-agenda" aria-label="Day appointment schedule">
+              <div class="day-agenda-head">
+                <div><strong>{{ calendar_anchor_date|date:"l" }}</strong><span>{{ calendar_anchor_date|date:"F j, Y" }}</span></div>
+                <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a>
+              </div>
+              {% for appointment in calendar_day_appointments %}
+                <a class="calendar-event agenda-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">
+                  <span>{{ appointment.starts_at|time:"g:i A" }} - {{ appointment.ends_at|time:"g:i A" }}</span>
+                  {{ appointment.client }} · {{ appointment.get_appointment_type_display }}
+                </a>
+              {% empty %}
+                <p class="empty-state">No appointments scheduled for this day.</p>
+              {% endfor %}
+            </div>
+          {% elif calendar_view == 'week' %}
+            <div class="week-schedule" aria-label="Week appointment schedule">
+              {% for day in calendar_week_days %}
+                <section class="week-day{% if day.is_today %} today{% endif %}">
+                  <div class="week-day-head">
+                    <strong>{{ day.date|date:"D" }}</strong>
+                    <span>{{ day.date|date:"M j" }}</span>
                     <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
                   </div>
-                  <div class="calendar-events">
-                    {% for appointment in day.appointments %}
-                      <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">
-                        <span>{{ appointment.starts_at|time:"g:i A" }}</span>
-                        {{ appointment.client }}
-                      </a>
-                    {% endfor %}
-                  </div>
-                </div>
+                  {% for appointment in day.appointments %}
+                    <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}"><span>{{ appointment.starts_at|time:"g:i A" }}</span>{{ appointment.client }}</a>
+                  {% empty %}
+                    <p class="empty-state">Open</p>
+                  {% endfor %}
+                </section>
               {% endfor %}
-            {% endfor %}
-          </div>
+            </div>
+          {% elif calendar_view == 'year' %}
+            <div class="year-grid" aria-label="Year appointment overview">
+              {% for month in calendar_year_months %}
+                <a class="year-month-card" href="{{ month.href }}">
+                  <strong>{{ month.label }}</strong>
+                  <span>{{ month.count }} appointment{{ month.count|pluralize }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="calendar-grid" aria-label="Appointment calendar">
+              {% for label in weekday_labels %}
+                <div class="calendar-weekday">{{ label }}</div>
+              {% endfor %}
+
+              {% for week in calendar_weeks %}
+                {% for day in week %}
+                  <div class="calendar-day{% if not day.in_month %} muted{% endif %}{% if day.is_today %} today{% endif %}">
+                    <div class="calendar-day-head">
+                      <span class="calendar-date">{{ day.date|date:"j" }}</span>
+                      <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
+                    </div>
+                    <div class="calendar-events">
+                      {% for appointment in day.appointments %}
+                        <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">
+                          <span>{{ appointment.starts_at|time:"g:i A" }}</span>
+                          {{ appointment.client }}
+                        </a>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          {% endif %}
         </article>
 
         <article class="panel upcoming-panel">

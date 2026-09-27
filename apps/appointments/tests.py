@@ -272,6 +272,10 @@ class AppointmentViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Practice Calendar')
+        self.assertContains(response, 'Day')
+        self.assertContains(response, 'Week')
+        self.assertContains(response, 'Month')
+        self.assertContains(response, 'Year')
         self.assertContains(response, '<div class="calendar-weekday">Mon</div>', html=True)
         self.assertContains(response, 'id="client-create-modal"')
         self.assertContains(response, 'id="appointment-create-modal"')
@@ -285,6 +289,29 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'aria-label="Add appointment on')
         self.assertContains(response, 'Google Calendar: Not Synced')
         self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
+
+    def test_appointment_calendar_supports_day_week_and_year_views(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0)
+        Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+
+        self.client.force_login(user)
+        day_response = self.client.get(reverse('appointments:list'), {'view': 'day', 'date': starts_at.date().isoformat()})
+        week_response = self.client.get(reverse('appointments:list'), {'view': 'week', 'date': starts_at.date().isoformat()})
+        year_response = self.client.get(reverse('appointments:list'), {'view': 'year', 'date': starts_at.date().isoformat()})
+
+        self.assertContains(day_response, 'Day appointment schedule')
+        self.assertContains(day_response, 'Maya Johnson')
+        self.assertContains(week_response, 'Week appointment schedule')
+        self.assertContains(week_response, 'Maya Johnson')
+        self.assertContains(year_response, 'Year appointment overview')
+        self.assertContains(year_response, 'appointment')
 
     def test_appointment_list_highlights_today(self):
         user, _practice, _therapist, _client = self.create_practice_user()

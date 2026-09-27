@@ -62,11 +62,6 @@
               <h3>{{ subscription.get_plan_display }}</h3>
               <p>{{ subscription.get_billing_period_display }} billing{% if subscription_limit %} · {{ subscription_limit }}{% endif %}</p>
             </div>
-            <dl class="profile-detail-list">
-              <div><dt>Stripe customer</dt><dd>{{ subscription.stripe_customer_id|default:'Pending' }}</dd></div>
-              <div><dt>Stripe subscription</dt><dd>{{ subscription.stripe_subscription_id|default:'Pending' }}</dd></div>
-              <div><dt>Current period end</dt><dd>{% if subscription.current_period_end %}{{ subscription.current_period_end|date:'M j, Y g:i A' }}{% else %}Managed by Stripe{% endif %}</dd></div>
-            </dl>
             {% if subscription.stripe_customer_id %}
               <form method="post" action="{% url 'billing:customer_portal' %}" class="profile-billing-actions">
                 {% csrf_token %}

@@ -152,6 +152,9 @@ h1, h2, h3, p { margin-top: 0; }
 .upcoming-panel { background: linear-gradient(180deg, #fff, rgba(255, 227, 216, .34)); border-color: rgba(243, 111, 86, .18); }
 .calendar-head { align-items: center; }
 .calendar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.calendar-view-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; padding: 6px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255,255,255,.72); }
+.calendar-view-tabs a { min-height: 36px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: var(--slate-600); font-size: 13px; font-weight: 900; }
+.calendar-view-tabs a.active, .calendar-view-tabs a:hover { background: var(--brand-600); color: #fff; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; overflow: hidden; border: 1px solid var(--slate-200); border-radius: 18px; background: #fff; }
 .calendar-weekday { padding: 11px 8px; color: var(--brand-700); font-size: 12px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; text-align: center; background: var(--brand-50); border-right: 1px solid var(--slate-200); border-bottom: 1px solid var(--slate-200); }
 .calendar-weekday:nth-child(7n) { border-right: 0; }
@@ -168,6 +171,20 @@ h1, h2, h3, p { margin-top: 0; }
 .calendar-events { display: grid; gap: 6px; margin-top: 10px; }
 .calendar-event { display: block; padding: 8px 9px; border-radius: 9px; background: linear-gradient(135deg, var(--brand-600), var(--aqua-500)); color: #fff; font-size: 12px; font-weight: 800; line-height: 1.25; box-shadow: 0 5px 14px rgba(112, 82, 217, .14); }
 .calendar-event span { display: block; color: rgba(255, 255, 255, .78); font-size: 11px; }
+.day-agenda, .week-schedule, .year-grid { display: grid; gap: 12px; }
+.day-agenda { padding: 16px; border: 1px solid var(--slate-200); border-radius: 18px; background: #fff; }
+.day-agenda-head, .week-day-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.day-agenda-head div, .week-day-head { color: var(--slate-900); }
+.day-agenda-head span, .week-day-head span { color: var(--slate-500); font-size: 13px; font-weight: 800; }
+.agenda-event { padding: 13px 14px; font-size: 14px; }
+.week-schedule { grid-template-columns: repeat(7, minmax(150px, 1fr)); overflow-x: auto; }
+.week-day { min-height: 220px; padding: 12px; border: 1px solid var(--slate-200); border-radius: 16px; background: rgba(255,255,255,.94); display: grid; align-content: start; gap: 9px; }
+.week-day.today { background: radial-gradient(circle at top right, rgba(204, 251, 245, .9), transparent 50%), #fff; border-color: rgba(112, 82, 217, .3); }
+.year-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.year-month-card { min-height: 112px; padding: 16px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.9); box-shadow: var(--shadow-1); display: grid; align-content: space-between; }
+.year-month-card:hover { transform: translateY(-1px); border-color: rgba(112, 82, 217, .3); color: var(--brand-700); }
+.year-month-card strong { font-size: 18px; color: var(--slate-900); }
+.year-month-card span { color: var(--slate-500); font-size: 13px; font-weight: 800; }
 .compact-list { max-height: 680px; overflow-y: auto; padding-right: 3px; }
 .clients-panel { background: radial-gradient(circle at top right, rgba(255, 227, 216, .72), transparent 28%), linear-gradient(145deg, #fff, var(--brand-50)); }
 .client-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -409,6 +426,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .appointment-card { grid-template-columns: 1fr; align-items: start; }
   .appointment-time { padding-right: 0; padding-bottom: 10px; border-right: 0; border-bottom: 1px solid var(--slate-200); }
   .calendar-grid { min-width: 720px; gap: 0; }
+  .calendar-view-tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .week-schedule { grid-template-columns: repeat(7, minmax(180px, 1fr)); }
+  .year-grid { grid-template-columns: 1fr; }
   .calendar-day { min-height: 118px; padding: 8px; }
   .calendar-event { padding: 5px 6px; font-size: 11px; }
   .client-card { grid-template-columns: 1fr; }

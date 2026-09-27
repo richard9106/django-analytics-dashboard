@@ -30,6 +30,7 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
     model = Appointment
     template_name = 'appointments/list.html'
     context_object_name = 'appointments'
+    calendar_views = {'day', 'week', 'month', 'year'}
 
     def get_queryset(self):
         practice = self.get_practice()
@@ -51,10 +52,38 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
                 pass
         return timezone.localdate().replace(day=1)
 
-    def get_calendar_context(self, appointments):
-        month_start = self.get_calendar_month()
+    def get_calendar_view(self):
+        view = self.request.GET.get('view', 'month')
+        return view if view in self.calendar_views else 'month'
+
+    def get_anchor_date(self):
+        date_value = self.request.GET.get('date')
+        if date_value:
+            try:
+                return date.fromisoformat(date_value)
+            except ValueError:
+                pass
+        return self.get_calendar_month()
+
+    def get_period_navigation(self, view, anchor):
+        if view == 'day':
+            previous_value = (anchor - timedelta(days=1)).isoformat()
+            next_value = (anchor + timedelta(days=1)).isoformat()
+            return f'?view=day&date={previous_value}', f'?view=day&date={next_value}'
+        if view == 'week':
+            week_start = anchor - timedelta(days=anchor.weekday())
+            return f'?view=week&date={(week_start - timedelta(days=7)).isoformat()}', f'?view=week&date={(week_start + timedelta(days=7)).isoformat()}'
+        if view == 'year':
+            return f'?view=year&date={date(anchor.year - 1, 1, 1).isoformat()}', f'?view=year&date={date(anchor.year + 1, 1, 1).isoformat()}'
+        month_start = anchor.replace(day=1)
         previous_month = (month_start - timedelta(days=1)).replace(day=1)
         next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        return f'?view=month&month={previous_month:%Y-%m}', f'?view=month&month={next_month:%Y-%m}'
+
+    def get_calendar_context(self, appointments):
+        selected_view = self.get_calendar_view()
+        anchor = self.get_anchor_date()
+        month_start = self.get_calendar_month() if selected_view == 'month' else anchor.replace(day=1)
         month_dates = calendar.Calendar(firstweekday=0).monthdatescalendar(month_start.year, month_start.month)
         today = timezone.localdate()
 
@@ -75,11 +104,50 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
                 for day in week
             ])
 
+        week_start = anchor - timedelta(days=anchor.weekday())
+        week_days = []
+        for index in range(7):
+            current_day = week_start + timedelta(days=index)
+            week_days.append({
+                'date': current_day,
+                'is_today': current_day == today,
+                'appointments': appointments_by_date.get(current_day, []),
+            })
+
+        year_months = []
+        for month_number in range(1, 13):
+            current_month = date(anchor.year, month_number, 1)
+            month_count = sum(1 for appointment in appointments if timezone.localtime(appointment.starts_at).date().replace(day=1) == current_month)
+            year_months.append({
+                'date': current_month,
+                'label': current_month.strftime('%B'),
+                'count': month_count,
+                'href': f'?view=month&month={current_month:%Y-%m}',
+            })
+
+        previous_period, next_period = self.get_period_navigation(selected_view, anchor)
+        period_labels = {
+            'day': anchor.strftime('%A, %B %-d'),
+            'week': f"{week_start.strftime('%b %-d')} - {(week_start + timedelta(days=6)).strftime('%b %-d, %Y')}",
+            'month': month_start.strftime('%B %Y'),
+            'year': str(anchor.year),
+        }
+
         return {
+            'calendar_view': selected_view,
             'calendar_weeks': weeks,
-            'calendar_month_label': month_start.strftime('%B %Y'),
-            'previous_month': previous_month.strftime('%Y-%m'),
-            'next_month': next_month.strftime('%Y-%m'),
+            'calendar_period_label': period_labels[selected_view],
+            'calendar_anchor_date': anchor,
+            'calendar_week_days': week_days,
+            'calendar_day_appointments': appointments_by_date.get(anchor, []),
+            'calendar_year_months': year_months,
+            'previous_period_url': previous_period,
+            'next_period_url': next_period,
+            'today_period_url': '?view=day&date=' + today.isoformat(),
+            'month_view_url': f'?view=month&month={month_start:%Y-%m}',
+            'week_view_url': f'?view=week&date={anchor.isoformat()}',
+            'day_view_url': f'?view=day&date={anchor.isoformat()}',
+            'year_view_url': f'?view=year&date={date(anchor.year, 1, 1).isoformat()}',
             'weekday_labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         }
 

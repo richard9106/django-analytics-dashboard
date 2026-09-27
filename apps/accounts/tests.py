@@ -147,7 +147,8 @@ class ProfileSettingsViewTests(TestCase):
         self.assertContains(response, "Group Practice")
         self.assertContains(response, "Yearly billing")
         self.assertContains(response, "Up to 5 users")
-        self.assertContains(response, "cus_test")
+        self.assertNotContains(response, "cus_test")
+        self.assertNotContains(response, "sub_test")
         self.assertContains(response, reverse("billing:customer_portal"))
         self.assertContains(response, "Manage billing in Stripe")
 
