@@ -146,6 +146,8 @@ class ClientViewTests(TestCase):
         self.assertContains(response, "My patients")
         self.assertContains(response, "Maya Johnson")
         self.assertContains(response, 'id="client-create-modal"')
+        self.assertContains(response, 'data-modal-target="appointment-create-modal"')
+        self.assertContains(response, 'id="appointment-create-modal"')
         self.assertContains(response, f'id="client-note-modal-{client.pk}"')
         self.assertContains(response, f'id="client-package-modal-{client.pk}"')
         self.assertContains(response, "Add note")

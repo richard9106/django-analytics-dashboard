@@ -17,7 +17,7 @@
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
-          <a class="btn btn-secondary" href="{% url 'appointments:create' %}">+ New appointment</a>
+          <a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>
           <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
         </div>
         <details class="profile-menu">
@@ -160,6 +160,43 @@
               <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
               <button class="btn btn-primary" type="submit">Create client</button>
             </div>
+          </form>
+        </div>
+      </dialog>
+
+      <dialog class="modal-dialog" id="appointment-create-modal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">New Appointment</p>
+              <h2>Schedule a session</h2>
+            </div>
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+          </div>
+          <form class="appointment-form" method="post" action="{% url 'appointments:create' %}">
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field">
+                <label for="clients-appointment-client">Client</label>
+                <select id="clients-appointment-client" name="client" required>
+                  {% for client in clients %}<option value="{{ client.pk }}">{{ client }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label for="clients-appointment-therapist">Therapist</label>
+                <select id="clients-appointment-therapist" name="therapist" required>
+                  {% for therapist in client_therapists %}<option value="{{ therapist.pk }}">{{ therapist }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="field"><label for="clients-appointment-start">Starts at</label><input id="clients-appointment-start" name="starts_at" type="datetime-local" required></div>
+              <div class="field"><label for="clients-appointment-end">Ends at</label><input id="clients-appointment-end" name="ends_at" type="datetime-local" required></div>
+              <div class="field"><label for="clients-appointment-type">Appointment type</label><select id="clients-appointment-type" name="appointment_type" required><option value="video">Video Call</option><option value="in_person">In Person</option><option value="phone">Phone Call</option></select></div>
+              <div class="field"><label for="clients-appointment-status">Status</label><select id="clients-appointment-status" name="status" required><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="no_show">No Show</option></select></div>
+              <div class="field"><label for="clients-appointment-location">Location</label><input id="clients-appointment-location" name="location"></div>
+              <div class="field"><label for="clients-appointment-url">Meeting URL</label><input id="clients-appointment-url" name="meeting_url" type="url"></div>
+              <div class="field full"><label for="clients-appointment-notes">Notes</label><textarea id="clients-appointment-notes" name="notes" rows="4"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create appointment</button></div>
           </form>
         </div>
       </dialog>
