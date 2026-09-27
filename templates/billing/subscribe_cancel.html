@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout canceled | NuviaMy{% endblock %}
+
+{% block content %}
+<section class="card page-card">
+  <p class="eyebrow">Subscription</p>
+  <h1>Checkout was canceled.</h1>
+  <p>No subscription changes were completed. You can return to pricing and choose a plan whenever you are ready.</p>
+  <a class="btn btn-primary" href="{% url 'pricing' %}">Back to pricing</a>
+</section>
+{% endblock %}

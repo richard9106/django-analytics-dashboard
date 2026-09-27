@@ -1,16 +1,18 @@
 from datetime import timedelta
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
 from apps.audit.models import AuditLog
-from apps.billing.models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, ServicePackage
+from apps.billing.models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, PracticeSubscription, ServicePackage
 from apps.billing.models import SessionPackageTemplate
 from apps.clients.models import Client
 from apps.practices.models import Practice, TherapistProfile
@@ -579,3 +581,79 @@ class BillingViewTests(TestCase):
         self.assertEqual(rate.practice, practice)
         self.assertEqual(rate.state, "CA")
         self.assertEqual(rate.reimbursement_amount, Decimal("175.00"))
+
+    def test_subscribe_missing_stripe_config_redirects_to_pricing(self):
+        user, _practice, _therapist, _client, _appointment = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:subscribe", args=["solo", "monthly"]))
+
+        self.assertRedirects(response, reverse("pricing"))
+
+    @override_settings(
+        STRIPE_SECRET_KEY="stripe-secret-placeholder",
+        STRIPE_PRICE_IDS={
+            "solo": {"monthly": "price_solo_monthly", "yearly": ""},
+            "group": {"monthly": "", "yearly": ""},
+            "clinic": {"monthly": "", "yearly": ""},
+        },
+    )
+    @patch("apps.billing.views.stripe.checkout.Session.create")
+    def test_subscribe_creates_checkout_session_for_practice(self, mock_create):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        mock_create.return_value = SimpleNamespace(url="https://checkout.stripe.test/session")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:subscribe", args=["solo", "monthly"]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "https://checkout.stripe.test/session")
+        mock_create.assert_called_once()
+        kwargs = mock_create.call_args.kwargs
+        self.assertEqual(kwargs["line_items"], [{"price": "price_solo_monthly", "quantity": 1}])
+        self.assertEqual(kwargs["metadata"]["practice_id"], str(practice.pk))
+        subscription = PracticeSubscription.objects.get(practice=practice)
+        self.assertEqual(subscription.plan, PracticeSubscription.Plan.SOLO)
+        self.assertEqual(subscription.billing_period, PracticeSubscription.BillingPeriod.MONTHLY)
+        self.assertEqual(subscription.status, PracticeSubscription.Status.INCOMPLETE)
+
+    @override_settings(
+        STRIPE_WEBHOOK_SECRET="webhook-secret-placeholder",
+        STRIPE_PRICE_IDS={
+            "solo": {"monthly": "price_solo_monthly", "yearly": ""},
+            "group": {"monthly": "", "yearly": ""},
+            "clinic": {"monthly": "", "yearly": ""},
+        },
+    )
+    @patch("apps.billing.views.stripe.Webhook.construct_event")
+    def test_subscription_updated_webhook_syncs_practice_subscription(self, mock_construct_event):
+        _user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        period_end = int((timezone.now() + timedelta(days=30)).timestamp())
+        mock_construct_event.return_value = {
+            "type": "customer.subscription.updated",
+            "data": {
+                "object": {
+                    "id": "sub_123",
+                    "customer": "cus_123",
+                    "status": "active",
+                    "metadata": {"practice_id": str(practice.pk)},
+                    "current_period_end": period_end,
+                    "items": {"data": [{"price": {"id": "price_solo_monthly"}}]},
+                }
+            },
+        }
+
+        response = self.client.post(
+            reverse("billing:stripe_webhook"),
+            data=b"{}",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test-signature",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        subscription = PracticeSubscription.objects.get(practice=practice)
+        self.assertEqual(subscription.plan, PracticeSubscription.Plan.SOLO)
+        self.assertEqual(subscription.billing_period, PracticeSubscription.BillingPeriod.MONTHLY)
+        self.assertEqual(subscription.status, PracticeSubscription.Status.ACTIVE)
+        self.assertEqual(subscription.stripe_customer_id, "cus_123")
+        self.assertEqual(subscription.stripe_subscription_id, "sub_123")

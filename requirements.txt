@@ -16,6 +16,7 @@ python-dotenv==1.2.3
 s3transfer==0.19.2
 six==1.17.0
 sqlparse==0.6.0
+stripe==14.0.1
 typing_extensions==4.16.0
 urllib3==2.8.0
 webencodings==0.6.1

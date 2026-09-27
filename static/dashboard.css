@@ -58,6 +58,7 @@ h1, h2, h3, p { margin-top: 0; }
 .btn-primary:hover { background: var(--brand-700); }
 .btn-secondary { background: #fff; border-color: var(--border); color: var(--slate-800); }
 .btn-soft { background: var(--brand-50); color: var(--brand-700); }
+.btn-ghost { background: transparent; border-color: rgba(112, 82, 217, .22); color: var(--brand-700); }
 .btn-danger { background: var(--danger-bg); border-color: rgba(200, 62, 77, .18); color: var(--danger); }
 .btn-danger:hover { background: #fbd9de; }
 
@@ -321,6 +322,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .pricing-card ul { display: grid; gap: 10px; margin: 4px 0 8px; padding: 0; list-style: none; }
 .pricing-card li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; color: var(--slate-700); font-size: 14px; line-height: 1.45; }
 .pricing-card li::before { content: "✓"; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: var(--success-bg); color: var(--success); font-size: 12px; font-weight: 900; }
+.pricing-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .pricing-advice { align-items: start; }
 .pricing-faq { padding-top: 18px; }
 

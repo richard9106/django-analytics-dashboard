@@ -117,6 +117,24 @@ GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', '')
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY', '')
 
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_IDS = {
+    'solo': {
+        'monthly': os.getenv('STRIPE_PRICE_SOLO_MONTHLY', ''),
+        'yearly': os.getenv('STRIPE_PRICE_SOLO_YEARLY', ''),
+    },
+    'group': {
+        'monthly': os.getenv('STRIPE_PRICE_GROUP_MONTHLY', ''),
+        'yearly': os.getenv('STRIPE_PRICE_GROUP_YEARLY', ''),
+    },
+    'clinic': {
+        'monthly': os.getenv('STRIPE_PRICE_CLINIC_MONTHLY', ''),
+        'yearly': os.getenv('STRIPE_PRICE_CLINIC_YEARLY', ''),
+    },
+}
+
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',')

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, ServicePackage, SessionPackageTemplate
+from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, PracticeSubscription, ServicePackage, SessionPackageTemplate
 
 
 @admin.register(Invoice)
@@ -56,4 +56,12 @@ class InsuranceRateAdmin(admin.ModelAdmin):
     list_display = ("payer", "practice", "state", "service_code", "reimbursement_amount", "active")
     list_filter = ("practice", "state", "service_code", "active")
     search_fields = ("payer__name", "state", "service_code", "service_label")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PracticeSubscription)
+class PracticeSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("practice", "plan", "billing_period", "status", "current_period_end")
+    list_filter = ("plan", "billing_period", "status")
+    search_fields = ("practice__name", "stripe_customer_id", "stripe_subscription_id")
     readonly_fields = ("created_at", "updated_at")

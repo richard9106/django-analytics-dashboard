@@ -23,6 +23,10 @@ from .views import (
     SessionPackageTemplateDeleteView,
     SessionPackageTemplateListView,
     SessionPackageTemplateUpdateView,
+    StripeSubscribeCancelView,
+    StripeSubscribeSuccessView,
+    StripeSubscribeView,
+    StripeWebhookView,
 )
 
 app_name = 'billing'
@@ -39,6 +43,10 @@ urlpatterns = [
     path('packages/<int:pk>/delete/', PackageDeleteView.as_view(), name='package_delete'),
     path('usage/new/', PackageUsageCreateView.as_view(), name='usage_create'),
     path('usage/<int:pk>/delete/', PackageUsageDeleteView.as_view(), name='usage_delete'),
+    path('subscribe/<str:plan>/<str:period>/', StripeSubscribeView.as_view(), name='subscribe'),
+    path('subscribe/success/', StripeSubscribeSuccessView.as_view(), name='subscribe_success'),
+    path('subscribe/cancel/', StripeSubscribeCancelView.as_view(), name='subscribe_cancel'),
+    path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe_webhook'),
 ]
 
 settings_patterns = [

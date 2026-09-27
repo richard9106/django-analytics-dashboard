@@ -306,3 +306,42 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.client} payment {self.amount}"
+
+
+class PracticeSubscription(models.Model):
+    class Plan(models.TextChoices):
+        SOLO = "solo", "Solo Therapist"
+        GROUP = "group", "Group Practice"
+        CLINIC = "clinic", "Clinic"
+
+    class BillingPeriod(models.TextChoices):
+        MONTHLY = "monthly", "Monthly"
+        YEARLY = "yearly", "Yearly"
+
+    class Status(models.TextChoices):
+        INCOMPLETE = "incomplete", "Incomplete"
+        ACTIVE = "active", "Active"
+        PAST_DUE = "past_due", "Past Due"
+        CANCELED = "canceled", "Canceled"
+        UNPAID = "unpaid", "Unpaid"
+
+    practice = models.OneToOneField("practices.Practice", on_delete=models.CASCADE, related_name="subscription")
+    plan = models.CharField(max_length=20, choices=Plan.choices)
+    billing_period = models.CharField(max_length=20, choices=BillingPeriod.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.INCOMPLETE)
+    stripe_customer_id = models.CharField(max_length=120, blank=True)
+    stripe_subscription_id = models.CharField(max_length=120, blank=True)
+    stripe_price_id = models.CharField(max_length=120, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["practice__name"]
+
+    @property
+    def is_active(self):
+        return self.status == self.Status.ACTIVE
+
+    def __str__(self):
+        return f"{self.practice} - {self.get_plan_display()} ({self.get_status_display()})"
