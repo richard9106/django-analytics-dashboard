@@ -148,6 +148,8 @@ class ProfileSettingsViewTests(TestCase):
         self.assertContains(response, "Yearly billing")
         self.assertContains(response, "Up to 5 users")
         self.assertContains(response, "cus_test")
+        self.assertContains(response, reverse("billing:customer_portal"))
+        self.assertContains(response, "Manage billing in Stripe")
 
     def test_dashboard_profile_menu_links_to_profile_settings(self):
         user, _practice = self.create_practice_user()

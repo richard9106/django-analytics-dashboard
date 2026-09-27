@@ -320,6 +320,7 @@ class PracticeSubscription(models.Model):
 
     class Status(models.TextChoices):
         INCOMPLETE = "incomplete", "Incomplete"
+        TRIALING = "trialing", "Trialing"
         ACTIVE = "active", "Active"
         PAST_DUE = "past_due", "Past Due"
         CANCELED = "canceled", "Canceled"

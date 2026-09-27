@@ -518,6 +518,28 @@ class StripeSubscribeCancelView(LoginRequiredMixin, ClientPortalRedirectMixin, T
     template_name = 'billing/subscribe_cancel.html'
 
 
+class StripeCustomerPortalView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        practice = get_practice_for_user(request.user)
+        subscription = getattr(practice, 'subscription', None) if practice else None
+        if not settings.STRIPE_SECRET_KEY or not subscription or not subscription.stripe_customer_id:
+            messages.error(request, 'Stripe billing management is not available for this account yet.')
+            return redirect('profile_settings')
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            session = stripe.billing_portal.Session.create(
+                customer=subscription.stripe_customer_id,
+                return_url=request.build_absolute_uri(reverse('profile_settings')),
+            )
+        except stripe.error.StripeError:
+            messages.error(request, 'Stripe could not open billing management. Please try again later.')
+            return redirect('profile_settings')
+        return redirect(session.url)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(View):
     http_method_names = ['post']

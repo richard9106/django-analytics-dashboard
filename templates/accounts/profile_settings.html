@@ -37,6 +37,12 @@
         </div>
       </header>
 
+      {% if messages %}
+        <section class="message-list" aria-label="Profile messages">
+          {% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}
+        </section>
+      {% endif %}
+
       <section class="profile-grid">
         <article class="panel">
           <div class="panel-head compact"><div><h2>Your profile</h2><p>Signed-in user details.</p></div></div>
@@ -61,7 +67,15 @@
               <div><dt>Stripe subscription</dt><dd>{{ subscription.stripe_subscription_id|default:'Pending' }}</dd></div>
               <div><dt>Current period end</dt><dd>{% if subscription.current_period_end %}{{ subscription.current_period_end|date:'M j, Y g:i A' }}{% else %}Managed by Stripe{% endif %}</dd></div>
             </dl>
-            <p class="empty-state">Stripe Customer Portal controls for card updates, receipts, and cancellation are the next billing step.</p>
+            {% if subscription.stripe_customer_id %}
+              <form method="post" action="{% url 'billing:customer_portal' %}" class="profile-billing-actions">
+                {% csrf_token %}
+                <button class="btn btn-primary" type="submit">Manage billing in Stripe</button>
+              </form>
+              <p class="empty-state">Use Stripe to update your card, view receipts, change billing details, or cancel your subscription.</p>
+            {% else %}
+              <p class="empty-state">Stripe billing management will be available after checkout creates a Stripe customer.</p>
+            {% endif %}
           {% else %}
             <div class="subscription-summary muted-subscription">
               <span class="badge warning">No active subscription</span>

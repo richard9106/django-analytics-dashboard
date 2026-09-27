@@ -603,6 +603,39 @@ class BillingViewTests(TestCase):
         self.assertEqual(cancel_response.status_code, 200)
         self.assertContains(cancel_response, "Checkout was canceled")
 
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.billing.views.stripe.billing_portal.Session.create")
+    def test_customer_portal_redirects_to_stripe_for_practice_subscription(self, mock_create):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.TRIALING,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_123",
+        )
+        mock_create.return_value = SimpleNamespace(url="https://billing.stripe.test/session")
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:customer_portal"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "https://billing.stripe.test/session")
+        mock_create.assert_called_once()
+        kwargs = mock_create.call_args.kwargs
+        self.assertEqual(kwargs["customer"], "cus_123")
+        self.assertIn(reverse("profile_settings"), kwargs["return_url"])
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    def test_customer_portal_without_customer_redirects_to_profile(self):
+        user, _practice, _therapist, _client, _appointment = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:customer_portal"))
+
+        self.assertRedirects(response, reverse("profile_settings"))
+
     @override_settings(
         STRIPE_SECRET_KEY="stripe-secret-placeholder",
         STRIPE_PRICE_IDS={
