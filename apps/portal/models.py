@@ -1,5 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
+
+from apps.appointments.models import Appointment
 
 
 class ClientPortalAccess(models.Model):
@@ -59,6 +62,54 @@ class ClientPortalRequest(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()} from {self.client}"
+
+
+class PublicBookingRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        DECLINED = "declined", "Declined"
+
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="public_booking_requests")
+    client = models.ForeignKey("clients.Client", on_delete=models.SET_NULL, null=True, blank=True, related_name="public_booking_requests")
+    appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="public_booking_requests")
+    approved_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_booking_requests")
+    first_name = models.CharField(max_length=80)
+    last_name = models.CharField(max_length=80)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+    requested_starts_at = models.DateTimeField()
+    requested_ends_at = models.DateTimeField()
+    appointment_type = models.CharField(max_length=20, choices=Appointment.AppointmentType.choices, default=Appointment.AppointmentType.VIDEO)
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def clean(self):
+        errors = {}
+        if self.requested_starts_at and self.requested_ends_at and self.requested_ends_at <= self.requested_starts_at:
+            errors["requested_ends_at"] = "Requested appointment must end after it starts."
+        if self.requested_starts_at and self.requested_starts_at < timezone.now():
+            errors["requested_starts_at"] = "Choose a future appointment time."
+        if self.practice_id and self.requested_starts_at and self.requested_ends_at:
+            local_start = timezone.localtime(self.requested_starts_at)
+            local_end = timezone.localtime(self.requested_ends_at)
+            working_hours = self.practice.working_hours.filter(active=True, weekday=local_start.weekday())
+            if working_hours.exists() and not working_hours.filter(starts_at__lte=local_start.time(), ends_at__gte=local_end.time()).exists():
+                errors["requested_starts_at"] = "Choose a time within the practice working hours."
+        if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
+            errors["client"] = "Booking request client must belong to the same practice."
+        if self.appointment_id and self.practice_id and self.appointment.practice_id != self.practice_id:
+            errors["appointment"] = "Booking request appointment must belong to the same practice."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"Booking request from {self.first_name} {self.last_name}"
 
 
 class IntakePacketTemplate(models.Model):

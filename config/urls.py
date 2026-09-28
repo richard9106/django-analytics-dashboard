@@ -11,6 +11,7 @@ from apps.accounts.views import ForcePasswordChangeView, RoleAwareLoginView
 from apps.portal.settings_urls import urlpatterns as portal_settings_patterns
 from apps.portal.intake_urls import urlpatterns as intake_patterns
 from apps.portal.practice_urls import urlpatterns as portal_request_patterns
+from apps.portal.views import PublicBookingRequestCreateView
 from apps.practices.settings_urls import urlpatterns as practice_settings_patterns
 
 urlpatterns = [
@@ -27,6 +28,7 @@ urlpatterns = [
     path('intake/', include((intake_patterns, 'intake'), namespace='intake')),
     path('requests/', include((portal_request_patterns, 'portal_requests'), namespace='portal_requests')),
     path('portal/', include('apps.portal.urls')),
+    path('book/<slug:slug>/', PublicBookingRequestCreateView.as_view(), name='public_booking'),
     path('login/', RoleAwareLoginView.as_view(), name='login'),
     path('change-temporary-password/', ForcePasswordChangeView.as_view(), name='force_password_change'),
     path('logout/', LogoutView.as_view(), name='logout'),

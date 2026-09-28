@@ -12,7 +12,7 @@ from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, ServicePackage
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
-from apps.portal.models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
+from apps.portal.models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PublicBookingRequest
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -422,6 +422,100 @@ class ClientPortalViewTests(TestCase):
         response = self.client.get(reverse("portal_requests:list"))
 
         self.assertRedirects(response, reverse("portal:dashboard"))
+
+    def test_public_booking_page_accepts_appointment_request(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user()
+        starts_at = timezone.localtime().replace(hour=14, minute=0, second=0, microsecond=0) + timedelta(days=3)
+
+        response = self.client.post(reverse("public_booking", args=[practice.public_booking_slug]), {
+            "first_name": "Jordan",
+            "last_name": "Rivera",
+            "email": "jordan@example.com",
+            "phone": "555-0101",
+            "requested_starts_at": starts_at.strftime("%Y-%m-%dT%H:%M"),
+            "appointment_type": Appointment.AppointmentType.VIDEO,
+            "reason": "I would like an intake appointment.",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Request received")
+        booking_request = PublicBookingRequest.objects.get(practice=practice, email="jordan@example.com")
+        self.assertEqual(booking_request.status, PublicBookingRequest.Status.PENDING)
+        self.assertEqual(timezone.localtime(booking_request.requested_starts_at).strftime("%H:%M"), "14:00")
+
+    def test_practice_can_approve_public_booking_request(self):
+        _user, practice, therapist, _client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        starts_at = timezone.localtime().replace(hour=15, minute=0, second=0, microsecond=0) + timedelta(days=4)
+        booking_request = PublicBookingRequest.objects.create(
+            practice=practice,
+            first_name="Jordan",
+            last_name="Rivera",
+            email="jordan@example.com",
+            phone="555-0101",
+            requested_starts_at=starts_at,
+            requested_ends_at=starts_at + timedelta(minutes=50),
+            appointment_type=Appointment.AppointmentType.PHONE,
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_requests:booking_approve", args=[booking_request.pk]))
+
+        self.assertRedirects(response, reverse("portal_requests:list"))
+        booking_request.refresh_from_db()
+        self.assertEqual(booking_request.status, PublicBookingRequest.Status.APPROVED)
+        self.assertIsNotNone(booking_request.client)
+        self.assertIsNotNone(booking_request.appointment)
+        self.assertEqual(booking_request.client.primary_therapist, therapist)
+        self.assertEqual(booking_request.appointment.appointment_type, Appointment.AppointmentType.PHONE)
+
+    def test_public_booking_approval_is_scoped_to_practice(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        _other_user, other_practice, _other_therapist, _other_client, _other_access = self.create_portal_user(
+            username="other-client",
+            practice_name="Other Practice",
+        )
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        starts_at = timezone.localtime().replace(hour=13, minute=0, second=0, microsecond=0) + timedelta(days=5)
+        booking_request = PublicBookingRequest.objects.create(
+            practice=other_practice,
+            first_name="Hidden",
+            last_name="Client",
+            email="hidden@example.com",
+            requested_starts_at=starts_at,
+            requested_ends_at=starts_at + timedelta(minutes=50),
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_requests:booking_approve", args=[booking_request.pk]))
+
+        booking_request.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(booking_request.status, PublicBookingRequest.Status.PENDING)
+        self.assertFalse(Appointment.objects.filter(practice=other_practice, client__email="hidden@example.com").exists())
+
+    def test_practice_can_decline_public_booking_request(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user()
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=2)
+        booking_request = PublicBookingRequest.objects.create(
+            practice=practice,
+            first_name="Jordan",
+            last_name="Rivera",
+            email="jordan@example.com",
+            requested_starts_at=starts_at,
+            requested_ends_at=starts_at + timedelta(minutes=50),
+        )
+
+        self.client.force_login(practice_user)
+        response = self.client.post(reverse("portal_requests:booking_decline", args=[booking_request.pk]))
+
+        self.assertRedirects(response, reverse("portal_requests:list"))
+        booking_request.refresh_from_db()
+        self.assertEqual(booking_request.status, PublicBookingRequest.Status.DECLINED)
 
     def test_portal_settings_list_requires_login(self):
         response = self.client.get(reverse("portal_settings:portal_access"))

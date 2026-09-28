@@ -318,6 +318,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .login-form button { margin-top: 8px; min-height: 48px; border: 0; border-radius: 12px; background: var(--brand-600); color: white; padding: 0 16px; font-weight: 800; cursor: pointer; }
 .login-form button:hover { background: var(--brand-700); }
 .form-error { background: var(--danger-bg); color: var(--danger); border-radius: 14px; padding: 12px 14px; }
+.form-success { background: var(--success-bg); color: var(--success); border-radius: 14px; padding: 12px 14px; }
+.form-success p { margin: 4px 0 0; color: inherit; font-weight: 700; }
 .admin-note { display: inline-flex; margin-top: 18px; color: var(--brand-700); font-weight: 800; }
 .login-links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 

@@ -1,4 +1,5 @@
 import secrets
+from datetime import timedelta
 
 from django import forms
 from django.contrib.auth import get_user_model
@@ -8,7 +9,7 @@ from django.utils.text import slugify
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
-from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PublicBookingRequest
 
 
 def suggest_portal_username(client):
@@ -182,6 +183,34 @@ class AppointmentChangeRequestForm(forms.ModelForm):
             portal_request.save()
             self.save_m2m()
         return portal_request
+
+
+class PublicBookingRequestForm(forms.ModelForm):
+    class Meta:
+        model = PublicBookingRequest
+        fields = ['first_name', 'last_name', 'email', 'phone', 'requested_starts_at', 'appointment_type', 'reason']
+        widgets = {
+            'requested_starts_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'reason': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+        self.fields['requested_starts_at'].input_formats = ['%Y-%m-%dT%H:%M']
+        self.fields['reason'].label = 'What would you like support with?'
+        self.fields['reason'].required = False
+
+    def save(self, commit=True):
+        booking_request = super().save(commit=False)
+        booking_request.practice = self.practice
+        booking_request.requested_ends_at = booking_request.requested_starts_at + timedelta(minutes=50)
+        if commit:
+            booking_request.full_clean()
+            booking_request.save()
+            self.save_m2m()
+        return booking_request
 
 
 class IntakePacketTemplateForm(forms.ModelForm):

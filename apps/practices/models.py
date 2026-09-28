@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.text import slugify
 
 from .fields import EncryptedTextField
 
@@ -20,8 +21,20 @@ class Practice(models.Model):
     state = models.CharField(max_length=60, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
     description = models.TextField(blank=True)
+    public_booking_slug = models.SlugField(max_length=160, unique=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.public_booking_slug:
+            base = slugify(self.name)[:140] or "practice"
+            slug = base
+            suffix = 2
+            while Practice.objects.filter(public_booking_slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{suffix}"
+                suffix += 1
+            self.public_booking_slug = slug
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return str(self.name + ' - ' + self.get_practice_type_display())

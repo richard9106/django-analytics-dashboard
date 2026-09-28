@@ -1,5 +1,8 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -10,11 +13,14 @@ from django.views.generic import CreateView, DeleteView, FormView, ListView, Tem
 
 from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, get_practice_for_user
 from apps.accounts.models import UserProfile
+from apps.appointments.google_calendar import sync_appointment_to_google
 from apps.appointments.models import Appointment
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import Invoice, ServicePackage
+from apps.clients.models import Client
 from apps.documents.models import ClientDocument
+from apps.practices.models import Practice
 from .forms import (
     ClientIntakeAssignmentForm,
     ClientIntakeResponseForm,
@@ -22,10 +28,11 @@ from .forms import (
     ClientPortalAccessForm,
     ClientPortalRequestForm,
     IntakePacketTemplateForm,
+    PublicBookingRequestForm,
     suggest_portal_password,
     suggest_portal_username,
 )
-from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PublicBookingRequest
 
 
 class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
@@ -219,6 +226,30 @@ class AppointmentChangeRequestCreateView(ClientPortalAccessMixin, View):
         return redirect('portal:dashboard')
 
 
+class PublicBookingRequestCreateView(View):
+    template_name = 'booking/public_booking.html'
+
+    def get_practice(self):
+        return get_object_or_404(Practice, public_booking_slug=self.kwargs['slug'])
+
+    def get(self, request, slug):
+        practice = self.get_practice()
+        form = PublicBookingRequestForm(practice=practice)
+        return TemplateResponse(request, self.template_name, {'practice': practice, 'form': form})
+
+    def post(self, request, slug):
+        practice = self.get_practice()
+        form = PublicBookingRequestForm(request.POST, practice=practice)
+        if form.is_valid():
+            booking_request = form.save()
+            return TemplateResponse(
+                request,
+                self.template_name,
+                {'practice': practice, 'form': PublicBookingRequestForm(practice=practice), 'submitted_request': booking_request},
+            )
+        return TemplateResponse(request, self.template_name, {'practice': practice, 'form': form}, status=400)
+
+
 class PortalAccessListView(PracticeContextMixin, ListView):
     model = ClientPortalAccess
     template_name = 'settings/portal_access.html'
@@ -332,6 +363,12 @@ class PracticePortalRequestListView(PracticeContextMixin, ListView):
             return ClientPortalRequest.objects.none()
         return ClientPortalRequest.objects.filter(practice=practice).select_related('client', 'submitted_by', 'appointment')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        context['booking_requests'] = PublicBookingRequest.objects.filter(practice=practice).select_related('client', 'appointment', 'approved_by') if practice else PublicBookingRequest.objects.none()
+        return context
+
 
 class PracticePortalRequestStatusView(PracticeContextMixin, View):
     def post(self, request, pk):
@@ -350,6 +387,78 @@ class PracticePortalRequestStatusView(PracticeContextMixin, View):
                 practice=portal_request.practice,
                 metadata={'client_id': portal_request.client_id, 'status': portal_request.status},
             )
+        return redirect('portal_requests:list')
+
+
+class PublicBookingRequestApproveView(PracticeContextMixin, View):
+    def post(self, request, pk):
+        practice = self.get_practice()
+        booking_request = get_object_or_404(PublicBookingRequest, pk=pk, practice=practice, status=PublicBookingRequest.Status.PENDING)
+        therapist = practice.therapists.select_related('user').first()
+        if not therapist:
+            messages.error(request, 'Add a therapist before approving booking requests.')
+            return redirect('portal_requests:list')
+
+        try:
+            with transaction.atomic():
+                client = Client.objects.filter(practice=practice, email__iexact=booking_request.email).first()
+                if not client:
+                    client = Client.objects.create(
+                        practice=practice,
+                        primary_therapist=therapist,
+                        first_name=booking_request.first_name,
+                        last_name=booking_request.last_name,
+                        email=booking_request.email,
+                        phone=booking_request.phone,
+                    )
+                appointment = Appointment(
+                    practice=practice,
+                    client=client,
+                    therapist=therapist,
+                    starts_at=booking_request.requested_starts_at,
+                    ends_at=booking_request.requested_ends_at,
+                    appointment_type=booking_request.appointment_type,
+                    notes=f'Created from public booking request.\n\n{booking_request.reason}'.strip(),
+                )
+                appointment.full_clean()
+                appointment.save()
+                booking_request.client = client
+                booking_request.appointment = appointment
+                booking_request.approved_by = request.user
+                booking_request.status = PublicBookingRequest.Status.APPROVED
+                booking_request.save(update_fields=['client', 'appointment', 'approved_by', 'status', 'updated_at'])
+        except ValidationError as exc:
+            messages.error(request, f'Booking request could not be approved: {exc}')
+            return redirect('portal_requests:list')
+
+        sync_appointment_to_google(appointment)
+        log_audit_event(
+            request,
+            AuditLog.Action.CREATE,
+            'appointments.Appointment',
+            appointment.pk,
+            practice=practice,
+            metadata={'client_id': client.pk, 'public_booking_request_id': booking_request.pk},
+        )
+        messages.success(request, 'Booking request approved and appointment created.')
+        return redirect('portal_requests:list')
+
+
+class PublicBookingRequestDeclineView(PracticeContextMixin, View):
+    def post(self, request, pk):
+        practice = self.get_practice()
+        booking_request = get_object_or_404(PublicBookingRequest, pk=pk, practice=practice, status=PublicBookingRequest.Status.PENDING)
+        booking_request.status = PublicBookingRequest.Status.DECLINED
+        booking_request.save(update_fields=['status', 'updated_at'])
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'portal.PublicBookingRequest',
+            booking_request.pk,
+            practice=practice,
+            metadata={'status': booking_request.status},
+        )
+        messages.success(request, 'Booking request declined.')
         return redirect('portal_requests:list')
 
 
