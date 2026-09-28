@@ -26,7 +26,10 @@
         </div>
         <div class="booking-link-box">
           <span>Public URL</span>
-          <a href="{{ public_booking_url }}">{{ public_booking_url }}</a>
+          <div class="copy-link-row">
+            <code data-copy-value>{{ public_booking_url }}</code>
+            <button class="btn btn-secondary" type="button" data-copy-button data-copy-text="{{ public_booking_url }}">Copy link</button>
+          </div>
         </div>
         <p class="sync-meta">Unique slug: <strong>{{ practice.public_booking_slug }}</strong>. If another practice has the same name, NuviaMy automatically adds a suffix so each booking link stays unique.</p>
       </section>
@@ -48,5 +51,27 @@
       </section>
     </main>
   </div>
+  <script>
+    document.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-copy-button]');
+      if (!button) return;
+      const originalText = button.textContent;
+      try {
+        await navigator.clipboard.writeText(button.dataset.copyText);
+        button.textContent = 'Copied';
+      } catch (_error) {
+        const value = button.closest('.copy-link-row')?.querySelector('[data-copy-value]');
+        if (value) {
+          const range = document.createRange();
+          range.selectNodeContents(value);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        button.textContent = 'Select link';
+      }
+      window.setTimeout(() => { button.textContent = originalText; }, 1800);
+    });
+  </script>
 </body>
 </html>

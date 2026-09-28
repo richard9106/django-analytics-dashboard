@@ -242,7 +242,8 @@ h1, h2, h3, p { margin-top: 0; }
 .booking-link-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .74), transparent 32%), linear-gradient(145deg, #fff, var(--brand-50)); }
 .booking-link-box { display: grid; gap: 6px; padding: 14px; border: 1px solid rgba(112, 82, 217, .16); border-radius: 16px; background: rgba(255,255,255,.82); }
 .booking-link-box span { color: var(--slate-500); font-size: 12px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
-.booking-link-box a { color: var(--brand-700); font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.copy-link-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.copy-link-row code { min-width: 0; padding: 10px 12px; border: 1px solid var(--slate-200); border-radius: 12px; background: #fff; color: var(--brand-700); font: inherit; font-size: 14px; font-weight: 900; overflow-wrap: anywhere; user-select: all; }
 .package-card strong { display: block; margin-bottom: 4px; }
 .package-card p { font-size: 14px; }
 .documents-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .5), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }
@@ -459,6 +460,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .quick-actions .btn, .topbar-actions .btn, .form-actions .btn { width: 100%; }
   .profile-menu-panel { left: 0; right: auto; }
   .action-bar > .profile-menu { display: none; }
+  .copy-link-row { grid-template-columns: 1fr; }
+  .copy-link-row .btn { width: 100%; }
   .stats { grid-template-columns: 1fr; }
   .appointment-card { grid-template-columns: 1fr; align-items: start; }
   .appointment-time { padding-right: 0; padding-bottom: 10px; border-right: 0; border-bottom: 1px solid var(--slate-200); }

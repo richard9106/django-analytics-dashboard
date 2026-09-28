@@ -366,6 +366,9 @@ class ClientPortalViewTests(TestCase):
         self.assertContains(response, "Client Requests")
         self.assertContains(response, "Billing question")
         self.assertContains(response, f"/book/{practice.public_booking_slug}/")
+        self.assertContains(response, 'data-copy-button')
+        self.assertContains(response, 'Copy link')
+        self.assertNotContains(response, f'href="http://testserver/book/{practice.public_booking_slug}/"')
         self.assertContains(response, "Unique slug")
         self.assertContains(response, 'class="nav-badge">1</strong>')
 
