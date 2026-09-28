@@ -70,36 +70,44 @@
           </nav>
 
           {% if calendar_view == 'day' %}
-            <div class="day-agenda" aria-label="Day appointment schedule" data-drop-date="{{ calendar_anchor_date|date:'Y-m-d' }}">
-              <div class="day-agenda-head">
-                <div><strong>{{ calendar_anchor_date|date:"l" }}</strong><span>{{ calendar_anchor_date|date:"F j, Y" }}</span></div>
-                <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a>
-              </div>
-              {% for appointment in calendar_day_appointments %}
-                <a class="calendar-event agenda-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
-                  <span>{{ appointment.starts_at|time:"g:i A" }} - {{ appointment.ends_at|time:"g:i A" }}</span>
-                  {{ appointment.client }} · {{ appointment.get_appointment_type_display }}
-                </a>
-              {% empty %}
-                <p class="empty-state">No appointments scheduled for this day.</p>
-              {% endfor %}
+            <div class="gcal-day" aria-label="Day appointment schedule">
+              <aside class="gcal-time-labels" aria-hidden="true">
+                {% for hour in calendar_hours %}<span>{{ hour|time:"g A" }}</span>{% endfor %}
+              </aside>
+              <section class="gcal-day-column" style="--calendar-grid-height: {{ calendar_grid_height }}px;" data-drop-date="{{ calendar_anchor_date|date:'Y-m-d' }}">
+                <div class="gcal-day-head"><strong>{{ calendar_anchor_date|date:"D" }}</strong><span>{{ calendar_anchor_date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a></div>
+                <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>
+                {% for event in calendar_day_timed_events %}
+                  {% with appointment=event.appointment %}
+                    <a class="gcal-event" style="{{ event.style }}" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
+                      <strong>{{ appointment.client }}</strong><span>{{ appointment.starts_at|time:"g:i A" }} - {{ appointment.ends_at|time:"g:i A" }}</span><small>{{ appointment.get_appointment_type_display }}</small>
+                    </a>
+                  {% endwith %}
+                {% empty %}
+                  <p class="empty-state gcal-empty">No appointments scheduled for this day.</p>
+                {% endfor %}
+              </section>
             </div>
           {% elif calendar_view == 'week' %}
-            <div class="week-schedule" aria-label="Week appointment schedule">
-              {% for day in calendar_week_days %}
-                <section class="week-day{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
-                  <div class="week-day-head">
-                    <strong>{{ day.date|date:"D" }}</strong>
-                    <span>{{ day.date|date:"M j" }}</span>
-                    <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
-                  </div>
-                  {% for appointment in day.appointments %}
-                    <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"><span>{{ appointment.starts_at|time:"g:i A" }}</span>{{ appointment.client }}</a>
-                  {% empty %}
-                    <p class="empty-state">Open</p>
-                  {% endfor %}
-                </section>
-              {% endfor %}
+            <div class="gcal-week" aria-label="Week appointment schedule">
+              <aside class="gcal-time-labels" aria-hidden="true">
+                {% for hour in calendar_hours %}<span>{{ hour|time:"g A" }}</span>{% endfor %}
+              </aside>
+              <div class="gcal-week-columns" style="--calendar-grid-height: {{ calendar_grid_height }}px;">
+                {% for day in calendar_week_days %}
+                  <section class="gcal-day-column{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
+                    <div class="gcal-day-head"><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a></div>
+                    <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>
+                    {% for event in day.timed_events %}
+                      {% with appointment=event.appointment %}
+                        <a class="gcal-event" style="{{ event.style }}" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
+                          <strong>{{ appointment.client }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span>
+                        </a>
+                      {% endwith %}
+                    {% endfor %}
+                  </section>
+                {% endfor %}
+              </div>
             </div>
           {% elif calendar_view == 'year' %}
             <div class="year-grid" aria-label="Year appointment overview">

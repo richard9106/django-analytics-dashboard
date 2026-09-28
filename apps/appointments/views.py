@@ -33,6 +33,9 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
     template_name = 'appointments/list.html'
     context_object_name = 'appointments'
     calendar_views = {'day', 'week', 'month', 'year'}
+    calendar_start_hour = 7
+    calendar_end_hour = 20
+    calendar_hour_height = 72
 
     def get_queryset(self):
         practice = self.get_practice()
@@ -82,6 +85,21 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
         return f'?view=month&month={previous_month:%Y-%m}', f'?view=month&month={next_month:%Y-%m}'
 
+    def get_timed_event(self, appointment):
+        local_start = timezone.localtime(appointment.starts_at)
+        local_end = timezone.localtime(appointment.ends_at)
+        start_minutes = max(0, (local_start.hour - self.calendar_start_hour) * 60 + local_start.minute)
+        duration_minutes = max(25, int((local_end - local_start).total_seconds() // 60))
+        top = int(start_minutes * (self.calendar_hour_height / 60))
+        height = int(duration_minutes * (self.calendar_hour_height / 60))
+        max_height = (self.calendar_end_hour - self.calendar_start_hour + 1) * self.calendar_hour_height
+        if top > max_height:
+            top = max_height - 28
+        return {
+            'appointment': appointment,
+            'style': f'top: {top}px; min-height: {max(34, height)}px;',
+        }
+
     def get_calendar_context(self, appointments):
         selected_view = self.get_calendar_view()
         anchor = self.get_anchor_date()
@@ -114,7 +132,10 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
                 'date': current_day,
                 'is_today': current_day == today,
                 'appointments': appointments_by_date.get(current_day, []),
+                'timed_events': [self.get_timed_event(appointment) for appointment in appointments_by_date.get(current_day, [])],
             })
+
+        day_timed_events = [self.get_timed_event(appointment) for appointment in appointments_by_date.get(anchor, [])]
 
         year_months = []
         for month_number in range(1, 13):
@@ -142,7 +163,10 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
             'calendar_anchor_date': anchor,
             'calendar_week_days': week_days,
             'calendar_day_appointments': appointments_by_date.get(anchor, []),
+            'calendar_day_timed_events': day_timed_events,
             'calendar_year_months': year_months,
+            'calendar_hours': [time(hour=hour) for hour in range(self.calendar_start_hour, self.calendar_end_hour + 1)],
+            'calendar_grid_height': (self.calendar_end_hour - self.calendar_start_hour + 1) * self.calendar_hour_height,
             'previous_period_url': previous_period,
             'next_period_url': next_period,
             'today_period_url': '?view=day&date=' + today.isoformat(),
