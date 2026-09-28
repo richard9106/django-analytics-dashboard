@@ -77,6 +77,7 @@
               <section class="gcal-day-column" style="--calendar-grid-height: {{ calendar_grid_height }}px;" data-drop-date="{{ calendar_anchor_date|date:'Y-m-d' }}">
                 <div class="gcal-day-head"><strong>{{ calendar_anchor_date|date:"D" }}</strong><span>{{ calendar_anchor_date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a></div>
                 <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>
+                {% if calendar_show_current_time and calendar_anchor_date == calendar_today %}<div class="gcal-now-line" style="top: {{ calendar_current_time_top }}px;"><span>Now</span></div>{% endif %}
                 {% for event in calendar_day_timed_events %}
                   {% with appointment=event.appointment %}
                     <a class="gcal-event" style="{{ event.style }}" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
@@ -98,6 +99,7 @@
                   <section class="gcal-day-column{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
                     <div class="gcal-day-head"><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a></div>
                     <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>
+                    {% if calendar_show_current_time and day.date == calendar_today %}<div class="gcal-now-line" style="top: {{ calendar_current_time_top }}px;"><span>Now</span></div>{% endif %}
                     {% for event in day.timed_events %}
                       {% with appointment=event.appointment %}
                         <a class="gcal-event" style="{{ event.style }}" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
@@ -398,8 +400,31 @@
       </dialog>
     </main>
   </div>
+  {{ calendar_grid_config|json_script:"calendar-grid-config" }}
   <script>
+    const calendarGridConfig = JSON.parse(document.getElementById('calendar-grid-config').textContent);
     let draggedAppointment = null;
+
+    function timeFromPointer(event, target) {
+      const rect = target.getBoundingClientRect();
+      const headerHeight = 54;
+      const y = Math.max(0, event.clientY - rect.top - headerHeight);
+      const rawMinutes = Math.round((y / calendarGridConfig.hourHeight) * 60);
+      const roundedMinutes = Math.max(0, Math.round(rawMinutes / 15) * 15);
+      const totalMinutes = calendarGridConfig.startHour * 60 + roundedMinutes;
+      const hours = Math.min(calendarGridConfig.endHour, Math.floor(totalMinutes / 60));
+      const minutes = hours === calendarGridConfig.endHour ? 0 : totalMinutes % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    function datetimeFor(dateValue, timeValue, durationMinutes = calendarGridConfig.defaultDurationMinutes) {
+      const [hours, minutes] = timeValue.split(':').map(Number);
+      const start = new Date(`${dateValue}T00:00:00`);
+      start.setHours(hours, minutes, 0, 0);
+      const end = new Date(start.getTime() + durationMinutes * 60000);
+      const format = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}T${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+      return { start: format(start), end: format(end) };
+    }
 
     document.addEventListener('dragstart', (event) => {
       const item = event.target.closest('[data-draggable-appointment]');
@@ -433,12 +458,25 @@
       const dialog = document.getElementById('reschedule-modal');
       const form = dialog?.querySelector('[data-reschedule-form]');
       if (!dialog || !form) return;
+      const newTime = target.classList.contains('gcal-day-column') ? timeFromPointer(event, target) : draggedAppointment.time || '09:00';
       form.action = draggedAppointment.url;
       form.elements.date.value = target.dataset.dropDate;
-      form.elements.time.value = draggedAppointment.time || '09:00';
+      form.elements.time.value = newTime;
       dialog.querySelector('[data-reschedule-title]').textContent = `Move ${draggedAppointment.title || 'appointment'}`;
       dialog.showModal();
       draggedAppointment = null;
+    });
+
+    document.addEventListener('click', (event) => {
+      const column = event.target.closest('.gcal-day-column[data-drop-date]');
+      if (!column || event.target.closest('a, button, input, select, textarea')) return;
+      const dialog = document.getElementById('appointment-create-modal');
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      const selectedTime = timeFromPointer(event, column);
+      const values = datetimeFor(column.dataset.dropDate, selectedTime);
+      dialog.querySelector('[name="starts_at"]').value = values.start;
+      dialog.querySelector('[name="ends_at"]').value = values.end;
+      dialog.showModal();
     });
 
     document.addEventListener('click', (event) => {

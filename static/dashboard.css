@@ -186,6 +186,9 @@ h1, h2, h3, p { margin-top: 0; }
 .gcal-day-column.today .gcal-day-head span { background: var(--brand-600); color: #fff; }
 .gcal-time-grid { position: absolute; top: 54px; right: 0; left: 0; height: var(--calendar-grid-height); display: grid; grid-auto-rows: 72px; pointer-events: none; }
 .gcal-time-grid span { border-bottom: 1px solid var(--slate-100); }
+.gcal-now-line { position: absolute; left: 0; right: 0; z-index: 4; height: 2px; background: var(--coral-500); pointer-events: none; }
+.gcal-now-line::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 999px; background: var(--coral-500); }
+.gcal-now-line span { position: absolute; right: 8px; top: -11px; padding: 2px 7px; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 10px; font-weight: 900; text-transform: uppercase; }
 .gcal-event { position: absolute; z-index: 2; left: 8px; right: 8px; margin-top: 54px; padding: 8px 10px; overflow: hidden; border-radius: 12px; background: linear-gradient(135deg, var(--brand-600), #8267e6); color: #fff; box-shadow: 0 8px 18px rgba(112, 82, 217, .22); cursor: grab; }
 .gcal-event:active { cursor: grabbing; }
 .gcal-event strong, .gcal-event span, .gcal-event small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

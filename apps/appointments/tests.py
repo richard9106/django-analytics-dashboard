@@ -310,8 +310,11 @@ class AppointmentViewTests(TestCase):
         year_response = self.client.get(reverse('appointments:list'), {'view': 'year', 'date': starts_at.date().isoformat()})
 
         self.assertContains(day_response, 'Day appointment schedule')
+        self.assertContains(day_response, 'calendar-grid-config')
+        self.assertContains(day_response, 'gcal-day-column')
         self.assertContains(day_response, 'Maya Johnson')
         self.assertContains(week_response, 'Week appointment schedule')
+        self.assertContains(week_response, 'gcal-week-columns')
         self.assertContains(week_response, 'Maya Johnson')
         self.assertContains(year_response, 'Year appointment overview')
         self.assertContains(year_response, 'appointment')

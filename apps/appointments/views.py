@@ -155,6 +155,10 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
             'month': month_start.strftime('%B %Y'),
             'year': str(anchor.year),
         }
+        now = timezone.localtime()
+        current_minutes = (now.hour - self.calendar_start_hour) * 60 + now.minute
+        current_time_top = int(current_minutes * (self.calendar_hour_height / 60)) + 54
+        show_current_time = self.calendar_start_hour <= now.hour <= self.calendar_end_hour
 
         return {
             'calendar_view': selected_view,
@@ -167,6 +171,15 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
             'calendar_year_months': year_months,
             'calendar_hours': [time(hour=hour) for hour in range(self.calendar_start_hour, self.calendar_end_hour + 1)],
             'calendar_grid_height': (self.calendar_end_hour - self.calendar_start_hour + 1) * self.calendar_hour_height,
+            'calendar_grid_config': {
+                'startHour': self.calendar_start_hour,
+                'endHour': self.calendar_end_hour,
+                'hourHeight': self.calendar_hour_height,
+                'defaultDurationMinutes': 50,
+            },
+            'calendar_current_time_top': current_time_top,
+            'calendar_show_current_time': show_current_time,
+            'calendar_today': today,
             'previous_period_url': previous_period,
             'next_period_url': next_period,
             'today_period_url': '?view=day&date=' + today.isoformat(),
