@@ -35,6 +35,15 @@
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'availability' %} active{% endif %}" href="{% url 'practice_settings:availability' %}">Availability</a>
       <a class="nav-item subitem{% if request.resolver_match.namespace == 'portal_settings' %} active{% endif %}" href="{% url 'portal_settings:portal_access' %}">Client portal</a>
     </details>
+    <div class="mobile-account-menu" aria-label="Account navigation">
+      <span class="mobile-account-name">{{ request.user.first_name|default:request.user.username }}</span>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'profile_settings' %} active{% endif %}" href="{% url 'profile_settings' %}">Profile settings</a>
+      {% if request.user.is_staff %}<a class="nav-item subitem" href="/admin/">Admin</a>{% endif %}
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button class="nav-item subitem" type="submit">Sign out</button>
+      </form>
+    </div>
   </nav>
 
   <div class="sidebar-card">

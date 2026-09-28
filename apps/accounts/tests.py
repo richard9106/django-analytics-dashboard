@@ -160,3 +160,4 @@ class ProfileSettingsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("profile_settings"))
+        self.assertContains(response, 'class="mobile-account-menu"')

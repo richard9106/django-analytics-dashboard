@@ -82,6 +82,7 @@ h1, h2, h3, p { margin-top: 0; }
 .sidebar-settings summary { cursor: pointer; list-style: none; }
 .sidebar-settings summary::-webkit-details-marker { display: none; }
 .sidebar-settings .subitem { margin-left: 28px; min-height: 38px; font-size: 13px; }
+.mobile-account-menu { display: none; }
 .sidebar-card { margin-top: auto; padding: 16px; background: linear-gradient(180deg, #fff, var(--brand-50)); border: 1px solid rgba(112, 82, 217, .16); border-radius: 16px; box-shadow: var(--shadow-1); }
 .sidebar-card strong { display: block; margin-bottom: 6px; }
 .sidebar-card p { color: var(--slate-500); font-size: 13px; margin: 0; }
@@ -435,6 +436,10 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .nav-item { min-height: 46px; padding: 0 12px; justify-content: flex-start; border-radius: 14px; font-size: 14px; }
   .nav-item span { font-size: 16px; }
   .sidebar-settings .subitem { margin-left: 0; padding-left: 40px; min-height: 40px; font-size: 13px; }
+  .mobile-account-menu { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--slate-200); display: grid; gap: 4px; }
+  .mobile-account-name { padding: 0 12px 4px; color: var(--slate-500); font-size: 12px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+  .mobile-account-menu form { margin: 0; }
+  .mobile-account-menu button { width: 100%; border: 0; background: transparent; font: inherit; cursor: pointer; }
   .sidebar-card { display: none; }
   .app-main { padding: 14px; gap: 14px; }
   .app-main, .calendar-layout, .calendar-panel { min-width: 0; }
@@ -447,6 +452,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .quick-actions, .topbar-actions, .form-actions { width: 100%; display: grid; grid-template-columns: 1fr; }
   .quick-actions .btn, .topbar-actions .btn, .form-actions .btn { width: 100%; }
   .profile-menu-panel { left: 0; right: auto; }
+  .action-bar > .profile-menu { display: none; }
   .stats { grid-template-columns: 1fr; }
   .appointment-card { grid-template-columns: 1fr; align-items: start; }
   .appointment-time { padding-right: 0; padding-bottom: 10px; border-right: 0; border-bottom: 1px solid var(--slate-200); }
