@@ -282,6 +282,9 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, reverse('appointments:create'))
         self.assertContains(response, 'Create appointment')
         self.assertContains(response, reverse('appointments:edit', args=[appointment.pk]))
+        self.assertContains(response, reverse('appointments:reschedule', args=[appointment.pk]))
+        self.assertContains(response, 'draggable="true"')
+        self.assertContains(response, 'id="reschedule-modal"')
         self.assertContains(response, f'id="appointment-modal-{appointment.pk}"')
         self.assertContains(response, 'Save changes')
         self.assertContains(response, 'Delete appointment')
@@ -312,6 +315,53 @@ class AppointmentViewTests(TestCase):
         self.assertContains(week_response, 'Maya Johnson')
         self.assertContains(year_response, 'Year appointment overview')
         self.assertContains(year_response, 'appointment')
+
+    def test_appointment_reschedule_updates_start_and_end(self):
+        user, _practice, therapist, client = self.create_practice_user()
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=client.practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+        new_date = (starts_at + timedelta(days=2)).date()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:reschedule', args=[appointment.pk]), {
+            'date': new_date.isoformat(),
+            'time': '14:30',
+        })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointment.refresh_from_db()
+        self.assertEqual(timezone.localtime(appointment.starts_at).date(), new_date)
+        self.assertEqual(timezone.localtime(appointment.starts_at).strftime('%H:%M'), '14:30')
+        self.assertEqual(appointment.ends_at - appointment.starts_at, timedelta(minutes=50))
+
+    def test_appointment_reschedule_is_scoped_to_user_practice(self):
+        user, _practice, _therapist, _client = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client = self.create_practice_user(
+            username='otherdoc',
+            practice_name='Other Practice',
+        )
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        other_appointment = Appointment.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:reschedule', args=[other_appointment.pk]), {
+            'date': starts_at.date().isoformat(),
+            'time': '14:30',
+        })
+
+        self.assertEqual(response.status_code, 404)
 
     def test_appointment_list_highlights_today(self):
         user, _practice, _therapist, _client = self.create_practice_user()

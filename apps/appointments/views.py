@@ -1,7 +1,9 @@
 import calendar
 from datetime import date, datetime, time, timedelta
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -274,6 +276,32 @@ class AppointmentGoogleSyncView(LoginRequiredMixin, PracticeContextMixin, View):
     def post(self, request, pk):
         appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
         sync_appointment_to_google(appointment)
+        return redirect('appointments:list')
+
+
+class AppointmentRescheduleView(LoginRequiredMixin, PracticeContextMixin, View):
+    def post(self, request, pk):
+        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        date_value = request.POST.get('date', '')
+        time_value = request.POST.get('time', '')
+        try:
+            selected_date = date.fromisoformat(date_value)
+            selected_time = datetime.strptime(time_value, '%H:%M').time()
+        except ValueError:
+            messages.error(request, 'Choose a valid date and time to move the appointment.')
+            return redirect('appointments:list')
+
+        duration = appointment.ends_at - appointment.starts_at
+        appointment.starts_at = timezone.make_aware(datetime.combine(selected_date, selected_time))
+        appointment.ends_at = appointment.starts_at + duration
+        try:
+            appointment.full_clean()
+        except ValidationError as exc:
+            messages.error(request, f'Appointment could not be moved: {exc}')
+            return redirect('appointments:list')
+        appointment.save()
+        sync_appointment_to_google(appointment)
+        messages.success(request, 'Appointment moved successfully.')
         return redirect('appointments:list')
 
 

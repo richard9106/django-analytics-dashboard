@@ -42,6 +42,12 @@
         </div>
       </header>
 
+      {% if messages %}
+        <section class="message-list" aria-label="Appointment messages">
+          {% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}
+        </section>
+      {% endif %}
+
       <section class="calendar-layout">
         <article class="panel calendar-panel">
           <div class="panel-head calendar-head">
@@ -64,13 +70,13 @@
           </nav>
 
           {% if calendar_view == 'day' %}
-            <div class="day-agenda" aria-label="Day appointment schedule">
+            <div class="day-agenda" aria-label="Day appointment schedule" data-drop-date="{{ calendar_anchor_date|date:'Y-m-d' }}">
               <div class="day-agenda-head">
                 <div><strong>{{ calendar_anchor_date|date:"l" }}</strong><span>{{ calendar_anchor_date|date:"F j, Y" }}</span></div>
                 <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a>
               </div>
               {% for appointment in calendar_day_appointments %}
-                <a class="calendar-event agenda-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">
+                <a class="calendar-event agenda-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
                   <span>{{ appointment.starts_at|time:"g:i A" }} - {{ appointment.ends_at|time:"g:i A" }}</span>
                   {{ appointment.client }} · {{ appointment.get_appointment_type_display }}
                 </a>
@@ -81,14 +87,14 @@
           {% elif calendar_view == 'week' %}
             <div class="week-schedule" aria-label="Week appointment schedule">
               {% for day in calendar_week_days %}
-                <section class="week-day{% if day.is_today %} today{% endif %}">
+                <section class="week-day{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
                   <div class="week-day-head">
                     <strong>{{ day.date|date:"D" }}</strong>
                     <span>{{ day.date|date:"M j" }}</span>
                     <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
                   </div>
                   {% for appointment in day.appointments %}
-                    <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}"><span>{{ appointment.starts_at|time:"g:i A" }}</span>{{ appointment.client }}</a>
+                    <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"><span>{{ appointment.starts_at|time:"g:i A" }}</span>{{ appointment.client }}</a>
                   {% empty %}
                     <p class="empty-state">Open</p>
                   {% endfor %}
@@ -112,14 +118,14 @@
 
               {% for week in calendar_weeks %}
                 {% for day in week %}
-                  <div class="calendar-day{% if not day.in_month %} muted{% endif %}{% if day.is_today %} today{% endif %}">
+                  <div class="calendar-day{% if not day.in_month %} muted{% endif %}{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
                     <div class="calendar-day-head">
                       <span class="calendar-date">{{ day.date|date:"j" }}</span>
                       <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
                     </div>
                     <div class="calendar-events">
                       {% for appointment in day.appointments %}
-                        <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">
+                        <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
                           <span>{{ appointment.starts_at|time:"g:i A" }}</span>
                           {{ appointment.client }}
                         </a>
@@ -361,9 +367,72 @@
           </div>
         </dialog>
       {% endfor %}
+
+      <dialog class="modal-dialog" id="reschedule-modal">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <p class="eyebrow">Move Appointment</p>
+              <h2 data-reschedule-title>Reschedule session</h2>
+            </div>
+            <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
+          </div>
+          <form class="appointment-form" method="post" data-reschedule-form>
+            {% csrf_token %}
+            <div class="field-grid two">
+              <div class="field"><label for="reschedule-date">New date</label><input id="reschedule-date" name="date" type="date" required></div>
+              <div class="field"><label for="reschedule-time">New start time</label><input id="reschedule-time" name="time" type="time" required></div>
+            </div>
+            <p class="empty-state">Duration, client, therapist, and appointment type stay the same. NuviaMy will still check working hours and overlapping sessions.</p>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Move appointment</button></div>
+          </form>
+        </div>
+      </dialog>
     </main>
   </div>
   <script>
+    let draggedAppointment = null;
+
+    document.addEventListener('dragstart', (event) => {
+      const item = event.target.closest('[data-draggable-appointment]');
+      if (!item) return;
+      draggedAppointment = {
+        title: item.dataset.appointmentTitle,
+        time: item.dataset.appointmentTime,
+        url: item.dataset.rescheduleUrl,
+      };
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedAppointment.title || 'Appointment');
+    });
+
+    document.addEventListener('dragover', (event) => {
+      const target = event.target.closest('[data-drop-date]');
+      if (!target || !draggedAppointment) return;
+      event.preventDefault();
+      target.classList.add('drop-ready');
+    });
+
+    document.addEventListener('dragleave', (event) => {
+      const target = event.target.closest('[data-drop-date]');
+      if (target) target.classList.remove('drop-ready');
+    });
+
+    document.addEventListener('drop', (event) => {
+      const target = event.target.closest('[data-drop-date]');
+      if (!target || !draggedAppointment) return;
+      event.preventDefault();
+      target.classList.remove('drop-ready');
+      const dialog = document.getElementById('reschedule-modal');
+      const form = dialog?.querySelector('[data-reschedule-form]');
+      if (!dialog || !form) return;
+      form.action = draggedAppointment.url;
+      form.elements.date.value = target.dataset.dropDate;
+      form.elements.time.value = draggedAppointment.time || '09:00';
+      dialog.querySelector('[data-reschedule-title]').textContent = `Move ${draggedAppointment.title || 'appointment'}`;
+      dialog.showModal();
+      draggedAppointment = null;
+    });
+
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-modal-target]');
       if (!trigger) return;
