@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='practice',
             name='public_booking_slug',
-            field=models.SlugField(blank=True, max_length=160),
+            field=models.CharField(blank=True, max_length=160),
         ),
         migrations.RunPython(populate_public_booking_slugs, migrations.RunPython.noop),
         migrations.AlterField(
