@@ -131,6 +131,7 @@
                   <div class="calendar-day{% if not day.in_month %} muted{% endif %}{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
                     <div class="calendar-day-head">
                       <span class="calendar-date">{{ day.date|date:"j" }}</span>
+                      <span class="calendar-day-name">{{ day.date|date:"D, M j" }}</span>
                       <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
                     </div>
                     <div class="calendar-events">

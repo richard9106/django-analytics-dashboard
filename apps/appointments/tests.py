@@ -277,6 +277,7 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'Month')
         self.assertContains(response, 'Year')
         self.assertContains(response, '<div class="calendar-weekday">Mon</div>', html=True)
+        self.assertContains(response, 'calendar-day-name')
         self.assertContains(response, 'id="client-create-modal"')
         self.assertContains(response, 'id="appointment-create-modal"')
         self.assertContains(response, reverse('appointments:create'))
