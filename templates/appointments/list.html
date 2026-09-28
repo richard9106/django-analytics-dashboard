@@ -148,37 +148,6 @@
           {% endif %}
         </article>
 
-        <article class="panel upcoming-panel">
-          <div class="panel-head compact">
-            <div>
-              <h2>Upcoming appointments</h2>
-              <p>Scheduled sessions for {{ practice.name|default:"your practice" }}.</p>
-            </div>
-            <span class="badge brand">{{ appointments|length }}</span>
-          </div>
-
-          <div class="appointment-list compact-list">
-            {% for appointment in appointments %}
-              <div class="appointment-card appointment-card-mini">
-                <div class="appointment-time">
-                  <strong>{{ appointment.starts_at|date:"M j" }}</strong>
-                  <span>{{ appointment.starts_at|time:"g:i A" }}</span>
-                </div>
-                <div class="appointment-body">
-                  <h3>{{ appointment.client }}</h3>
-                  <p>{{ appointment.get_appointment_type_display }} with {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p>
-                  <p class="sync-meta">Google Calendar: {{ appointment.get_sync_status_display }}{% if appointment.sync_error %} · {{ appointment.sync_error|truncatechars:80 }}{% endif %}</p>
-                  <p class="sync-meta">Reminder: {{ appointment.get_reminder_status_display }}{% if appointment.reminder_error %} · {{ appointment.reminder_error|truncatechars:80 }}{% endif %}</p>
-                  <a class="inline-link" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}">Edit appointment</a>
-                </div>
-                <span class="badge success">{{ appointment.get_status_display }}</span>
-                <span class="badge {% if appointment.sync_status == 'synced' %}success{% elif appointment.sync_status == 'failed' %}danger{% elif appointment.sync_status == 'pending' %}warning{% else %}brand{% endif %}">{{ appointment.get_sync_status_display }}</span>
-              </div>
-            {% empty %}
-              <p class="empty-state">No appointments have been scheduled yet.</p>
-            {% endfor %}
-          </div>
-        </article>
       </section>
 
       <dialog class="modal-dialog" id="client-create-modal">
@@ -389,6 +358,7 @@
           </div>
           <form class="appointment-form" method="post" data-reschedule-form>
             {% csrf_token %}
+            <input type="hidden" name="next" value="" data-reschedule-next>
             <div class="field-grid two">
               <div class="field"><label for="reschedule-date">New date</label><input id="reschedule-date" name="date" type="date" required></div>
               <div class="field"><label for="reschedule-time">New start time</label><input id="reschedule-time" name="time" type="time" required></div>
@@ -462,6 +432,7 @@
       form.action = draggedAppointment.url;
       form.elements.date.value = target.dataset.dropDate;
       form.elements.time.value = newTime;
+      form.elements.next.value = `${window.location.pathname}${window.location.search}`;
       dialog.querySelector('[data-reschedule-title]').textContent = `Move ${draggedAppointment.title || 'appointment'}`;
       dialog.showModal();
       draggedAppointment = null;

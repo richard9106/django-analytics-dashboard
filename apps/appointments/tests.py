@@ -290,8 +290,9 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'Delete appointment')
         self.assertContains(response, f"{reverse('appointments:create')}?date={starts_at.date().isoformat()}")
         self.assertContains(response, 'aria-label="Add appointment on')
-        self.assertContains(response, 'Google Calendar: Not Synced')
+        self.assertNotContains(response, 'Upcoming appointments')
         self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
+        self.assertContains(response, f'?view=week&amp;date={timezone.localdate().isoformat()}')
 
     def test_appointment_calendar_supports_day_week_and_year_views(self):
         user, practice, therapist, client = self.create_practice_user()
@@ -342,6 +343,27 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(timezone.localtime(appointment.starts_at).date(), new_date)
         self.assertEqual(timezone.localtime(appointment.starts_at).strftime('%H:%M'), '14:30')
         self.assertEqual(appointment.ends_at - appointment.starts_at, timedelta(minutes=50))
+
+    def test_appointment_reschedule_returns_to_current_calendar_view(self):
+        user, _practice, therapist, client = self.create_practice_user()
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        appointment = Appointment.objects.create(
+            practice=client.practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+        )
+        return_url = f"{reverse('appointments:list')}?view=week&date={starts_at.date().isoformat()}"
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:reschedule', args=[appointment.pk]), {
+            'date': starts_at.date().isoformat(),
+            'time': '15:00',
+            'next': return_url,
+        })
+
+        self.assertRedirects(response, return_url)
 
     def test_appointment_reschedule_is_scoped_to_user_practice(self):
         user, _practice, _therapist, _client = self.create_practice_user()

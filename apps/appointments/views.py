@@ -6,6 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -159,6 +160,7 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         current_minutes = (now.hour - self.calendar_start_hour) * 60 + now.minute
         current_time_top = int(current_minutes * (self.calendar_hour_height / 60)) + 54
         show_current_time = self.calendar_start_hour <= now.hour <= self.calendar_end_hour
+        view_switch_date = today if selected_view == 'month' and month_start.year == today.year and month_start.month == today.month else anchor
 
         return {
             'calendar_view': selected_view,
@@ -184,9 +186,9 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
             'next_period_url': next_period,
             'today_period_url': '?view=day&date=' + today.isoformat(),
             'month_view_url': f'?view=month&month={month_start:%Y-%m}',
-            'week_view_url': f'?view=week&date={anchor.isoformat()}',
-            'day_view_url': f'?view=day&date={anchor.isoformat()}',
-            'year_view_url': f'?view=year&date={date(anchor.year, 1, 1).isoformat()}',
+            'week_view_url': f'?view=week&date={view_switch_date.isoformat()}',
+            'day_view_url': f'?view=day&date={view_switch_date.isoformat()}',
+            'year_view_url': f'?view=year&date={date(view_switch_date.year, 1, 1).isoformat()}',
             'weekday_labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         }
 
@@ -317,6 +319,12 @@ class AppointmentGoogleSyncView(LoginRequiredMixin, PracticeContextMixin, View):
 
 
 class AppointmentRescheduleView(LoginRequiredMixin, PracticeContextMixin, View):
+    def get_success_url(self):
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            return next_url
+        return reverse_lazy('appointments:list')
+
     def post(self, request, pk):
         appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
         date_value = request.POST.get('date', '')
@@ -326,7 +334,7 @@ class AppointmentRescheduleView(LoginRequiredMixin, PracticeContextMixin, View):
             selected_time = datetime.strptime(time_value, '%H:%M').time()
         except ValueError:
             messages.error(request, 'Choose a valid date and time to move the appointment.')
-            return redirect('appointments:list')
+            return redirect(self.get_success_url())
 
         duration = appointment.ends_at - appointment.starts_at
         appointment.starts_at = timezone.make_aware(datetime.combine(selected_date, selected_time))
@@ -335,11 +343,11 @@ class AppointmentRescheduleView(LoginRequiredMixin, PracticeContextMixin, View):
             appointment.full_clean()
         except ValidationError as exc:
             messages.error(request, f'Appointment could not be moved: {exc}')
-            return redirect('appointments:list')
+            return redirect(self.get_success_url())
         appointment.save()
         sync_appointment_to_google(appointment)
         messages.success(request, 'Appointment moved successfully.')
-        return redirect('appointments:list')
+        return redirect(self.get_success_url())
 
 
 class AvailabilitySettingsView(LoginRequiredMixin, PracticeContextMixin, ListView):
