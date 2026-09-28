@@ -365,6 +365,8 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Client Requests")
         self.assertContains(response, "Billing question")
+        self.assertContains(response, f"/book/{practice.public_booking_slug}/")
+        self.assertContains(response, "Unique slug")
         self.assertContains(response, 'class="nav-badge">1</strong>')
 
     def test_practice_can_update_portal_request_status(self):

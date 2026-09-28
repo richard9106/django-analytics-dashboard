@@ -239,6 +239,10 @@ h1, h2, h3, p { margin-top: 0; }
 .request-list { display: grid; gap: 14px; }
 .request-card { display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.9); box-shadow: var(--shadow-1); }
 .request-card h3 { margin: 0 0 4px; font-size: 18px; letter-spacing: -.03em; }
+.booking-link-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .74), transparent 32%), linear-gradient(145deg, #fff, var(--brand-50)); }
+.booking-link-box { display: grid; gap: 6px; padding: 14px; border: 1px solid rgba(112, 82, 217, .16); border-radius: 16px; background: rgba(255,255,255,.82); }
+.booking-link-box span { color: var(--slate-500); font-size: 12px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.booking-link-box a { color: var(--brand-700); font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
 .package-card strong { display: block; margin-bottom: 4px; }
 .package-card p { font-size: 14px; }
 .documents-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .5), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }

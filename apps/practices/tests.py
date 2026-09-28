@@ -10,6 +10,15 @@ from apps.accounts.models import UserProfile
 from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
 
+class PracticeModelTests(TestCase):
+    def test_public_booking_slug_is_unique_for_duplicate_practice_names(self):
+        first = Practice.objects.create(name="NuviaMy Wellness")
+        second = Practice.objects.create(name="NuviaMy Wellness")
+
+        self.assertEqual(first.public_booking_slug, "nuviamy-wellness")
+        self.assertEqual(second.public_booking_slug, "nuviamy-wellness-2")
+
+
 class IntegrationSettingsTests(TestCase):
     def create_practice_user(self):
         user = get_user_model().objects.create_user(username="owner", password="StrongPass123!")

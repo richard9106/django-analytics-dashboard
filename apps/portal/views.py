@@ -367,6 +367,7 @@ class PracticePortalRequestListView(PracticeContextMixin, ListView):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
         context['booking_requests'] = PublicBookingRequest.objects.filter(practice=practice).select_related('client', 'appointment', 'approved_by') if practice else PublicBookingRequest.objects.none()
+        context['public_booking_url'] = self.request.build_absolute_uri(reverse_lazy('public_booking', args=[practice.public_booking_slug])) if practice else ''
         return context
 
 
