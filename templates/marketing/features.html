@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Features | NuviaMy Therapy Practice Management Software</title>
+  <meta name="description" content="Explore NuviaMy features for therapists and mental health practices: scheduling, public booking, clinical notes, treatment plans, billing, client portal, documents, reminders, and Google integrations.">
+  <link rel="canonical" href="https://nuviamy.com/features/">
+  <meta property="og:title" content="NuviaMy Features | Therapy Practice Management Software">
+  <meta property="og:description" content="Scheduling, clinical notes, treatment plans, billing, client portal, documents, reminders, public booking, and Google integrations for therapy practices.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nuviamy.com/features/">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body id="top" class="marketing-page">
+  {% include 'marketing/partials/nav.html' %}
+  <main>
+    <section class="pricing-hero">
+      <p class="eyebrow coral-eyebrow">Product Features</p>
+      <h1>Everything therapists need to run a calmer practice.</h1>
+      <p>NuviaMy brings scheduling, public booking, clinical documentation, treatment planning, billing, documents, reminders, and client portal workflows into one practice-scoped SaaS workspace.</p>
+    </section>
+
+    <section class="visual-band calm-banner" aria-label="NuviaMy feature workflow">
+      <div>
+        <p class="eyebrow coral-eyebrow">Connected workflows</p>
+        <h2>From first request to clinical follow-up.</h2>
+        <p>Each feature is designed to reduce handoffs: public requests flow into scheduling, sessions connect to notes and billing, and clients use a dedicated portal for the right tasks.</p>
+      </div>
+      <div class="workflow-river" aria-hidden="true"><span>Booking</span><span>Calendar</span><span>Notes</span><span>Billing</span><span>Portal</span></div>
+    </section>
+
+    <section class="marketing-section">
+      <p class="eyebrow">Core Features</p>
+      <h2>Feature areas built around real therapy operations.</h2>
+      <div class="marketing-grid three">
+        <article><h3><a href="{% url 'therapy_scheduling_software' %}">Scheduling and calendar</a></h3><p>Day, week, month, and year calendar views, availability rules, recurring appointments, conflict validation, drag-and-drop rescheduling, and Google Calendar sync.</p></article>
+        <article><h3>Public booking requests</h3><p>Share a public booking link, collect appointment requests, review them inside Requests, then approve to create the client and appointment.</p></article>
+        <article><h3><a href="{% url 'clinical_notes_software' %}">Clinical notes</a></h3><p>Progress notes, intake notes, general notes, diagnoses, treatment plan links, review workflows, and note locking for a stronger documentation routine.</p></article>
+        <article><h3>Treatment plans</h3><p>Build treatment plans with goals, objectives, interventions, target dates, statuses, and review dates that surface when follow-up is due.</p></article>
+        <article><h3><a href="{% url 'mental_health_billing_software' %}">Billing and superbills</a></h3><p>Invoices, printable invoices, superbills, service packages, usage tracking, insurance payer settings, and billing follow-up tasks.</p></article>
+        <article><h3><a href="{% url 'client_portal_software' %}">Client portal</a></h3><p>Client-only access for appointments, visible documents, invoices, intake packets, service packages, and appointment change requests.</p></article>
+        <article><h3>Documents</h3><p>Upload documents, control client visibility, download/delete files, prepare for R2 production storage, and export selected files to Google Drive.</p></article>
+        <article><h3>Reminders and Gmail</h3><p>Gmail-powered appointment reminders, reminder statuses, error tracking, and scheduled reminder delivery for upcoming sessions.</p></article>
+        <article><h3>Google workspace</h3><p>OAuth-based Google connection for Gmail, Calendar, and Drive without storing Google passwords, with encrypted tokens at rest.</p></article>
+      </div>
+    </section>
+
+    <section class="marketing-band">
+      <div><p class="eyebrow coral-eyebrow">Security-minded</p><h2>Practice-scoped by default.</h2></div>
+      <p>Every sensitive object belongs to a practice. Client users stay inside the portal, internal workflows redirect client roles away, and Google integrations use OAuth instead of stored passwords.</p>
+    </section>
+
+    <section class="marketing-cta">
+      <p class="eyebrow">Explore NuviaMy</p>
+      <h2>Give your therapy practice one calmer workspace.</h2>
+      <p>Start with scheduling, documentation, billing, client portal, public booking, documents, reminders, and Google integrations in one server-rendered SaaS app.</p>
+      <a class="btn btn-primary" href="{% url 'signup' %}">Start workspace</a>
+    </section>
+  </main>
+  <a class="back-to-top" href="#top" aria-label="Back to top">↑ Top</a>
+</body>
+</html>

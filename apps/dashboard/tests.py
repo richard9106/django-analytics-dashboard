@@ -52,6 +52,7 @@ class DashboardTests(TestCase):
         self.assertContains(response, '/static/favicon.svg')
         self.assertContains(response, 'Back to top')
         self.assertContains(response, reverse('pricing'))
+        self.assertContains(response, reverse('features'))
         self.assertContains(response, 'marketing-nav-toggle')
         self.assertContains(response, 'marketing-menu-button')
 
@@ -68,6 +69,17 @@ class DashboardTests(TestCase):
         self.assertContains(response, '$149')
         self.assertContains(response, '10% annual discount')
         self.assertContains(response, 'FAQPage')
+
+    def test_features_page_is_public_and_links_to_seo_pages(self):
+        response = self.client.get(reverse('features'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Everything therapists need to run a calmer practice')
+        self.assertContains(response, 'Public booking requests')
+        self.assertContains(response, reverse('therapy_scheduling_software'))
+        self.assertContains(response, reverse('clinical_notes_software'))
+        self.assertContains(response, reverse('client_portal_software'))
+        self.assertContains(response, reverse('mental_health_billing_software'))
 
     def test_seo_content_pages_are_public(self):
         pages = [
@@ -95,6 +107,7 @@ class DashboardTests(TestCase):
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, '<loc>https://nuviamy.com/</loc>')
         self.assertContains(sitemap, '<loc>https://nuviamy.com/pricing/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/features/</loc>')
         self.assertContains(sitemap, '<loc>https://nuviamy.com/therapy-practice-management-software/</loc>')
         self.assertContains(sitemap, '<loc>https://nuviamy.com/therapy-scheduling-software/</loc>')
         self.assertContains(sitemap, '<loc>https://nuviamy.com/clinical-notes-software-for-therapists/</loc>')

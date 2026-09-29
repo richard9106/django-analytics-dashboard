@@ -171,6 +171,10 @@ class PricingPageView(TemplateView):
     template_name = 'marketing/pricing.html'
 
 
+class FeaturesPageView(TemplateView):
+    template_name = 'marketing/features.html'
+
+
 class TherapyPracticeManagementPageView(TemplateView):
     template_name = 'marketing/therapy_practice_management.html'
 
