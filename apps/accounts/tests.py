@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -472,3 +473,52 @@ class TeamManagementViewTests(TestCase):
         self.assertTrue(member_profile.must_change_password)
         self.assertTrue(member.check_password(mock_send_invitation.call_args.args[2]))
         self.assertNotEqual(mock_send_invitation.call_args.args[2], "OldPass123!")
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class PasswordResetTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="drsmith",
+            email="drsmith@example.com",
+            password="OldStrongPass123!",
+        )
+
+    def test_login_links_to_password_reset(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertContains(response, reverse("password_reset"))
+
+    def test_existing_email_receives_reset_link(self):
+        response = self.client.post(reverse("password_reset"), {"email": "drsmith@example.com"})
+
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("/password-reset/", mail.outbox[0].body)
+        self.assertIn("Reset your NuviaMy password", mail.outbox[0].subject)
+
+    def test_unknown_email_does_not_reveal_account(self):
+        response = self.client.post(reverse("password_reset"), {"email": "unknown@example.com"})
+
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_reset_link_changes_password(self):
+        self.client.post(reverse("password_reset"), {"email": "drsmith@example.com"})
+        reset_email = mail.outbox[0].body
+        path = reset_email.split("http://testserver", 1)[1].split()[0]
+        response = self.client.get(path)
+        self.assertEqual(response.status_code, 302)
+        path = response.url
+        response = self.client.get(path)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Set new password")
+
+        response = self.client.post(path, {
+            "new_password1": "NewStrongPass123!",
+            "new_password2": "NewStrongPass123!",
+        })
+
+        self.assertRedirects(response, reverse("password_reset_complete"))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewStrongPass123!"))
