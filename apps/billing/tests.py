@@ -639,6 +639,80 @@ class BillingViewTests(TestCase):
     @override_settings(
         STRIPE_SECRET_KEY="stripe-secret-placeholder",
         STRIPE_PRICE_IDS={
+            "solo": {"monthly": "price_solo_monthly", "yearly": "price_solo_yearly"},
+            "group": {"monthly": "price_group_monthly", "yearly": "price_group_yearly"},
+            "clinic": {"monthly": "price_clinic_monthly", "yearly": "price_clinic_yearly"},
+        },
+    )
+    @patch("apps.billing.views.stripe.Subscription.modify")
+    @patch("apps.billing.views.stripe.Subscription.retrieve")
+    def test_change_plan_updates_existing_stripe_subscription(self, mock_retrieve, mock_modify):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        subscription = PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_123",
+            stripe_price_id="price_solo_monthly",
+        )
+        mock_retrieve.return_value = {"items": {"data": [{"id": "si_123"}]}}
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:change_plan", args=["group", "yearly"]))
+
+        self.assertRedirects(response, reverse("profile_settings"))
+        mock_retrieve.assert_called_once_with("sub_123")
+        mock_modify.assert_called_once_with(
+            "sub_123",
+            items=[{"id": "si_123", "price": "price_group_yearly"}],
+            proration_behavior="create_prorations",
+            metadata={"practice_id": str(practice.pk), "plan": "group", "period": "yearly"},
+        )
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.plan, PracticeSubscription.Plan.GROUP)
+        self.assertEqual(subscription.billing_period, PracticeSubscription.BillingPeriod.YEARLY)
+        self.assertEqual(subscription.stripe_price_id, "price_group_yearly")
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    def test_change_plan_blocks_downgrade_when_internal_users_exceed_target_limit(self):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        second_user = get_user_model().objects.create_user(username="second")
+        UserProfile.objects.create(user=second_user, practice=practice, role=UserProfile.Role.ADMIN)
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.GROUP,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_123",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:change_plan", args=["solo", "monthly"]))
+
+        self.assertRedirects(response, reverse("profile_settings"))
+        subscription = PracticeSubscription.objects.get(practice=practice)
+        self.assertEqual(subscription.plan, PracticeSubscription.Plan.GROUP)
+
+    def test_change_plan_without_stripe_subscription_redirects_to_checkout(self):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.INCOMPLETE,
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:change_plan", args=["group", "monthly"]))
+
+        self.assertRedirects(response, reverse("billing:subscribe", args=["group", "monthly"]), fetch_redirect_response=False)
+
+    @override_settings(
+        STRIPE_SECRET_KEY="stripe-secret-placeholder",
+        STRIPE_PRICE_IDS={
             "solo": {"monthly": "price_solo_monthly", "yearly": ""},
             "group": {"monthly": "", "yearly": ""},
             "clinic": {"monthly": "", "yearly": ""},

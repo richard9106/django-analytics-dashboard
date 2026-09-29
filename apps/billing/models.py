@@ -309,6 +309,12 @@ class Payment(models.Model):
 
 
 class PracticeSubscription(models.Model):
+    PLAN_INTERNAL_USER_LIMITS = {
+        "solo": 1,
+        "group": 5,
+        "clinic": 15,
+    }
+
     class Plan(models.TextChoices):
         SOLO = "solo", "Solo Therapist"
         GROUP = "group", "Group Practice"
@@ -346,11 +352,11 @@ class PracticeSubscription(models.Model):
 
     @property
     def internal_user_limit(self):
-        return {
-            self.Plan.SOLO: 1,
-            self.Plan.GROUP: 5,
-            self.Plan.CLINIC: 15,
-        }[self.plan]
+        return self.internal_user_limit_for_plan(self.plan)
+
+    @classmethod
+    def internal_user_limit_for_plan(cls, plan):
+        return cls.PLAN_INTERNAL_USER_LIMITS[plan]
 
     @property
     def internal_user_count(self):

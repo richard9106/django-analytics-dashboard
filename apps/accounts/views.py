@@ -78,6 +78,18 @@ class ProfileSettingsView(LoginRequiredMixin, TemplateView):
         context.update({
             "practice": practice,
             "subscription": subscription,
+            "subscription_plan_options": [
+                {
+                    "plan": plan,
+                    "period": period,
+                    "label": PracticeSubscription.Plan(plan).label,
+                    "period_label": PracticeSubscription.BillingPeriod(period).label,
+                    "limit": PracticeSubscription.internal_user_limit_for_plan(plan),
+                    "is_current": bool(subscription and subscription.plan == plan and subscription.billing_period == period),
+                }
+                for plan in PracticeSubscription.Plan.values
+                for period in PracticeSubscription.BillingPeriod.values
+            ],
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
         return context

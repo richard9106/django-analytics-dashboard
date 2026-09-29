@@ -540,6 +540,64 @@ class StripeCustomerPortalView(LoginRequiredMixin, ClientPortalRedirectMixin, Vi
         return redirect(session.url)
 
 
+class StripeChangePlanView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        plan = kwargs.get('plan')
+        period = kwargs.get('period')
+        practice = get_practice_for_user(request.user)
+        price_id = _stripe_price_id(plan, period)
+        if plan not in PracticeSubscription.Plan.values or period not in PracticeSubscription.BillingPeriod.values:
+            return HttpResponseBadRequest('Unknown subscription plan.')
+        if not practice:
+            messages.error(request, 'Create a practice workspace before changing plans.')
+            return redirect('signup')
+
+        internal_user_count = practice.user_profiles.exclude(role='client').count()
+        target_limit = PracticeSubscription.internal_user_limit_for_plan(plan)
+        if internal_user_count > target_limit:
+            messages.error(
+                request,
+                f'This practice has {internal_user_count} internal users. The {PracticeSubscription.Plan(plan).label} plan allows up to {target_limit}.',
+            )
+            return redirect('profile_settings')
+
+        subscription = getattr(practice, 'subscription', None)
+        if not subscription or not subscription.stripe_subscription_id:
+            return redirect('billing:subscribe', plan=plan, period=period)
+        if subscription.plan == plan and subscription.billing_period == period:
+            messages.info(request, 'That plan is already active for this practice.')
+            return redirect('profile_settings')
+        if not settings.STRIPE_SECRET_KEY or not price_id:
+            messages.error(request, 'Online subscription changes are not configured yet. Please contact NuviaMy support.')
+            return redirect('profile_settings')
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+            items = stripe_subscription.get('items', {}).get('data', [])
+            if not items:
+                messages.error(request, 'Stripe could not find the active subscription item. Please contact NuviaMy support.')
+                return redirect('profile_settings')
+            stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                items=[{'id': items[0]['id'], 'price': price_id}],
+                proration_behavior='create_prorations',
+                metadata={'practice_id': str(practice.pk), 'plan': plan, 'period': period},
+            )
+        except stripe.error.StripeError:
+            messages.error(request, 'Stripe could not change your plan. Please try again later.')
+            return redirect('profile_settings')
+
+        subscription.plan = plan
+        subscription.billing_period = period
+        subscription.stripe_price_id = price_id
+        subscription.save(update_fields=['plan', 'billing_period', 'stripe_price_id', 'updated_at'])
+        messages.success(request, f'Plan changed to {PracticeSubscription.Plan(plan).label}.')
+        return redirect('profile_settings')
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(View):
     http_method_names = ['post']

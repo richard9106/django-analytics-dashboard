@@ -72,6 +72,20 @@
             {% else %}
               <p class="empty-state">Stripe billing management will be available after checkout creates a Stripe customer.</p>
             {% endif %}
+            <div class="plan-change-panel">
+              <div class="panel-head compact"><div><h3>Change plan</h3><p>Select a new plan when your practice grows or needs fewer seats.</p></div></div>
+              <div class="plan-change-grid">
+                {% for option in subscription_plan_options %}
+                  <form method="post" action="{% url 'billing:change_plan' option.plan option.period %}" class="plan-change-card{% if option.is_current %} current-plan{% endif %}">
+                    {% csrf_token %}
+                    <span class="badge {% if option.is_current %}success{% else %}brand{% endif %}">{% if option.is_current %}Current{% else %}{{ option.period_label }}{% endif %}</span>
+                    <h4>{{ option.label }}</h4>
+                    <p>{{ option.period_label }} billing · up to {{ option.limit }} internal user{{ option.limit|pluralize }}</p>
+                    <button class="btn {% if option.is_current %}btn-secondary{% else %}btn-primary{% endif %}" type="submit" {% if option.is_current %}disabled{% endif %}>{% if option.is_current %}Active plan{% else %}Select plan{% endif %}</button>
+                  </form>
+                {% endfor %}
+              </div>
+            </div>
           {% else %}
             <div class="subscription-summary muted-subscription">
               <span class="badge warning">No active subscription</span>
