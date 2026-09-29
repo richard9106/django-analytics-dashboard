@@ -235,15 +235,56 @@ class TreatmentPlanListView(LoginRequiredMixin, TreatmentPlanContextMixin, ListV
     template_name = 'clinical/treatment_plans.html'
     context_object_name = 'plans'
 
+    def get_plan_filters(self):
+        return {
+            'q': self.request.GET.get('q', '').strip(),
+            'client': self.request.GET.get('client', ''),
+            'therapist': self.request.GET.get('therapist', ''),
+            'diagnosis': self.request.GET.get('diagnosis', ''),
+            'status': self.request.GET.get('status', ''),
+            'review_from': self.request.GET.get('review_from', ''),
+            'review_to': self.request.GET.get('review_to', ''),
+        }
+
     def get_queryset(self):
         practice = self.get_practice()
         if not practice:
             return TreatmentPlan.objects.none()
-        return (
+        plans = (
             TreatmentPlan.objects.filter(practice=practice)
             .select_related('client', 'therapist__user')
             .prefetch_related('diagnoses')
         )
+        filters = self.get_plan_filters()
+
+        if filters['q']:
+            plans = plans.filter(
+                Q(title__icontains=filters['q'])
+                | Q(goals__icontains=filters['q'])
+                | Q(objectives__icontains=filters['q'])
+                | Q(interventions__icontains=filters['q'])
+                | Q(client__first_name__icontains=filters['q'])
+                | Q(client__last_name__icontains=filters['q'])
+                | Q(diagnoses__code__icontains=filters['q'])
+                | Q(diagnoses__label__icontains=filters['q'])
+            )
+        if filters['client'].isdigit():
+            plans = plans.filter(client_id=filters['client'])
+        if filters['therapist'].isdigit():
+            plans = plans.filter(therapist_id=filters['therapist'])
+        if filters['diagnosis'].isdigit():
+            plans = plans.filter(diagnoses__id=filters['diagnosis'])
+        valid_statuses = {choice for choice, _label in TreatmentPlan.Status.choices}
+        if filters['status'] in valid_statuses:
+            plans = plans.filter(status=filters['status'])
+        try:
+            if filters['review_from']:
+                plans = plans.filter(review_date__gte=date.fromisoformat(filters['review_from']))
+            if filters['review_to']:
+                plans = plans.filter(review_date__lte=date.fromisoformat(filters['review_to']))
+        except ValueError:
+            pass
+        return plans.distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -251,6 +292,8 @@ class TreatmentPlanListView(LoginRequiredMixin, TreatmentPlanContextMixin, ListV
         context['diagnoses'] = (
             practice.diagnoses.select_related('client').all() if practice else Diagnosis.objects.none()
         )
+        context['plan_filters'] = self.get_plan_filters()
+        context['plan_status_choices'] = TreatmentPlan.Status.choices
         context['default_next_review_date'] = timezone.localdate() + timedelta(days=90)
         return context
 

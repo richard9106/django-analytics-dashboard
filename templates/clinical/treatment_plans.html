@@ -31,33 +31,48 @@
             <div><h2>Active planning workspace</h2><p>Manage clinical goals, objectives, interventions, and upcoming reviews.</p></div>
             <span class="badge brand">{{ plans|length }} plans</span>
           </div>
-          <div class="notes-list">
-            {% for plan in plans %}
-              <article class="note-card{% if plan.is_review_due %} review-due-card{% endif %}">
-                <div class="note-card-head">
-                  <div><h3>{{ plan.title }}</h3><p>{{ plan.client }} with {{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }} · Started {{ plan.start_date|date:"M j, Y" }}</p></div>
-                  <span class="badge {% if plan.is_review_due or plan.status == 'review_due' %}warning{% elif plan.status == 'active' %}success{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{% if plan.is_review_due %}Review due{% else %}{{ plan.get_status_display }}{% endif %}</span>
-                </div>
-                <p class="note-preview"><strong>Goals:</strong> {{ plan.goals|truncatechars:190 }}</p>
-                {% if plan.review_date %}<p class="sync-meta">Review date: {{ plan.review_date|date:"M j, Y" }}</p>{% endif %}
-                {% if plan.diagnoses.all %}
-                  <p class="sync-meta">Diagnoses: {% for diagnosis in plan.diagnoses.all %}{{ diagnosis.code }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-                {% endif %}
-                <div class="inline-actions">
-                  <a class="inline-link" href="{% url 'clinical:treatment_plan_edit' plan.pk %}" data-modal-target="plan-modal-{{ plan.pk }}">Edit plan</a>
-                  {% if plan.is_review_due %}
-                    <form class="inline-review-form" method="post" action="{% url 'clinical:treatment_plan_complete_review' plan.pk %}">
-                      {% csrf_token %}
-                      <label for="next-review-{{ plan.pk }}">Next review</label>
-                      <input id="next-review-{{ plan.pk }}" name="next_review_date" type="date" value="{{ default_next_review_date|date:'Y-m-d' }}" required>
-                      <button class="inline-button" type="submit">Complete review</button>
-                    </form>
+          <div class="notes-workspace">
+            <details class="filter-sidebar" open>
+              <summary><span>Filters</span><strong>Show / hide</strong></summary>
+              <form class="filter-stack" method="get" aria-label="Filter treatment plans">
+                <div class="field"><label for="plan-filter-q">Search</label><input id="plan-filter-q" name="q" type="search" value="{{ plan_filters.q }}" placeholder="Client, goals, diagnosis"></div>
+                <div class="field"><label for="plan-filter-client">Client</label><select id="plan-filter-client" name="client"><option value="">All clients</option>{% for client in plan_clients %}<option value="{{ client.pk }}" {% if plan_filters.client == client.pk|stringformat:"s" %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="plan-filter-therapist">Therapist</label><select id="plan-filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in plan_therapists %}<option value="{{ therapist.pk }}" {% if plan_filters.therapist == therapist.pk|stringformat:"s" %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="plan-filter-diagnosis">Diagnosis</label><select id="plan-filter-diagnosis" name="diagnosis"><option value="">All diagnoses</option>{% for diagnosis in diagnosis_options %}<option value="{{ diagnosis.pk }}" {% if plan_filters.diagnosis == diagnosis.pk|stringformat:"s" %}selected{% endif %}>{{ diagnosis.code }} · {{ diagnosis.client }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="plan-filter-status">Status</label><select id="plan-filter-status" name="status"><option value="">All statuses</option>{% for value,label in plan_status_choices %}<option value="{{ value }}" {% if plan_filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                <div class="field"><label for="plan-filter-review-from">Review from</label><input id="plan-filter-review-from" name="review_from" type="date" value="{{ plan_filters.review_from }}"></div>
+                <div class="field"><label for="plan-filter-review-to">Review to</label><input id="plan-filter-review-to" name="review_to" type="date" value="{{ plan_filters.review_to }}"></div>
+                <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'clinical:treatment_plans' %}">Clear</a></div>
+              </form>
+            </details>
+            <div class="notes-list">
+              {% for plan in plans %}
+                <article class="note-card{% if plan.is_review_due %} review-due-card{% endif %}">
+                  <div class="note-card-head">
+                    <div><h3>{{ plan.title }}</h3><p>{{ plan.client }} with {{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }} · Started {{ plan.start_date|date:"M j, Y" }}</p></div>
+                    <span class="badge {% if plan.is_review_due or plan.status == 'review_due' %}warning{% elif plan.status == 'active' %}success{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{% if plan.is_review_due %}Review due{% else %}{{ plan.get_status_display }}{% endif %}</span>
+                  </div>
+                  <p class="note-preview"><strong>Goals:</strong> {{ plan.goals|truncatechars:190 }}</p>
+                  {% if plan.review_date %}<p class="sync-meta">Review date: {{ plan.review_date|date:"M j, Y" }}</p>{% endif %}
+                  {% if plan.diagnoses.all %}
+                    <p class="sync-meta">Diagnoses: {% for diagnosis in plan.diagnoses.all %}{{ diagnosis.code }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
                   {% endif %}
-                </div>
-              </article>
-            {% empty %}
-              <p class="empty-state">No treatment plans have been created yet.</p>
-            {% endfor %}
+                  <div class="inline-actions">
+                    <a class="inline-link" href="{% url 'clinical:treatment_plan_edit' plan.pk %}" data-modal-target="plan-modal-{{ plan.pk }}">Edit plan</a>
+                    {% if plan.is_review_due %}
+                      <form class="inline-review-form" method="post" action="{% url 'clinical:treatment_plan_complete_review' plan.pk %}">
+                        {% csrf_token %}
+                        <label for="next-review-{{ plan.pk }}">Next review</label>
+                        <input id="next-review-{{ plan.pk }}" name="next_review_date" type="date" value="{{ default_next_review_date|date:'Y-m-d' }}" required>
+                        <button class="inline-button" type="submit">Complete review</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </article>
+              {% empty %}
+                <p class="empty-state">No treatment plans have been created yet.</p>
+              {% endfor %}
+            </div>
           </div>
         </div>
 

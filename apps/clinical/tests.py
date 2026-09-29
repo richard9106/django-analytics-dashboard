@@ -790,6 +790,104 @@ class TreatmentPlanViewTests(TestCase):
         self.assertContains(response, "Review due")
         self.assertContains(response, "Complete review")
 
+    def test_treatment_plan_list_can_filter_by_client_therapist_diagnosis_status_and_review_date(self):
+        user, practice, therapist, client = self.create_practice_user()
+        other_client = Client.objects.create(practice=practice, first_name="Lucia", last_name="Garcia")
+        diagnosis = Diagnosis.objects.create(
+            practice=practice,
+            client=client,
+            code="F41.1",
+            label="Generalized anxiety disorder",
+        )
+        other_diagnosis = Diagnosis.objects.create(
+            practice=practice,
+            client=other_client,
+            code="F32.1",
+            label="Major depressive disorder",
+        )
+        review_date = timezone.localdate() + timedelta(days=30)
+        visible_plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Filtered care plan",
+            status=TreatmentPlan.Status.ACTIVE,
+            goals="Visible goals.",
+            review_date=review_date,
+        )
+        visible_plan.diagnoses.add(diagnosis)
+        hidden_plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=other_client,
+            therapist=therapist,
+            title="Hidden care plan",
+            status=TreatmentPlan.Status.COMPLETED,
+            goals="Hidden goals.",
+            review_date=review_date + timedelta(days=60),
+        )
+        hidden_plan.diagnoses.add(other_diagnosis)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clinical:treatment_plans"), {
+            "client": str(client.pk),
+            "therapist": str(therapist.pk),
+            "diagnosis": str(diagnosis.pk),
+            "status": TreatmentPlan.Status.ACTIVE,
+            "review_from": timezone.localdate().isoformat(),
+            "review_to": (review_date + timedelta(days=1)).isoformat(),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Filtered care plan")
+        self.assertNotContains(response, "Hidden care plan")
+        self.assertContains(response, 'value="active" selected')
+        self.assertContains(response, 'Filter treatment plans')
+        self.assertIn(visible_plan, response.context["plans"])
+        self.assertNotIn(hidden_plan, response.context["plans"])
+
+    def test_treatment_plan_list_can_search_plan_and_diagnosis_text(self):
+        user, practice, therapist, client = self.create_practice_user()
+        diagnosis = Diagnosis.objects.create(
+            practice=practice,
+            client=client,
+            code="F43.10",
+            label="Post-traumatic stress disorder",
+        )
+        diagnosis_plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Trauma care plan",
+            goals="Increase safety and stabilization.",
+        )
+        diagnosis_plan.diagnoses.add(diagnosis)
+        objectives_plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Sleep care plan",
+            goals="Improve sleep.",
+            objectives="Practice nightmare rescripting weekly.",
+        )
+        hidden_plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Mood care plan",
+            goals="Track mood.",
+        )
+
+        self.client.force_login(user)
+
+        diagnosis_response = self.client.get(reverse("clinical:treatment_plans"), {"q": "F43.10"})
+        self.assertIn(diagnosis_plan, diagnosis_response.context["plans"])
+        self.assertNotIn(hidden_plan, diagnosis_response.context["plans"])
+        self.assertContains(diagnosis_response, 'value="F43.10"')
+
+        objective_response = self.client.get(reverse("clinical:treatment_plans"), {"q": "rescripting"})
+        self.assertIn(objectives_plan, objective_response.context["plans"])
+        self.assertNotIn(hidden_plan, objective_response.context["plans"])
+
     def test_diagnosis_create_saves_to_user_practice(self):
         user, practice, _therapist, client = self.create_practice_user()
 
