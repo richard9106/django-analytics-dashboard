@@ -237,34 +237,34 @@
   <script>
     const tourSteps = [
       {
+        title: 'Start from the practice menu',
+        copy: 'Use this menu to move between your dashboard, clients, appointments, notes, billing, documents, and settings.',
+        route: 'Primary navigation',
+        target: '.sidebar',
+      },
+      {
         title: 'Welcome to your practice command center',
         copy: 'The dashboard summarizes revenue, active clients, today\'s sessions, and tasks that need attention. Use it as your morning check-in.',
         route: 'Dashboard overview',
         target: '[data-tour-target="welcome"]',
       },
       {
-        title: 'Add clients before anything else',
-        copy: 'Create client profiles first. Every appointment, document, invoice, note, and portal account is safely scoped back to a client and practice.',
+        title: 'Complete the setup checklist',
+        copy: 'Connect Gmail and Stripe first. Then you can safely add clients and use invitations, reminders, and client invoice payments.',
         route: 'Setup checklist',
         target: '[data-tour-target="setup"]',
       },
       {
-        title: 'Set availability and schedule sessions',
-        copy: 'Define working hours, then create appointments. NuviaMy validates practice, therapist, and client relationships before saving.',
+        title: 'Review your practice metrics',
+        copy: 'Track revenue, active clients, today\'s sessions, and tasks from this compact overview.',
         route: 'Practice metrics',
         target: '[data-tour-target="metrics"]',
       },
       {
-        title: 'Use notes, treatment plans, and billing together',
-        copy: 'After sessions, document notes, connect treatment plans, and create invoices or superbills from the billing workspace.',
+        title: 'See today\'s appointments',
+        copy: 'Your scheduled sessions appear here so you can quickly see what needs attention today.',
         route: "Today's appointments",
         target: '[data-tour-target="appointments"]',
-      },
-      {
-        title: 'Activate the client-facing workflow',
-        copy: 'When you are ready, enable portal access, assign intake packets, and connect Google for reminders, calendar sync, and Drive exports.',
-        route: 'Primary navigation',
-        target: '.sidebar',
       },
     ];
     const tourOverlay = document.querySelector('[data-tour-overlay]');
