@@ -431,6 +431,71 @@ class SessionNoteViewTests(TestCase):
         self.assertIn(visible_note, response.context["notes"])
         self.assertNotIn(hidden_note, response.context["notes"])
 
+    def test_note_list_can_search_note_content_progress_client_and_plan(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        other_client = Client.objects.create(practice=practice, first_name="Lucia", last_name="Garcia")
+        plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Grounding skills plan",
+            goals="Practice grounding daily.",
+        )
+        content_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            appointment=appointment,
+            note_type=SessionNote.NoteType.PROGRESS_NOTE,
+            content="Client practiced paced breathing.",
+        )
+        progress_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            note_type=SessionNote.NoteType.GENERAL_NOTE,
+            content="Follow up note.",
+            treatment_progress="Used grounding between sessions.",
+        )
+        plan_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            treatment_plan=plan,
+            note_type=SessionNote.NoteType.TREATMENT_PLAN,
+            content="Reviewed care plan.",
+        )
+        client_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=other_client,
+            note_type=SessionNote.NoteType.PROGRESS_NOTE,
+            content="Client name search result.",
+        )
+        hidden_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            note_type=SessionNote.NoteType.PROGRESS_NOTE,
+            content="Medication review content.",
+        )
+
+        self.client.force_login(user)
+
+        content_response = self.client.get(reverse("clinical:list"), {"q": "paced"})
+        self.assertIn(content_note, content_response.context["notes"])
+        self.assertNotIn(hidden_note, content_response.context["notes"])
+        self.assertContains(content_response, 'value="paced"')
+
+        progress_response = self.client.get(reverse("clinical:list"), {"q": "grounding"})
+        self.assertIn(progress_note, progress_response.context["notes"])
+        self.assertIn(plan_note, progress_response.context["notes"])
+        self.assertNotIn(hidden_note, progress_response.context["notes"])
+
+        client_response = self.client.get(reverse("clinical:list"), {"q": "Lucia"})
+        self.assertIn(client_note, client_response.context["notes"])
+        self.assertNotIn(content_note, client_response.context["notes"])
+
     def test_note_create_links_treatment_plan_and_progress(self):
         user, practice, therapist, client, appointment = self.create_practice_user()
         plan = TreatmentPlan.objects.create(

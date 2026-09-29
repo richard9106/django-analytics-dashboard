@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -60,6 +61,7 @@ class SessionNoteListView(LoginRequiredMixin, PracticeContextMixin, ListView):
 
     def get_note_filters(self):
         return {
+            'q': self.request.GET.get('q', '').strip(),
             'client': self.request.GET.get('client', ''),
             'therapist': self.request.GET.get('therapist', ''),
             'appointment': self.request.GET.get('appointment', ''),
@@ -81,6 +83,14 @@ class SessionNoteListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         )
         filters = self.get_note_filters()
 
+        if filters['q']:
+            notes = notes.filter(
+                Q(content__icontains=filters['q'])
+                | Q(treatment_progress__icontains=filters['q'])
+                | Q(client__first_name__icontains=filters['q'])
+                | Q(client__last_name__icontains=filters['q'])
+                | Q(treatment_plan__title__icontains=filters['q'])
+            )
         if filters['client'].isdigit():
             notes = notes.filter(client_id=filters['client'])
         if filters['therapist'].isdigit():
