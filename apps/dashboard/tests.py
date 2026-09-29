@@ -160,6 +160,10 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'show-dashboard-tour')
         self.assertContains(response, 'data-tour-spotlight')
         self.assertContains(response, 'target: \'[data-tour-target="setup"]\'')
+        self.assertContains(response, 'data-tour-target="nav-appointments"')
+        self.assertContains(response, 'data-tour-target="nav-clients"')
+        self.assertContains(response, 'data-tour-target="nav-billing"')
+        self.assertContains(response, 'data-tour-target="nav-settings"')
         self.assertContains(response, 'data-tour-next')
 
     def test_client_login_redirects_to_portal(self):

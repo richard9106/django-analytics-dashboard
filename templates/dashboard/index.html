@@ -40,7 +40,7 @@
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
           <p>{{ dashboard_date_label }}</p>
         </div>
-        <button class="btn btn-secondary" type="button" data-tour-open>Start guided tour</button>
+         <button class="btn btn-secondary" type="button" data-tour-open>Start guided tour</button>
       </section>
 
       <section class="onboarding-panel" aria-label="Recommended first steps" data-tour-target="setup">
@@ -237,34 +237,64 @@
   <script>
     const tourSteps = [
       {
-        title: 'Start from the practice menu',
-        copy: 'Use this menu to move between your dashboard, clients, appointments, notes, billing, documents, and settings.',
-        route: 'Primary navigation',
-        target: '.sidebar',
+        title: 'Overview',
+        copy: 'Your dashboard is the daily command center for revenue, active clients, appointments, and tasks.',
+        route: 'Primary navigation → Overview',
+        target: '[data-tour-target="nav-overview"]',
       },
       {
-        title: 'Welcome to your practice command center',
-        copy: 'The dashboard summarizes revenue, active clients, today\'s sessions, and tasks that need attention. Use it as your morning check-in.',
-        route: 'Dashboard overview',
-        target: '[data-tour-target="welcome"]',
+        title: 'Appointments',
+        copy: 'Manage day, week, month, and year calendar views, availability, recurring sessions, and reminders.',
+        route: 'Primary navigation → Appointments',
+        target: '[data-tour-target="nav-appointments"]',
+      },
+      {
+        title: 'Clients',
+        copy: 'Client records are the foundation for appointments, notes, treatment plans, invoices, documents, and portal access.',
+        route: 'Primary navigation → Clients',
+        target: '[data-tour-target="nav-clients"]',
+      },
+      {
+        title: 'Notes & Treatment',
+        copy: 'Document sessions, manage diagnoses and treatment plans, and keep clinical reviews organized.',
+        route: 'Primary navigation → Notes & Treatment',
+        target: '[data-tour-target="nav-notes"]',
+      },
+      {
+        title: 'Billing',
+        copy: 'Create invoices, manage packages, record payments, and track client balances from one workspace.',
+        route: 'Primary navigation → Billing',
+        target: '[data-tour-target="nav-billing"]',
+      },
+      {
+        title: 'Documents',
+        copy: 'Upload, organize, download, and share practice-scoped documents with clients when appropriate.',
+        route: 'Primary navigation → Documents',
+        target: '[data-tour-target="nav-documents"]',
+      },
+      {
+        title: 'Intake',
+        copy: 'Assign intake packets, collect responses, and keep onboarding work connected to each client.',
+        route: 'Primary navigation → Intake',
+        target: '[data-tour-target="nav-intake"]',
+      },
+      {
+        title: 'Requests',
+        copy: 'Review public booking requests and client portal requests before changing practice records or schedules.',
+        route: 'Primary navigation → Requests',
+        target: '[data-tour-target="nav-requests"]',
+      },
+      {
+        title: 'Settings',
+        copy: 'Configure packages, insurance, integrations, availability, team members, portal access, Gmail, and Stripe Connect.',
+        route: 'Primary navigation → Settings',
+        target: '[data-tour-target="nav-settings"]',
       },
       {
         title: 'Complete the setup checklist',
         copy: 'Connect Gmail and Stripe first. Then you can safely add clients and use invitations, reminders, and client invoice payments.',
-        route: 'Setup checklist',
+        route: 'Dashboard → Setup checklist',
         target: '[data-tour-target="setup"]',
-      },
-      {
-        title: 'Review your practice metrics',
-        copy: 'Track revenue, active clients, today\'s sessions, and tasks from this compact overview.',
-        route: 'Practice metrics',
-        target: '[data-tour-target="metrics"]',
-      },
-      {
-        title: 'See today\'s appointments',
-        copy: 'Your scheduled sessions appear here so you can quickly see what needs attention today.',
-        route: "Today's appointments",
-        target: '[data-tour-target="appointments"]',
       },
     ];
     const tourOverlay = document.querySelector('[data-tour-overlay]');
@@ -276,8 +306,13 @@
     const tourProgress = document.querySelector('[data-tour-progress]');
     const tourPrev = document.querySelector('[data-tour-prev]');
     const tourNext = document.querySelector('[data-tour-next]');
+    const tourOpenButton = document.querySelector('[data-tour-open]');
     const tourShouldOpen = JSON.parse(document.getElementById('show-dashboard-tour').textContent);
     let tourIndex = 0;
+
+    function syncTourButton() {
+      if (tourOpenButton) tourOpenButton.hidden = localStorage.getItem('nuviamy.dashboardTourComplete') === '1';
+    }
 
     function renderTourStep() {
       const step = tourSteps[tourIndex];
@@ -319,6 +354,7 @@
       renderTourStep();
       tourOverlay.hidden = false;
       document.body.classList.add('tour-active');
+      if (tourOpenButton) tourOpenButton.hidden = false;
       positionTourStep();
       tourNext.focus();
     }
@@ -327,6 +363,7 @@
       localStorage.setItem('nuviamy.dashboardTourComplete', '1');
       tourOverlay.hidden = true;
       document.body.classList.remove('tour-active');
+      syncTourButton();
     }
 
     document.addEventListener('click', (event) => {
@@ -360,6 +397,7 @@
     });
     window.addEventListener('resize', () => { if (tourOverlay && !tourOverlay.hidden) positionTourStep(); });
     window.addEventListener('scroll', () => { if (tourOverlay && !tourOverlay.hidden) positionTourStep(); }, { passive: true });
+    syncTourButton();
     if (tourShouldOpen) openTour();
   </script>
 </body>
