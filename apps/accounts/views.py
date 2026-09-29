@@ -8,8 +8,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
-from django.core.mail import BadHeaderError
-from smtplib import SMTPException
 from django.urls import reverse, reverse_lazy
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
@@ -18,6 +16,8 @@ from .access import get_practice_for_user, is_client_user, must_change_password
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
+from apps.practices.google_oauth import send_gmail_message
+from apps.appointments.reminders import get_gmail_integration
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, TeamMemberCreateForm
 from .models import UserProfile
 
@@ -165,6 +165,7 @@ class TeamManagementView(LoginRequiredMixin, FormView):
             "subscription": subscription,
             "team_members": practice.user_profiles.exclude(role=UserProfile.Role.CLIENT).select_related("user", "user__therapist_profile") if practice else [],
             "can_add_team_member": not subscription or subscription.can_add_internal_user(),
+            "gmail_connected": bool(practice and get_gmail_integration(practice)),
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
         return context
@@ -173,25 +174,29 @@ class TeamManagementView(LoginRequiredMixin, FormView):
         user = form.save()
         member_name = user.get_full_name() or user.email
         if form.cleaned_data.get("send_invitation_email"):
+            practice = user.nuvia_profile.practice
+            gmail_integration = get_gmail_integration(practice)
             try:
-                sent = send_mail(
-                    subject="Your NuviaMy team invitation",
-                    message=(
+                subject = "Your NuviaMy team invitation"
+                body = (
                         f"Hello {user.first_name or member_name},\n\n"
-                        f"You have been invited to join {user.nuvia_profile.practice.name} on NuviaMy.\n\n"
+                        f"You have been invited to join {practice.name} on NuviaMy.\n\n"
                         f"Sign in at: {self.request.build_absolute_uri('/login/')}\n"
                         f"Email: {user.email}\n"
                         f"Temporary password: {form.temporary_password}\n\n"
                         "You will be required to change this password when you first sign in."
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
                 )
-            except (BadHeaderError, SMTPException, OSError):
-                sent = 0
+                if gmail_integration:
+                    send_gmail_message(gmail_integration, user.email, subject, body)
+                    sent_via = "connected Gmail"
+                    sent = True
+                else:
+                    sent = bool(send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False))
+                    sent_via = "email"
+            except Exception:
+                sent = False
             if sent:
-                messages.success(self.request, f"Team member {member_name} was created and the temporary password was emailed to {user.email}.")
+                messages.success(self.request, f"Team member {member_name} was created and the temporary password was sent via {sent_via} to {user.email}.")
             else:
                 messages.warning(self.request, f"Team member {member_name} was created, but the email could not be sent. Temporary password: {form.temporary_password}")
         else:

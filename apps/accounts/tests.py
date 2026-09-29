@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.accounts.models import UserProfile
 from apps.billing.models import PracticeSubscription
-from apps.practices.models import Practice, TherapistProfile
+from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
 
 class UserProfileModelTests(TestCase):
@@ -339,10 +339,30 @@ class TeamManagementViewTests(TestCase):
 
         self.assertRedirects(response, reverse("team_management"))
         mock_send_mail.assert_called_once()
-        email_kwargs = mock_send_mail.call_args.kwargs
-        self.assertEqual(email_kwargs["recipient_list"], ["laura@example.com"])
-        self.assertIn("Temporary password:", email_kwargs["message"])
-        self.assertContains(response, "temporary password was emailed")
+        email_args = mock_send_mail.call_args.args
+        self.assertEqual(email_args[3], ["laura@example.com"])
+        self.assertIn("Temporary password:", email_args[1])
+        self.assertContains(response, "temporary password was sent via email")
+
+    @patch("apps.accounts.views.send_gmail_message")
+    def test_owner_uses_connected_gmail_for_invitation(self, mock_send_gmail):
+        user, practice = self.create_practice_user()
+        integration = ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            account_email="owner@gmail.com",
+            send_email_enabled=True,
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload(send_invitation_email="on"), follow=True)
+
+        self.assertRedirects(response, reverse("team_management"))
+        mock_send_gmail.assert_called_once()
+        self.assertEqual(mock_send_gmail.call_args.args[0], integration)
+        self.assertEqual(mock_send_gmail.call_args.args[1], "laura@example.com")
+        self.assertContains(response, "sent via connected Gmail")
 
     @patch("apps.accounts.views.send_mail", return_value=0)
     def test_email_failure_keeps_temporary_password_visible_as_fallback(self, mock_send_mail):

@@ -75,7 +75,7 @@
                 <div class="field"><label for="team-specialty">Specialty</label><input id="team-specialty" name="specialty" value="{{ form.specialty.value|default:'' }}">{{ form.specialty.errors }}</div>
                 <div class="field"><label for="team-license-number">License number</label><input id="team-license-number" name="license_number" value="{{ form.license_number.value|default:'' }}">{{ form.license_number.errors }}</div>
                 <div class="field"><label for="team-license-state">License state</label><input id="team-license-state" name="license_state" value="{{ form.license_state.value|default:'' }}">{{ form.license_state.errors }}</div>
-                <div class="field checkbox-field full"><label><input name="send_invitation_email" type="checkbox" {% if form.send_invitation_email.value != False %}checked{% endif %}> Email the temporary password to this team member</label></div>
+                <div class="field checkbox-field full"><label><input name="send_invitation_email" type="checkbox" {% if form.send_invitation_email.value != False %}checked{% endif %}> {% if gmail_connected %}Send the temporary password using connected Gmail{% else %}Email the temporary password to this team member{% endif %}</label></div>
               </div>
               <p class="empty-state">NuviaMy will generate a temporary password and require the new user to change it at first login.</p>
               <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create team member</button></div>
