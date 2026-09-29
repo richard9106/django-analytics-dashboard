@@ -33,6 +33,15 @@ GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
 GOOGLE_OAUTH_REDIRECT_URI=https://nuviamy.com/settings/integrations/google/callback/
 
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-brevo-login-email
+EMAIL_HOST_PASSWORD=your-brevo-smtp-key
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL=NuviaMy <noreply@nuviamy.com>
+
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_WEBHOOK_SECRET=
@@ -92,6 +101,31 @@ VPS_PORT=22
 ```
 
 After setup, every push to `main` deploys the latest code, rebuilds containers, runs migrations, and collects static files.
+
+## Brevo SMTP
+
+In Brevo, create an SMTP key under **Settings > SMTP & API > SMTP**. Use the SMTP key, not the Brevo API key or account password. Also verify the sender/domain used by `DEFAULT_FROM_EMAIL`.
+
+Production values:
+
+```env
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-brevo-login-email
+EMAIL_HOST_PASSWORD=your-brevo-smtp-key
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL=NuviaMy <noreply@nuviamy.com>
+```
+
+After changing the VPS `.env`, restart the web container:
+
+```bash
+docker compose up -d --build web
+docker compose exec -T web python manage.py check
+```
+
+Password reset emails use this SMTP configuration. Team invitations use connected Gmail OAuth first; Brevo is the fallback when Gmail sending is not connected.
 
 ## Stripe Setup
 
