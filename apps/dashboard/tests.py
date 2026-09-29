@@ -56,10 +56,10 @@ class DashboardTests(TestCase):
         self.assertContains(response, reverse('features'))
         self.assertContains(response, 'marketing-nav-toggle')
         self.assertContains(response, 'marketing-menu-button')
-        self.assertContains(response, '/static/marketing/therapy-practice-consultation.jpg')
-        self.assertContains(response, '/static/marketing/therapist-client-session.jpg')
-        self.assertContains(response, '/static/marketing/mental-health-clinic-team.jpg')
-        self.assertContains(response, '/static/marketing/therapy-office-workflow.jpg')
+        self.assertContains(response, '/static/marketing/therapy-practice-consultation.webp')
+        self.assertContains(response, '/static/marketing/therapist-client-session.webp')
+        self.assertContains(response, '/static/marketing/mental-health-clinic-team.webp')
+        self.assertContains(response, '/static/marketing/therapy-office-workflow.webp')
 
     def test_pricing_page_is_public_and_shows_subscription_plans(self):
         response = self.client.get(reverse('pricing'))
