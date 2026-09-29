@@ -330,6 +330,32 @@ class TeamManagementViewTests(TestCase):
         self.assertEqual(admin.nuvia_profile.role, UserProfile.Role.ADMIN)
         self.assertFalse(hasattr(admin, "therapist_profile"))
 
+    @patch("apps.accounts.views.send_mail", return_value=1)
+    def test_owner_can_email_temporary_password(self, mock_send_mail):
+        user, _practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload(send_invitation_email="on"), follow=True)
+
+        self.assertRedirects(response, reverse("team_management"))
+        mock_send_mail.assert_called_once()
+        email_kwargs = mock_send_mail.call_args.kwargs
+        self.assertEqual(email_kwargs["recipient_list"], ["laura@example.com"])
+        self.assertIn("Temporary password:", email_kwargs["message"])
+        self.assertContains(response, "temporary password was emailed")
+
+    @patch("apps.accounts.views.send_mail", return_value=0)
+    def test_email_failure_keeps_temporary_password_visible_as_fallback(self, mock_send_mail):
+        user, _practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload(send_invitation_email="on"), follow=True)
+
+        self.assertRedirects(response, reverse("team_management"))
+        mock_send_mail.assert_called_once()
+        self.assertContains(response, "email could not be sent")
+        self.assertContains(response, "Temporary password:")
+
     def test_team_management_blocks_when_plan_limit_is_reached(self):
         user, _practice = self.create_practice_user(plan=PracticeSubscription.Plan.SOLO)
 

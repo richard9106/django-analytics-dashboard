@@ -7,6 +7,9 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
+from django.core.mail import BadHeaderError
+from smtplib import SMTPException
 from django.urls import reverse, reverse_lazy
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
@@ -168,10 +171,31 @@ class TeamManagementView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         user = form.save()
-        messages.success(
-            self.request,
-            f"Team member {user.get_full_name() or user.email} was created. Temporary password: {form.temporary_password}",
-        )
+        member_name = user.get_full_name() or user.email
+        if form.cleaned_data.get("send_invitation_email"):
+            try:
+                sent = send_mail(
+                    subject="Your NuviaMy team invitation",
+                    message=(
+                        f"Hello {user.first_name or member_name},\n\n"
+                        f"You have been invited to join {user.nuvia_profile.practice.name} on NuviaMy.\n\n"
+                        f"Sign in at: {self.request.build_absolute_uri('/login/')}\n"
+                        f"Email: {user.email}\n"
+                        f"Temporary password: {form.temporary_password}\n\n"
+                        "You will be required to change this password when you first sign in."
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except (BadHeaderError, SMTPException, OSError):
+                sent = 0
+            if sent:
+                messages.success(self.request, f"Team member {member_name} was created and the temporary password was emailed to {user.email}.")
+            else:
+                messages.warning(self.request, f"Team member {member_name} was created, but the email could not be sent. Temporary password: {form.temporary_password}")
+        else:
+            messages.success(self.request, f"Team member {member_name} was created. Temporary password: {form.temporary_password}")
         log_audit_event(
             self.request,
             AuditLog.Action.CREATE,

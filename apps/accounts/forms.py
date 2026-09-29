@@ -134,6 +134,7 @@ class TeamMemberCreateForm(forms.Form):
     license_number = forms.CharField(max_length=60, required=False)
     license_state = forms.CharField(max_length=60, required=False)
     specialty = forms.CharField(max_length=140, required=False)
+    send_invitation_email = forms.BooleanField(required=False, initial=True)
 
     def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
