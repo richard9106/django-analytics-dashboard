@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
-<body class="app-page">
+<body class="app-page integrations-page">
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='Integrations' card_text='Connect Google once for Gmail, Calendar, and Drive. Dropbox remains separate.' %}
     <main class="app-main">
@@ -23,15 +23,14 @@
           <form class="appointment-form" method="post" action="{% url 'practice_settings:google_connect' %}">
             {% csrf_token %}
             {{ google_form.non_field_errors }}
-            <div class="field-grid two">
-              <div class="field checkbox-field"><label>{{ google_form.send_email_enabled }} Gmail: send email</label></div>
-              <div class="field checkbox-field"><label>{{ google_form.read_email_enabled }} Gmail: read inbox</label></div>
-              <div class="field checkbox-field"><label>{{ google_form.calendar_enabled }} Google Calendar sync</label></div>
-              <div class="field checkbox-field"><label>{{ google_form.file_storage_enabled }} Google Drive file storage</label></div>
-              <div class="field full"><label>Drive folder</label>{{ google_form.default_folder }}</div>
-              <div class="field full"><label>Notes</label>{{ google_form.notes }}</div>
-            </div>
-            <div class="form-actions"><button class="btn btn-primary" type="submit" {% if not google_oauth_configured %}disabled{% endif %}>Connect Google</button></div>
+              <div class="field-grid integration-capabilities">
+                <div class="field checkbox-field"><label>{{ google_form.send_email_enabled }} Gmail: send email</label></div>
+                <div class="field checkbox-field"><label>{{ google_form.read_email_enabled }} Gmail: read inbox</label></div>
+                <div class="field checkbox-field"><label>{{ google_form.calendar_enabled }} Google Calendar sync</label></div>
+                <div class="field checkbox-field"><label>{{ google_form.file_storage_enabled }} Google Drive file storage</label></div>
+              </div>
+              <details class="integration-advanced"><summary>Advanced Google settings</summary><div class="field-grid two"><div class="field"><label>Drive folder</label>{{ google_form.default_folder }}</div><div class="field"><label>Notes</label>{{ google_form.notes }}</div></div></details>
+              <div class="form-actions"><button class="btn btn-primary" type="submit" {% if not google_oauth_configured %}disabled{% endif %}>Connect Google</button></div>
           </form>
           {% if not google_oauth_configured %}<p class="empty-state">Google OAuth env vars are not configured yet.</p>{% endif %}
           {% if google_integration %}<div class="inline-actions"><a class="inline-link" href="{% url 'practice_settings:google_workspace' %}">Open Google workspace</a><form method="post" action="{% url 'practice_settings:google_disconnect' %}">{% csrf_token %}<button class="inline-button-danger" type="submit">Disconnect Google</button></form></div>{% endif %}

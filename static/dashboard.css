@@ -234,6 +234,17 @@ h1, h2, h3, p { margin-top: 0; }
 .note-card p { font-size: 14px; }
 .note-preview { color: var(--slate-600); line-height: 1.55; }
 .billing-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
+.integrations-page .topbar { padding-block: 18px; }
+.integrations-page .billing-grid { gap: 14px; }
+.integrations-page .panel { padding: 18px; }
+.integrations-page .panel-head { margin-bottom: 14px; }
+.integrations-page .appointment-form { gap: 14px; }
+.integration-capabilities { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.integration-capabilities .checkbox-field { min-height: 44px; padding: 10px 11px; border: 1px solid var(--slate-200); border-radius: 12px; background: rgba(255,255,255,.72); }
+.integration-capabilities .checkbox-field label { font-size: 12px; line-height: 1.35; }
+.integration-advanced { border-top: 1px solid var(--slate-200); }
+.integration-advanced summary { padding: 11px 0 3px; color: var(--brand-700); font-size: 12px; font-weight: 900; cursor: pointer; }
+.integration-advanced .field-grid { padding-top: 10px; }
 .billing-panel { background: radial-gradient(circle at top right, rgba(255, 227, 216, .5), transparent 30%), linear-gradient(145deg, #fff, var(--brand-50)); }
 .package-list { display: grid; gap: 12px; }
 .package-card { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255, 255, 255, .86); box-shadow: var(--shadow-1); }
@@ -510,6 +521,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .article-cta { margin-top: 34px; padding: 24px; border-radius: 24px; background: radial-gradient(circle at top right, rgba(255,227,216,.84), transparent 40%), var(--brand-50); border: 1px solid rgba(243,111,86,.2); }
 
 @media (max-width: 1024px) {
+  .integration-capabilities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
   .sidebar { padding-inline: 10px; }
   .sidebar .brand span:not(.logo-mark), .nav-item { justify-content: center; }
@@ -533,6 +545,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 }
 
 @media (max-width: 720px) {
+  .integration-capabilities { grid-template-columns: 1fr; }
   .app-shell { display: block; }
   .sidebar { position: sticky; top: 0; z-index: 30; height: auto; padding: 12px; border-right: 0; border-bottom: 1px solid rgba(229, 231, 235, .92); gap: 0; box-shadow: 0 14px 30px rgba(15, 23, 42, .08); }
   .sidebar-head { min-height: 48px; }
