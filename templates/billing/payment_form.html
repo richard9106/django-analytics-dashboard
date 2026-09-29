@@ -1,0 +1,12 @@
+<form class="appointment-form" method="post" action="{% url 'billing:payment_create' %}">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="field-grid two">
+    <div class="field full"><label for="id_invoice">Invoice</label>{{ form.invoice }}{{ form.invoice.errors }}</div>
+    <div class="field"><label for="id_amount">Amount received</label>{{ form.amount }}{{ form.amount.errors }}</div>
+    <div class="field"><label for="id_method">Payment method</label>{{ form.method }}{{ form.method.errors }}</div>
+    <div class="field"><label for="id_paid_at">Payment date</label>{{ form.paid_at }}{{ form.paid_at.errors }}</div>
+    <div class="field"><label for="id_external_payment_id">Reference</label>{{ form.external_payment_id }}{{ form.external_payment_id.errors }}</div>
+  </div>
+  <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Record payment</button></div>
+</form>

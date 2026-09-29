@@ -16,8 +16,8 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
-from .forms import InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, ServicePackageForm, SessionPackageTemplateForm
-from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, PracticeSubscription, ServicePackage, SessionPackageTemplate
+from .forms import InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, PaymentForm, ServicePackageForm, SessionPackageTemplateForm
+from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, PracticeSubscription, ServicePackage, SessionPackageTemplate
 
 
 def _stripe_price_id(plan, period):
@@ -131,7 +131,37 @@ class BillingListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         context['package_usages'] = (
             PackageUsage.objects.filter(package__practice=practice).select_related('package__client', 'appointment') if practice else PackageUsage.objects.none()
         )
+        context['payment_form'] = PaymentForm(practice=practice)
         return context
+
+
+class PaymentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+    model = Payment
+    form_class = PaymentForm
+    template_name = 'billing/payment_form.html'
+    success_url = reverse_lazy('billing:list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        invoice = self.object.invoice
+        if invoice.balance_due <= 0:
+            invoice.status = Invoice.Status.PAID
+            invoice.paid_at = self.object.paid_at
+            invoice.save(update_fields=['status', 'paid_at', 'updated_at'])
+        log_audit_event(
+            self.request,
+            AuditLog.Action.CREATE,
+            'billing.Payment',
+            self.object.pk,
+            practice=self.object.practice,
+            metadata={'invoice_id': invoice.pk, 'amount': str(self.object.amount), 'method': self.object.method},
+        )
+        return response
 
 
 class InvoiceCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):

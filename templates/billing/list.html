@@ -27,15 +27,15 @@
 
       <section class="billing-grid">
         <article class="panel billing-panel">
-          <div class="panel-head"><div><h2>Invoices</h2><p>Bill individual sessions or prepaid packages.</p></div><span class="badge brand">{{ invoices|length }} invoices</span></div>
+          <div class="panel-head"><div><h2>Invoices</h2><p>Bill individual sessions or prepaid packages.</p></div><div class="inline-actions"><span class="badge brand">{{ invoices|length }} invoices</span><button class="btn btn-secondary" type="button" data-modal-target="payment-create-modal">Record payment</button></div></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>For</th></tr></thead>
+              <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>Balance</th><th>For</th></tr></thead>
               <tbody>
                 {% for invoice in invoices %}
-                  <tr><td><a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a><br><a class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<br><a class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td></tr>
+                  <tr><td><a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a><br><a class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<br><a class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td></tr>
                 {% empty %}
-                  <tr><td colspan="5">No invoices yet.</td></tr>
+                  <tr><td colspan="6">No invoices yet.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -56,6 +56,7 @@
 
       <dialog class="modal-dialog" id="invoice-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Invoice</p><h2>Create invoice</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_create' submit_label='Create invoice' %}</div></dialog>
       <dialog class="modal-dialog" id="package-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Package</p><h2>Create prepaid package</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/package_form.html' with action_url='billing:package_create' submit_label='Create package' %}</div></dialog>
+      <dialog class="modal-dialog" id="payment-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Manual payment</p><h2>Record payment</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/payment_form.html' %}</div></dialog>
 
       {% for invoice in invoices %}
         <dialog class="modal-dialog" id="invoice-modal-{{ invoice.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Invoice</p><h2>{{ invoice.invoice_number }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_edit' object=invoice submit_label='Save changes' %}</div></dialog>

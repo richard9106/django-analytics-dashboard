@@ -68,6 +68,14 @@ class Invoice(models.Model):
     def __str__(self):
         return f"{self.invoice_number} - {self.client}"
 
+    @property
+    def payment_total(self):
+        return self.payments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
+
+    @property
+    def balance_due(self):
+        return max(self.amount - self.payment_total, Decimal('0.00'))
+
 
 class ServicePackage(models.Model):
     class Status(models.TextChoices):

@@ -1,7 +1,8 @@
 from django import forms
+from django.db.models import Sum
 from django.utils import timezone
 
-from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, ServicePackage, SessionPackageTemplate
+from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, ServicePackage, SessionPackageTemplate
 
 
 class InvoiceForm(forms.ModelForm):
@@ -83,6 +84,48 @@ class InvoiceForm(forms.ModelForm):
             invoice.save()
             self.save_m2m()
         return invoice
+
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ['invoice', 'amount', 'method', 'external_payment_id', 'paid_at']
+        widgets = {
+            'amount': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01'}),
+            'paid_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+        self.fields['paid_at'].input_formats = ['%Y-%m-%dT%H:%M']
+        self.fields['invoice'].queryset = (
+            practice.invoices.exclude(status__in=[Invoice.Status.PAID, Invoice.Status.VOID]).select_related('client')
+            if practice else Invoice.objects.none()
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        invoice = cleaned_data.get('invoice')
+        amount = cleaned_data.get('amount')
+        if invoice:
+            self.instance.client = invoice.client
+        if invoice and amount:
+            paid_total = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
+            remaining = invoice.amount - paid_total
+            if amount > remaining:
+                self.add_error('amount', f'Payment cannot exceed the invoice balance of ${remaining:.2f}.')
+        return cleaned_data
+
+    def save(self, commit=True):
+        payment = super().save(commit=False)
+        payment.practice = self.practice
+        payment.client = payment.invoice.client
+        if commit:
+            payment.full_clean()
+            payment.save()
+        return payment
 
 
 class ServicePackageForm(forms.ModelForm):

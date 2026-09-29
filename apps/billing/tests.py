@@ -213,6 +213,55 @@ class BillingViewTests(TestCase):
         self.assertContains(response, 'id="package-create-modal"')
         self.assertNotContains(response, "INV-HIDDEN")
 
+    def test_manual_payment_records_partial_balance_for_invoice(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=client,
+            invoice_number="INV-PARTIAL",
+            amount=Decimal("100.00"),
+            status=Invoice.Status.SENT,
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:payment_create"), {
+            "invoice": invoice.pk,
+            "amount": "40.00",
+            "method": Payment.Method.CASH,
+            "paid_at": "2026-09-29T10:00",
+            "external_payment_id": "cash-receipt-1",
+        })
+
+        self.assertRedirects(response, reverse("billing:list"))
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.SENT)
+        self.assertEqual(invoice.balance_due, Decimal("60.00"))
+        self.assertEqual(Payment.objects.get().method, Payment.Method.CASH)
+
+    def test_full_manual_payment_marks_invoice_paid(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=client,
+            invoice_number="INV-FULL",
+            amount=Decimal("100.00"),
+            status=Invoice.Status.SENT,
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:payment_create"), {
+            "invoice": invoice.pk,
+            "amount": "100.00",
+            "method": Payment.Method.ACH,
+            "paid_at": "2026-09-29T10:00",
+            "external_payment_id": "ach-1",
+        })
+
+        self.assertRedirects(response, reverse("billing:list"))
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.PAID)
+        self.assertIsNotNone(invoice.paid_at)
+
     def test_invoice_create_saves_to_user_practice(self):
         user, practice, _therapist, client, appointment = self.create_practice_user()
 
