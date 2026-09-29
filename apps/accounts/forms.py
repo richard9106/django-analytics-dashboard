@@ -135,6 +135,12 @@ class TeamMemberCreateForm(forms.Form):
     license_state = forms.CharField(max_length=60, required=False)
     specialty = forms.CharField(max_length=140, required=False)
     send_invitation_email = forms.BooleanField(required=False, initial=True)
+    password_mode = forms.ChoiceField(
+        choices=(('temporary', 'Generate a temporary password'), ('custom', 'Set a password manually')),
+        required=False,
+        initial='temporary',
+    )
+    password = forms.CharField(max_length=128, required=False, widget=forms.PasswordInput(render_value=False))
 
     def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -164,6 +170,8 @@ class TeamMemberCreateForm(forms.Form):
         role = cleaned_data.get("role")
         license_number = cleaned_data.get("license_number")
         license_state = cleaned_data.get("license_state")
+        password_mode = cleaned_data.get('password_mode') or 'temporary'
+        password = cleaned_data.get('password')
 
         if role == UserProfile.Role.THERAPIST:
             if not license_number:
@@ -180,12 +188,20 @@ class TeamMemberCreateForm(forms.Form):
             subscription = getattr(self.practice, "subscription", None)
             if subscription and not subscription.can_add_internal_user():
                 self.add_error("role", f"Your {subscription.get_plan_display()} plan has no internal user seats available.")
+        if password_mode == 'custom':
+            if not password:
+                self.add_error('password', 'Enter a password or choose a temporary password.')
+            else:
+                try:
+                    validate_password(password)
+                except ValidationError as error:
+                    self.add_error('password', error)
         return cleaned_data
 
     @transaction.atomic
     def save(self):
         User = get_user_model()
-        self.temporary_password = get_random_string(14)
+        self.temporary_password = self.cleaned_data.get('password') if self.cleaned_data.get('password_mode') == 'custom' else get_random_string(14)
         user = User.objects.create_user(
             username=self.build_username(),
             email=self.cleaned_data["email"],
@@ -206,7 +222,7 @@ class TeamMemberCreateForm(forms.Form):
             practice=self.practice,
             role=self.cleaned_data["role"],
             phone=self.cleaned_data.get("phone", ""),
-            must_change_password=True,
+            must_change_password=self.cleaned_data.get('password_mode') != 'custom',
         )
         profile.full_clean()
         profile.save()

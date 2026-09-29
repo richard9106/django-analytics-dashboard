@@ -8,6 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.crypto import get_random_string
@@ -252,6 +253,24 @@ class TeamMemberActionView(LoginRequiredMixin, View):
         practice = get_practice_for_user(request.user)
         target = get_object_or_404(UserProfile.objects.select_related("user"), pk=kwargs["pk"], practice=practice)
         action = request.POST.get("action")
+        if action == "delete":
+            if target.role == UserProfile.Role.OWNER:
+                messages.error(request, "Practice owners cannot be deleted from Team Management.")
+                return redirect("team_management")
+            if target.user_id == request.user.pk:
+                messages.error(request, "You cannot delete your own account.")
+                return redirect("team_management")
+            if target.user.is_active:
+                messages.error(request, "Deactivate the team member before deleting the account permanently.")
+                return redirect("team_management")
+            member_name = target.user.get_full_name() or target.user.email
+            try:
+                target.user.delete()
+            except ProtectedError:
+                messages.error(request, "This member has related records and cannot be deleted. Keep the account deactivated instead.")
+                return redirect("team_management")
+            messages.success(request, f"{member_name} was permanently deleted.")
+            return redirect("team_management")
         if target.role == UserProfile.Role.OWNER and action == "deactivate":
             owner_count = practice.user_profiles.filter(role=UserProfile.Role.OWNER, user__is_active=True).count()
             if owner_count <= 1:

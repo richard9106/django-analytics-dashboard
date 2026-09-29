@@ -38,7 +38,7 @@
                 {% if member.user.therapist_profile %}<p class="sync-meta">License: {{ member.user.therapist_profile.license_number }} · {{ member.user.therapist_profile.license_state }}</p>{% endif %}
                 {% if member.must_change_password %}<p class="sync-meta">Temporary password change pending.</p>{% endif %}
                 <div class="team-member-actions">
-                  {% if member.user.is_active %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="deactivate"><button class="inline-button" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><button class="inline-button" type="submit">Reactivate</button></form>{% endif %}
+                  {% if member.user.is_active %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="deactivate"><button class="inline-button" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><button class="inline-button" type="submit">Reactivate</button></form>{% if member.role != 'owner' %}<form method="post" action="{% url 'team_member_action' member.pk %}" onsubmit="return confirm('Delete this inactive team member permanently?');">{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="inline-button-danger" type="submit">Delete permanently</button></form>{% endif %}{% endif %}
                   {% if member.user.is_active and member.must_change_password %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resend_invitation"><button class="inline-button" type="submit">Resend invitation</button></form>{% endif %}
                 </div>
               </article>
@@ -80,6 +80,8 @@
                 <div class="field"><label for="team-specialty">Specialty</label><input id="team-specialty" name="specialty" value="{{ form.specialty.value|default:'' }}">{{ form.specialty.errors }}</div>
                 <div class="field"><label for="team-license-number">License number</label><input id="team-license-number" name="license_number" value="{{ form.license_number.value|default:'' }}">{{ form.license_number.errors }}</div>
                 <div class="field"><label for="team-license-state">License state</label><input id="team-license-state" name="license_state" value="{{ form.license_state.value|default:'' }}">{{ form.license_state.errors }}</div>
+                <div class="field"><label for="team-password-mode">Password</label><select id="team-password-mode" name="password_mode" data-password-mode><option value="temporary" {% if form.password_mode.value != 'custom' %}selected{% endif %}>Generate temporary password</option><option value="custom" {% if form.password_mode.value == 'custom' %}selected{% endif %}>Set password manually</option></select>{{ form.password_mode.errors }}</div>
+                <div class="field" data-custom-password-field hidden><label for="team-password">Custom password</label>{{ form.password }}{{ form.password.errors }}</div>
                 <div class="field checkbox-field full"><label><input name="send_invitation_email" type="checkbox" {% if form.send_invitation_email.value != False %}checked{% endif %}> {% if gmail_connected %}Send the temporary password using connected Gmail{% else %}Email the temporary password to this team member{% endif %}</label></div>
               </div>
               <p class="empty-state">NuviaMy will generate a temporary password and require the new user to change it at first login.</p>
@@ -93,6 +95,11 @@
   <script>
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
+    const passwordMode = document.querySelector('[data-password-mode]');
+    const customPasswordField = document.querySelector('[data-custom-password-field]');
+    const syncPasswordMode = () => { if (passwordMode && customPasswordField) customPasswordField.hidden = passwordMode.value !== 'custom'; };
+    passwordMode?.addEventListener('change', syncPasswordMode);
+    syncPasswordMode();
     if (document.querySelector('[data-team-form-errors]') && document.getElementById('team-member-modal')) document.getElementById('team-member-modal').showModal();
   </script>
 </body>
