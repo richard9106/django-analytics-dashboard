@@ -270,13 +270,14 @@ h1, h2, h3, p { margin-top: 0; }
 .subscription-summary p { margin: 0; color: var(--slate-600); }
 .muted-subscription { background: linear-gradient(145deg, #fff, var(--warning-bg)); }
 .profile-billing-actions { margin: 16px 0 10px; }
-.plan-change-panel { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--slate-200); }
-.plan-change-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.plan-change-card { padding: 14px; display: grid; gap: 10px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.78); }
-.plan-change-card.current-plan { background: var(--success-bg); border-color: rgba(5, 150, 105, .18); }
-.plan-change-card h4 { margin: 0; color: var(--slate-900); font-size: 18px; }
-.plan-change-card p { margin: 0; color: var(--slate-600); font-size: 13px; line-height: 1.45; }
-.plan-change-card .btn { width: 100%; }
+.plan-change-panel { margin-top: 20px; padding-top: 18px; display: grid; gap: 12px; border-top: 1px solid var(--slate-200); }
+.plan-change-panel h3 { margin: 0; color: var(--slate-900); font-size: 20px; }
+.plan-change-panel p { margin: 4px 0 0; color: var(--slate-600); line-height: 1.55; }
+.plan-change-panel .btn { width: fit-content; }
+.billing-period-options { margin: 0; padding: 14px; display: flex; gap: 12px; flex-wrap: wrap; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255,255,255,.78); }
+.billing-period-options legend { padding: 0 6px; color: var(--slate-500); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.billing-period-options label { min-height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--slate-200); border-radius: 999px; background: #fff; color: var(--slate-800); font-weight: 900; cursor: pointer; }
+.billing-period-options input { accent-color: var(--brand-600); }
 .message-list { display: grid; gap: 8px; }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }
@@ -587,7 +588,6 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .client-grid { grid-template-columns: 1fr; }
   .document-grid { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
-  .plan-change-grid { grid-template-columns: 1fr; }
   .profile-detail-list div { grid-template-columns: 1fr; gap: 4px; }
   .client-meta div { grid-template-columns: 1fr; gap: 2px; }
   .modal-card { padding: 18px; }
