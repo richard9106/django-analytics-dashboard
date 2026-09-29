@@ -362,6 +362,15 @@ class AvailabilitySettingsView(LoginRequiredMixin, PracticeContextMixin, ListVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['working_hour_form'] = PracticeWorkingHourForm(practice=self.get_practice())
+        hours = list(context['working_hours'])
+        context['working_hours_by_day'] = [
+            {
+                'value': weekday,
+                'label': label,
+                'hours': [hour for hour in hours if hour.weekday == weekday],
+            }
+            for weekday, label in PracticeWorkingHour.Weekday.choices
+        ]
         return context
 
 
