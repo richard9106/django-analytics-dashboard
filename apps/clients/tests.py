@@ -8,7 +8,7 @@ from decimal import Decimal
 from apps.accounts.models import UserProfile
 from apps.billing.models import ServicePackage, SessionPackageTemplate
 from apps.clients.models import Client
-from apps.practices.models import Practice, TherapistProfile
+from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
 
 class ClientModelTests(TestCase):
@@ -110,6 +110,16 @@ class ClientViewTests(TestCase):
             practice=practice,
             role=UserProfile.Role.OWNER,
         )
+        practice.stripe_connect_account_id = "acct_test"
+        practice.stripe_connect_charges_enabled = True
+        practice.stripe_connect_payouts_enabled = True
+        practice.save(update_fields=["stripe_connect_account_id", "stripe_connect_charges_enabled", "stripe_connect_payouts_enabled"])
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            send_email_enabled=True,
+        )
         return user, practice, therapist
 
     def test_client_list_requires_login(self):
@@ -123,6 +133,20 @@ class ClientViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clients:create')}")
+
+    def test_client_create_requires_practice_setup(self):
+        user, _practice, _therapist = self.create_practice_user()
+        ExternalIntegration.objects.all().delete()
+        Practice.objects.filter(pk=_practice.pk).update(
+            stripe_connect_account_id='',
+            stripe_connect_charges_enabled=False,
+            stripe_connect_payouts_enabled=False,
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clients:create"))
+
+        self.assertRedirects(response, reverse("dashboard"))
 
     def test_client_list_is_scoped_to_user_practice(self):
         user, practice, _therapist = self.create_practice_user()

@@ -1,9 +1,12 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.practices.models import ExternalIntegration
 from .forms import ClientForm
 from .models import Client
 
@@ -49,6 +52,19 @@ class ClientCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
     form_class = ClientForm
     template_name = 'clients/form.html'
     success_url = reverse_lazy('clients:list')
+
+    def dispatch(self, request, *args, **kwargs):
+        practice = self.get_practice()
+        gmail_ready = ExternalIntegration.objects.filter(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            send_email_enabled=True,
+        ).exists() if practice else False
+        if request.user.is_authenticated and practice and not (practice.can_receive_client_payments and gmail_ready):
+            messages.warning(request, 'Complete Gmail and Stripe Connect setup before adding clients.')
+            return redirect('dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

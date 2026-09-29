@@ -38,6 +38,13 @@
         </div>
       </header>
 
+      {% if not practice_setup_complete %}
+        <section class="setup-checklist-panel">
+          <div><p class="eyebrow">Before adding clients</p><h2>Set up your practice in about 10 minutes.</h2><p>Connect Gmail for secure invitations and reminders, then connect Stripe so client invoice payments go to your practice.</p></div>
+          <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
+        </section>
+      {% endif %}
+
       {% if messages %}
         <section class="message-list" aria-label="Profile messages">
           {% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}
@@ -88,7 +95,7 @@
         </article>
       </section>
       {% if can_manage_client_payments %}
-        <section class="panel client-payments-panel">
+        <section class="panel client-payments-panel" id="client-payments">
           <div class="panel-head compact"><div><h2>Client payments</h2><p>Connect the practice's Stripe payout account so client invoice payments go to the practice, not NuviaMy.</p></div><span class="badge {% if practice.can_receive_client_payments %}success{% else %}warning{% endif %}">{% if practice.can_receive_client_payments %}Ready to collect{% else %}Setup needed{% endif %}</span></div>
           {% if practice.can_receive_client_payments %}<p class="empty-state">Stripe Connect is active. Client payments are routed to {{ practice.name }}.</p>{% else %}<p class="empty-state">Stripe will collect the practice's legal and bank details securely during onboarding.</p>{% endif %}
           <a class="btn btn-primary" href="{% url 'practice_settings:stripe_connect' %}">{% if practice.stripe_connect_account_id %}Continue Stripe payout setup{% else %}Set up client payments{% endif %}</a>

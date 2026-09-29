@@ -48,6 +48,14 @@
     </div>
   </nav>
 
+  {% if not practice_setup_complete %}
+    <div class="setup-reminder" role="status">
+      <strong>Finish setup</strong>
+      <p>Connect Gmail and Stripe before adding clients.</p>
+      <a href="{% url 'profile_settings' %}">Open setup checklist</a>
+    </div>
+  {% endif %}
+
   <div class="sidebar-card">
     <strong>{{ card_title }}</strong>
     <p>{{ card_text }}</p>

@@ -307,6 +307,20 @@ h1, h2, h3, p { margin-top: 0; }
 .team-gmail-notice { padding: 14px 16px; border: 1px solid rgba(243, 111, 86, .28); border-radius: 16px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
 .team-gmail-notice strong { color: var(--slate-900); }
 .team-gmail-notice p { margin: 5px 0 8px; color: var(--slate-600); font-size: 13px; line-height: 1.5; }
+.setup-reminder { margin: 14px 14px 0; padding: 14px; border: 1px solid rgba(243, 111, 86, .28); border-radius: 16px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
+.setup-reminder strong { color: var(--slate-900); font-size: 13px; }
+.setup-reminder p { margin: 5px 0 8px; color: var(--slate-600); font-size: 12px; line-height: 1.45; }
+.setup-reminder a { color: var(--coral-500); font-size: 12px; font-weight: 900; }
+.setup-checklist-panel { padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; border: 1px solid rgba(243, 111, 86, .28); border-radius: 22px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
+.setup-checklist-panel h2 { margin: 0; color: var(--slate-900); font-size: 24px; }
+.setup-checklist-panel p:not(.eyebrow) { margin: 6px 0 0; color: var(--slate-600); line-height: 1.55; }
+.setup-checklist-items { display: grid; gap: 8px; min-width: 220px; }
+.setup-checklist-items a { min-height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(243, 111, 86, .2); border-radius: 12px; background: #fff; color: var(--slate-800); font-size: 13px; font-weight: 900; }
+.setup-checklist-items strong { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 12px; }
+.setup-checklist-items .setup-complete { border-color: rgba(5, 150, 105, .2); color: var(--success); }
+.setup-checklist-items .setup-complete strong { background: var(--success); }
+.onboarding-steps .setup-locked { opacity: .55; }
+.onboarding-steps .setup-complete strong { background: var(--success); }
 .message-list { display: grid; gap: 8px; }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }
@@ -545,6 +559,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 }
 
 @media (max-width: 720px) {
+  .setup-checklist-panel { grid-template-columns: 1fr; }
+  .setup-checklist-items { min-width: 0; }
   .integration-capabilities { grid-template-columns: 1fr; }
   .app-shell { display: block; }
   .sidebar { position: sticky; top: 0; z-index: 30; height: auto; padding: 12px; border-right: 0; border-bottom: 1px solid rgba(229, 231, 235, .92); gap: 0; box-shadow: 0 14px 30px rgba(15, 23, 42, .08); }
