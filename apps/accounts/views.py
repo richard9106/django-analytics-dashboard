@@ -8,8 +8,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils.crypto import get_random_string
 from django.views.generic import TemplateView
+from django.views import View
 from django.views.generic.edit import FormView
 
 from .access import get_practice_for_user, is_client_user, must_change_password
@@ -20,6 +23,26 @@ from apps.practices.google_oauth import send_gmail_message
 from apps.appointments.reminders import get_gmail_integration
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, TeamMemberCreateForm
 from .models import UserProfile
+
+
+def send_team_invitation(request, user, temporary_password):
+    practice = user.nuvia_profile.practice
+    integration = get_gmail_integration(practice)
+    subject = "Your NuviaMy team invitation"
+    body = (
+        f"Hello {user.first_name or user.email},\n\n"
+        f"You have been invited to join {practice.name} on NuviaMy.\n\n"
+        f"Sign in at: {request.build_absolute_uri('/login/')}\n"
+        f"Email: {user.email}\n"
+        f"Temporary password: {temporary_password}\n\n"
+        "You will be required to change this password when you first sign in."
+    )
+    if integration:
+        send_gmail_message(integration, user.email, subject, body)
+        return "connected Gmail"
+    if send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False):
+        return "email"
+    return ""
 
 
 class RoleAwareLoginView(LoginView):
@@ -174,28 +197,11 @@ class TeamManagementView(LoginRequiredMixin, FormView):
         user = form.save()
         member_name = user.get_full_name() or user.email
         if form.cleaned_data.get("send_invitation_email"):
-            practice = user.nuvia_profile.practice
-            gmail_integration = get_gmail_integration(practice)
             try:
-                subject = "Your NuviaMy team invitation"
-                body = (
-                        f"Hello {user.first_name or member_name},\n\n"
-                        f"You have been invited to join {practice.name} on NuviaMy.\n\n"
-                        f"Sign in at: {self.request.build_absolute_uri('/login/')}\n"
-                        f"Email: {user.email}\n"
-                        f"Temporary password: {form.temporary_password}\n\n"
-                        "You will be required to change this password when you first sign in."
-                )
-                if gmail_integration:
-                    send_gmail_message(gmail_integration, user.email, subject, body)
-                    sent_via = "connected Gmail"
-                    sent = True
-                else:
-                    sent = bool(send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False))
-                    sent_via = "email"
+                sent_via = send_team_invitation(self.request, user, form.temporary_password)
             except Exception:
-                sent = False
-            if sent:
+                sent_via = ""
+            if sent_via:
                 messages.success(self.request, f"Team member {member_name} was created and the temporary password was sent via {sent_via} to {user.email}.")
             else:
                 messages.warning(self.request, f"Team member {member_name} was created, but the email could not be sent. Temporary password: {form.temporary_password}")
@@ -210,6 +216,60 @@ class TeamManagementView(LoginRequiredMixin, FormView):
             metadata={"user_id": user.pk, "role": user.nuvia_profile.role},
         )
         return super().form_valid(form)
+
+
+class TeamMemberActionView(LoginRequiredMixin, View):
+    http_method_names = ["post"]
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        profile = getattr(request.user, "nuvia_profile", None)
+        if is_client_user(request.user) or not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
+            raise PermissionDenied("Only practice owners and admins can manage team members.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        practice = get_practice_for_user(request.user)
+        target = get_object_or_404(UserProfile.objects.select_related("user"), pk=kwargs["pk"], practice=practice)
+        action = request.POST.get("action")
+        if target.role == UserProfile.Role.OWNER and action == "deactivate":
+            owner_count = practice.user_profiles.filter(role=UserProfile.Role.OWNER, user__is_active=True).count()
+            if owner_count <= 1:
+                messages.error(request, "The practice must keep at least one active owner.")
+                return redirect("team_management")
+        if target.pk == request.user.nuvia_profile.pk and action == "deactivate":
+            messages.error(request, "You cannot deactivate your own account.")
+            return redirect("team_management")
+        if action == "deactivate":
+            target.user.is_active = False
+            target.user.save(update_fields=["is_active"])
+            messages.success(request, f"{target.user.get_full_name() or target.user.email} was deactivated.")
+        elif action == "reactivate":
+            subscription = getattr(practice, "subscription", None)
+            if subscription and not subscription.can_add_internal_user(exclude_profile_id=target.pk):
+                messages.error(request, "There are no available internal seats on the current plan.")
+                return redirect("team_management")
+            target.user.is_active = True
+            target.user.save(update_fields=["is_active"])
+            messages.success(request, f"{target.user.get_full_name() or target.user.email} was reactivated.")
+        elif action == "resend_invitation":
+            password = get_random_string(14)
+            target.user.set_password(password)
+            target.user.save(update_fields=["password"])
+            target.must_change_password = True
+            target.save(update_fields=["must_change_password", "updated_at"])
+            try:
+                sent_via = send_team_invitation(request, target.user, password)
+            except Exception:
+                sent_via = ""
+            if sent_via:
+                messages.success(request, f"A new temporary password was sent via {sent_via} to {target.user.email}.")
+            else:
+                messages.warning(request, f"The invitation email could not be sent. New temporary password: {password}")
+        else:
+            messages.error(request, "Unknown team action.")
+        return redirect("team_management")
 
 
 class PracticeSignupView(FormView):

@@ -33,9 +33,13 @@
             {% for member in team_members %}
               <article class="team-member-card">
                 <div><h3>{{ member.user.get_full_name|default:member.user.email|default:member.user.username }}</h3><p>{{ member.user.email|default:'No email set' }}</p></div>
-                <span class="badge {% if member.role == 'owner' %}success{% elif member.role == 'admin' %}brand{% else %}warning{% endif %}">{{ member.get_role_display }}</span>
+                <span class="badge {% if not member.user.is_active %}danger{% elif member.role == 'owner' %}success{% elif member.role == 'admin' %}brand{% else %}warning{% endif %}">{% if not member.user.is_active %}Inactive{% else %}{{ member.get_role_display }}{% endif %}</span>
                 {% if member.user.therapist_profile %}<p class="sync-meta">License: {{ member.user.therapist_profile.license_number }} · {{ member.user.therapist_profile.license_state }}</p>{% endif %}
                 {% if member.must_change_password %}<p class="sync-meta">Temporary password change pending.</p>{% endif %}
+                <div class="team-member-actions">
+                  {% if member.user.is_active %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="deactivate"><button class="inline-button" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><button class="inline-button" type="submit">Reactivate</button></form>{% endif %}
+                  {% if member.user.is_active and member.must_change_password %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resend_invitation"><button class="inline-button" type="submit">Resend invitation</button></form>{% endif %}
+                </div>
               </article>
             {% empty %}
               <p class="empty-state">No internal team members found.</p>

@@ -421,3 +421,49 @@ class TeamManagementViewTests(TestCase):
         })
 
         self.assertRedirects(response, reverse("dashboard"))
+
+    def test_owner_can_deactivate_and_reactivate_team_member(self):
+        owner, practice = self.create_practice_user()
+        member = get_user_model().objects.create_user(username="member", email="member@example.com")
+        member_profile = UserProfile.objects.create(user=member, practice=practice, role=UserProfile.Role.ADMIN)
+
+        self.client.force_login(owner)
+        response = self.client.post(reverse("team_member_action", args=[member_profile.pk]), {"action": "deactivate"})
+
+        self.assertRedirects(response, reverse("team_management"))
+        member.refresh_from_db()
+        self.assertFalse(member.is_active)
+
+        response = self.client.post(reverse("team_member_action", args=[member_profile.pk]), {"action": "reactivate"})
+
+        self.assertRedirects(response, reverse("team_management"))
+        member.refresh_from_db()
+        self.assertTrue(member.is_active)
+
+    def test_last_active_owner_cannot_be_deactivated(self):
+        owner, practice = self.create_practice_user()
+        owner_profile = owner.nuvia_profile
+
+        self.client.force_login(owner)
+        response = self.client.post(reverse("team_member_action", args=[owner_profile.pk]), {"action": "deactivate"}, follow=True)
+
+        self.assertRedirects(response, reverse("team_management"))
+        owner.refresh_from_db()
+        self.assertTrue(owner.is_active)
+        self.assertContains(response, "at least one active owner")
+
+    @patch("apps.accounts.views.send_team_invitation", return_value="connected Gmail")
+    def test_resend_invitation_resets_password_and_requires_change(self, mock_send_invitation):
+        owner, practice = self.create_practice_user()
+        member = get_user_model().objects.create_user(username="member", email="member@example.com", password="OldPass123!")
+        member_profile = UserProfile.objects.create(user=member, practice=practice, role=UserProfile.Role.ADMIN, must_change_password=False)
+
+        self.client.force_login(owner)
+        response = self.client.post(reverse("team_member_action", args=[member_profile.pk]), {"action": "resend_invitation"})
+
+        self.assertRedirects(response, reverse("team_management"))
+        member.refresh_from_db()
+        member_profile.refresh_from_db()
+        self.assertTrue(member_profile.must_change_password)
+        self.assertTrue(member.check_password(mock_send_invitation.call_args.args[2]))
+        self.assertNotEqual(mock_send_invitation.call_args.args[2], "OldPass123!")
