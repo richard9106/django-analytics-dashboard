@@ -369,7 +369,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-nav-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--slate-600); font-size: 14px; font-weight: 800; }
 .marketing-nav-links a:hover { color: var(--brand-700); }
 .marketing-nav a:focus-visible, .back-to-top:focus-visible, .content-links a:focus-visible { outline: 3px solid rgba(243, 111, 86, .28); outline-offset: 3px; border-radius: 12px; }
-.marketing-hero { position: relative; isolation: isolate; width: min(1180px, calc(100% - 32px)); margin: 18px auto 0; min-height: 620px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; align-items: center; padding: clamp(24px, 4vw, 44px); overflow: hidden; border-radius: 34px; background: linear-gradient(90deg, rgba(255,255,255,.94), rgba(255,255,255,.82) 46%, rgba(255,255,255,.56)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; box-shadow: var(--shadow-2); }
+.marketing-hero { position: relative; isolation: isolate; width: 100%; margin: 0; min-height: 620px; display: grid; grid-template-columns: minmax(16px, 1fr) minmax(0, 1180px) minmax(16px, 1fr); gap: 0; align-items: center; padding: clamp(24px, 4vw, 44px) 0; overflow: hidden; border-radius: 0; background: linear-gradient(90deg, rgba(255,255,255,.94), rgba(255,255,255,.82) 46%, rgba(255,255,255,.56)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; box-shadow: var(--shadow-2); }
+.marketing-hero > .hero-copy { grid-column: 2; width: min(58%, 720px); }
+.marketing-hero > .hero-card { grid-column: 2; justify-self: end; width: min(40%, 460px); align-self: center; }
 .marketing-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 14% 18%, rgba(204, 251, 245, .72), transparent 30%), radial-gradient(circle at 90% 12%, rgba(243, 111, 86, .22), transparent 28%); }
 .hero-copy h1 { max-width: 760px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(40px, 5.8vw, 62px); line-height: 1.04; letter-spacing: -.055em; }
 .hero-copy p:not(.eyebrow) { max-width: 720px; color: var(--slate-600); font-size: 17px; line-height: 1.68; }
@@ -485,6 +487,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .portal-grid { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marketing-hero, .visual-band, .marketing-band, .proof-layout, .marketing-grid.three, .marketing-grid.two, .feature-grid.marketing-grid.three, .pricing-grid { grid-template-columns: 1fr; }
+  .marketing-hero > .hero-copy, .marketing-hero > .hero-card { grid-column: auto; width: auto; justify-self: stretch; }
   .calm-banner > div:first-child, .calm-banner .workflow-media { margin-inline: max(16px, calc((100vw - 1180px) / 2)); }
   .proof-photo-card { position: static; }
   .proof-photo-card img { min-height: 360px; max-height: 520px; }
@@ -580,7 +583,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .marketing-nav-check:checked ~ .marketing-nav-links { max-height: 70vh; overflow-y: auto; padding-top: 12px; opacity: 1; transform: translateY(0); }
   .marketing-nav-links a { min-height: 42px; padding: 0 12px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.9); text-align: center; }
   .marketing-nav-links .btn { width: 100%; }
-  .marketing-hero { min-height: 0; padding: 22px; border-radius: 24px; background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.84)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; }
+  .marketing-hero { min-height: 0; padding: 22px 12px; border-radius: 0; background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.84)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; }
   .hero-copy h1 { font-size: 36px; }
   .hero-actions, .pricing-actions { display: grid; grid-template-columns: 1fr; }
   .hero-actions .btn, .pricing-actions .btn { width: 100%; }
