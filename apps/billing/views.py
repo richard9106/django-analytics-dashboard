@@ -564,7 +564,7 @@ class StripeChangePlanView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
             messages.error(request, 'Create a practice workspace before changing plans.')
             return redirect('signup')
 
-        internal_user_count = practice.user_profiles.exclude(role='client').count()
+        internal_user_count = practice.user_profiles.exclude(role__in=['client', 'owner']).count()
         target_limit = PracticeSubscription.internal_user_limit_for_plan(plan)
         if internal_user_count > target_limit:
             messages.error(
@@ -621,7 +621,7 @@ class StripePlanPreviewView(LoginRequiredMixin, ClientPortalRedirectMixin, View)
         if not practice:
             return JsonResponse({'error': 'Create a practice workspace before changing plans.'}, status=400)
 
-        internal_user_count = practice.user_profiles.exclude(role='client').count()
+        internal_user_count = practice.user_profiles.exclude(role__in=['client', 'owner']).count()
         target_limit = PracticeSubscription.internal_user_limit_for_plan(plan)
         if internal_user_count > target_limit:
             return JsonResponse({

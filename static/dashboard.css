@@ -293,6 +293,9 @@ h1, h2, h3, p { margin-top: 0; }
 .team-member-card .sync-meta { grid-column: 1 / -1; }
 .team-member-actions { grid-column: 1 / -1; display: flex; gap: 14px; flex-wrap: wrap; }
 .team-member-actions form { margin: 0; }
+.team-gmail-notice { padding: 14px 16px; border: 1px solid rgba(243, 111, 86, .28); border-radius: 16px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
+.team-gmail-notice strong { color: var(--slate-900); }
+.team-gmail-notice p { margin: 5px 0 8px; color: var(--slate-600); font-size: 13px; line-height: 1.5; }
 .message-list { display: grid; gap: 8px; }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }

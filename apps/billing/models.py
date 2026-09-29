@@ -360,14 +360,14 @@ class PracticeSubscription(models.Model):
 
     @property
     def internal_user_count(self):
-        return self.practice.user_profiles.exclude(role="client").count()
+        return self.practice.user_profiles.exclude(role__in=["client", "owner"]).count()
 
     @property
     def internal_user_slots_remaining(self):
         return max(self.internal_user_limit - self.internal_user_count, 0)
 
     def can_add_internal_user(self, exclude_profile_id=None):
-        profiles = self.practice.user_profiles.exclude(role="client")
+        profiles = self.practice.user_profiles.exclude(role__in=["client", "owner"])
         if exclude_profile_id:
             profiles = profiles.exclude(pk=exclude_profile_id)
         return profiles.count() < self.internal_user_limit

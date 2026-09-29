@@ -44,13 +44,15 @@ class UserProfileModelTests(TestCase):
             billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
             status=PracticeSubscription.Status.ACTIVE,
         )
+        existing_admin = get_user_model().objects.create_user(username="existing-admin")
+        UserProfile.objects.create(user=existing_admin, practice=practice, role=UserProfile.Role.ADMIN)
         admin = get_user_model().objects.create_user(username="admin")
         admin_profile = UserProfile(user=admin, practice=practice, role=UserProfile.Role.ADMIN)
 
         owner_profile.full_clean()
         self.assertEqual(subscription.internal_user_count, 1)
         self.assertEqual(subscription.internal_user_slots_remaining, 0)
-        with self.assertRaisesMessage(ValidationError, "allows up to 1 internal user"):
+        with self.assertRaisesMessage(ValidationError, "allows up to 1 team seat"):
             admin_profile.full_clean()
 
     def test_client_profile_does_not_count_against_subscription_plan_limit(self):
@@ -67,7 +69,7 @@ class UserProfileModelTests(TestCase):
         client_profile = UserProfile(user=client_user, practice=practice, role=UserProfile.Role.CLIENT)
 
         client_profile.full_clean()
-        self.assertEqual(subscription.internal_user_count, 1)
+        self.assertEqual(subscription.internal_user_count, 0)
 
 
 class PracticeSignupViewTests(TestCase):
@@ -183,8 +185,8 @@ class ProfileSettingsViewTests(TestCase):
         self.assertContains(response, "Profile & subscription")
         self.assertContains(response, "Group Practice")
         self.assertContains(response, "Yearly billing")
-        self.assertContains(response, "1 of 5 internal users used")
-        self.assertContains(response, "4 team seats remaining")
+        self.assertContains(response, "0 of 5 team seats used")
+        self.assertContains(response, "5 team seats remaining")
         self.assertContains(response, "Change plan")
         self.assertContains(response, "Change subscription plan")
         self.assertContains(response, 'id="plan-change-modal"')
@@ -292,9 +294,10 @@ class TeamManagementViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Team management")
-        self.assertContains(response, "1 of 5")
+        self.assertContains(response, "0 of 5")
         self.assertContains(response, "Add team member")
         self.assertContains(response, "owner@example.com")
+        self.assertContains(response, "Connect Gmail")
 
     def test_owner_can_create_therapist_team_member_with_temporary_password(self):
         user, practice = self.create_practice_user()
@@ -377,7 +380,9 @@ class TeamManagementViewTests(TestCase):
         self.assertContains(response, "Temporary password:")
 
     def test_team_management_blocks_when_plan_limit_is_reached(self):
-        user, _practice = self.create_practice_user(plan=PracticeSubscription.Plan.SOLO)
+        user, practice = self.create_practice_user(plan=PracticeSubscription.Plan.SOLO)
+        existing_member = get_user_model().objects.create_user(username="existing-member")
+        UserProfile.objects.create(user=existing_member, practice=practice, role=UserProfile.Role.ADMIN)
 
         self.client.force_login(user)
         response = self.client.post(reverse("team_management"), self.team_payload())

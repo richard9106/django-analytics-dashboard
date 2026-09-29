@@ -680,6 +680,8 @@ class BillingViewTests(TestCase):
         user, practice, _therapist, _client, _appointment = self.create_practice_user()
         second_user = get_user_model().objects.create_user(username="second")
         UserProfile.objects.create(user=second_user, practice=practice, role=UserProfile.Role.ADMIN)
+        third_user = get_user_model().objects.create_user(username="third")
+        UserProfile.objects.create(user=third_user, practice=practice, role=UserProfile.Role.ADMIN)
         PracticeSubscription.objects.create(
             practice=practice,
             plan=PracticeSubscription.Plan.GROUP,
@@ -759,6 +761,8 @@ class BillingViewTests(TestCase):
         user, practice, _therapist, _client, _appointment = self.create_practice_user()
         second_user = get_user_model().objects.create_user(username="second")
         UserProfile.objects.create(user=second_user, practice=practice, role=UserProfile.Role.ADMIN)
+        third_user = get_user_model().objects.create_user(username="third")
+        UserProfile.objects.create(user=third_user, practice=practice, role=UserProfile.Role.ADMIN)
         PracticeSubscription.objects.create(
             practice=practice,
             plan=PracticeSubscription.Plan.GROUP,

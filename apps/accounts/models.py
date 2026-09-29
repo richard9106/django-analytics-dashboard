@@ -36,12 +36,12 @@ class UserProfile(models.Model):
             therapist_profile = getattr(self.user, "therapist_profile", None)
             if therapist_profile and therapist_profile.practice_id != self.practice_id:
                 errors["practice"] = "Therapist user profile must belong to the same practice as the therapist profile."
-        if self.role != self.Role.CLIENT and self.practice_id:
+        if self.role not in {self.Role.CLIENT, self.Role.OWNER} and self.practice_id:
             subscription = getattr(self.practice, "subscription", None)
             if subscription and not subscription.can_add_internal_user(exclude_profile_id=self.pk):
                 errors["role"] = (
                     f"Your {subscription.get_plan_display()} plan allows up to "
-                    f"{subscription.internal_user_limit} internal user(s). Upgrade to add more team members."
+                    f"{subscription.internal_user_limit} team seat(s), plus the owner. Upgrade to add more team members."
                 )
         if errors:
             raise ValidationError(errors)
