@@ -13,7 +13,7 @@ from django.views.generic import CreateView, DeleteView, FormView, ListView, Tem
 import stripe
 from django.conf import settings
 
-from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, PracticePermissionMixin, get_practice_for_user
 from apps.accounts.models import UserProfile
 from apps.appointments.google_calendar import sync_appointment_to_google
 from apps.appointments.models import Appointment
@@ -303,7 +303,8 @@ class PublicBookingRequestCreateView(View):
         return TemplateResponse(request, self.template_name, {'practice': practice, 'form': form}, status=400)
 
 
-class PortalAccessListView(PracticeContextMixin, ListView):
+class PortalAccessListView(PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'intake'
     model = ClientPortalAccess
     template_name = 'settings/portal_access.html'
     context_object_name = 'portal_accesses'
@@ -320,7 +321,9 @@ class PortalAccessListView(PracticeContextMixin, ListView):
         return context
 
 
-class PortalAccessCreateView(PracticeContextMixin, CreateView):
+class PortalAccessCreateView(PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'intake'
+    permission_action = 'create'
     model = ClientPortalAccess
     form_class = ClientPortalAccessForm
     template_name = 'settings/portal_access_form.html'
@@ -346,6 +349,7 @@ class PortalAccessCreateView(PracticeContextMixin, CreateView):
 
 
 class PortalAccessUpdateView(PortalAccessCreateView, UpdateView):
+    permission_action = 'edit'
     def get_queryset(self):
         practice = self.get_practice()
         if not practice:
@@ -353,7 +357,9 @@ class PortalAccessUpdateView(PortalAccessCreateView, UpdateView):
         return ClientPortalAccess.objects.filter(practice=practice)
 
 
-class PortalAccessDeleteView(PracticeContextMixin, DeleteView):
+class PortalAccessDeleteView(PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'intake'
+    permission_action = 'delete'
     model = ClientPortalAccess
     success_url = reverse_lazy('portal_settings:portal_access')
 
@@ -405,7 +411,8 @@ class PortalAccessPasswordResetView(PracticeContextMixin, View):
         return redirect('portal_settings:portal_access')
 
 
-class PracticePortalRequestListView(PracticeContextMixin, ListView):
+class PracticePortalRequestListView(PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'requests'
     model = ClientPortalRequest
     template_name = 'requests/list.html'
     context_object_name = 'portal_requests'
@@ -424,7 +431,9 @@ class PracticePortalRequestListView(PracticeContextMixin, ListView):
         return context
 
 
-class PracticePortalRequestStatusView(PracticeContextMixin, View):
+class PracticePortalRequestStatusView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'requests'
+    permission_action = 'edit'
     def post(self, request, pk):
         practice = self.get_practice()
         portal_request = get_object_or_404(ClientPortalRequest, pk=pk, practice=practice)
@@ -444,7 +453,9 @@ class PracticePortalRequestStatusView(PracticeContextMixin, View):
         return redirect('portal_requests:list')
 
 
-class PublicBookingRequestApproveView(PracticeContextMixin, View):
+class PublicBookingRequestApproveView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'requests'
+    permission_action = 'edit'
     def post(self, request, pk):
         practice = self.get_practice()
         booking_request = get_object_or_404(PublicBookingRequest, pk=pk, practice=practice, status=PublicBookingRequest.Status.PENDING)
@@ -498,7 +509,9 @@ class PublicBookingRequestApproveView(PracticeContextMixin, View):
         return redirect('portal_requests:list')
 
 
-class PublicBookingRequestDeclineView(PracticeContextMixin, View):
+class PublicBookingRequestDeclineView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'requests'
+    permission_action = 'edit'
     def post(self, request, pk):
         practice = self.get_practice()
         booking_request = get_object_or_404(PublicBookingRequest, pk=pk, practice=practice, status=PublicBookingRequest.Status.PENDING)
@@ -516,7 +529,8 @@ class PublicBookingRequestDeclineView(PracticeContextMixin, View):
         return redirect('portal_requests:list')
 
 
-class PracticeIntakeListView(PracticeContextMixin, TemplateView):
+class PracticeIntakeListView(PracticePermissionMixin, PracticeContextMixin, TemplateView):
+    permission_resource = 'intake'
     template_name = 'intake/list.html'
 
     def get_context_data(self, **kwargs):
@@ -529,7 +543,9 @@ class PracticeIntakeListView(PracticeContextMixin, TemplateView):
         return context
 
 
-class IntakeTemplateCreateView(PracticeContextMixin, View):
+class IntakeTemplateCreateView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'intake'
+    permission_action = 'create'
     def post(self, request):
         practice = self.get_practice()
         form = IntakePacketTemplateForm(request.POST, practice=practice)
@@ -539,7 +555,9 @@ class IntakeTemplateCreateView(PracticeContextMixin, View):
         return redirect('intake:list')
 
 
-class ClientIntakeAssignView(PracticeContextMixin, View):
+class ClientIntakeAssignView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'intake'
+    permission_action = 'create'
     def post(self, request):
         practice = self.get_practice()
         form = ClientIntakeAssignmentForm(request.POST, practice=practice, assigned_by=request.user)
@@ -556,7 +574,9 @@ class ClientIntakeAssignView(PracticeContextMixin, View):
         return redirect('intake:list')
 
 
-class ClientIntakeReviewView(PracticeContextMixin, View):
+class ClientIntakeReviewView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'intake'
+    permission_action = 'edit'
     def post(self, request, pk):
         practice = self.get_practice()
         assignment = get_object_or_404(ClientIntakeAssignment, pk=pk, practice=practice)

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
 from .models import Appointment, PracticeWorkingHour
 from .forms import AppointmentForm, PracticeWorkingHourForm
@@ -29,7 +29,8 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
         return context
 
 
-class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'appointments'
     model = Appointment
     template_name = 'appointments/list.html'
     context_object_name = 'appointments'
@@ -201,7 +202,9 @@ class AppointmentListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         return context
 
 
-class AppointmentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class AppointmentCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'appointments'
+    permission_action = 'create'
     model = Appointment
     form_class = AppointmentForm
     template_name = 'appointments/form.html'
@@ -257,7 +260,9 @@ class AppointmentCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
         return response
 
 
-class AppointmentUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
+class AppointmentUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, UpdateView):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
     model = Appointment
     form_class = AppointmentForm
     template_name = 'appointments/form.html'
@@ -292,7 +297,9 @@ class AppointmentUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView
         return response
 
 
-class AppointmentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class AppointmentDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'appointments'
+    permission_action = 'delete'
     model = Appointment
     success_url = reverse_lazy('appointments:list')
 
@@ -311,14 +318,18 @@ class AppointmentDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
         return super().form_valid(form)
 
 
-class AppointmentGoogleSyncView(LoginRequiredMixin, PracticeContextMixin, View):
+class AppointmentGoogleSyncView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
     def post(self, request, pk):
         appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
         sync_appointment_to_google(appointment)
         return redirect('appointments:list')
 
 
-class AppointmentRescheduleView(LoginRequiredMixin, PracticeContextMixin, View):
+class AppointmentRescheduleView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
     def get_success_url(self):
         next_url = self.request.POST.get('next') or self.request.GET.get('next')
         if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
@@ -350,7 +361,8 @@ class AppointmentRescheduleView(LoginRequiredMixin, PracticeContextMixin, View):
         return redirect(self.get_success_url())
 
 
-class AvailabilitySettingsView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class AvailabilitySettingsView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'appointments'
     model = PracticeWorkingHour
     template_name = 'settings/availability.html'
     context_object_name = 'working_hours'
@@ -374,7 +386,9 @@ class AvailabilitySettingsView(LoginRequiredMixin, PracticeContextMixin, ListVie
         return context
 
 
-class WorkingHourCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class WorkingHourCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
     model = PracticeWorkingHour
     form_class = PracticeWorkingHourForm
     template_name = 'settings/availability_form.html'
@@ -386,7 +400,9 @@ class WorkingHourCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
         return kwargs
 
 
-class WorkingHourDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class WorkingHourDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'appointments'
+    permission_action = 'delete'
     model = PracticeWorkingHour
     success_url = reverse_lazy('practice_settings:availability')
 

@@ -185,6 +185,18 @@ class ClientViewTests(TestCase):
         self.assertContains(response, "Delete client")
         self.assertNotContains(response, "Hidden Client")
 
+    def test_therapist_without_client_read_permission_is_forbidden(self):
+        user, practice, _therapist = self.create_practice_user()
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'clients': {'view': False}}
+        profile.save(update_fields=['role', 'permissions', 'updated_at'])
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('clients:list'))
+
+        self.assertEqual(response.status_code, 403)
+
     def test_client_page_can_assign_package_to_client(self):
         user, practice, _therapist = self.create_practice_user()
         client = Client.objects.create(practice=practice, first_name="Maya", last_name="Johnson")

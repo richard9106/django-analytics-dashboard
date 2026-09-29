@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .forms import DiagnosisForm, SessionNoteForm, TreatmentPlanForm
@@ -54,7 +54,8 @@ class TreatmentPlanContextMixin(PracticeContextMixin):
         return context
 
 
-class SessionNoteListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class SessionNoteListView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'clinical'
     model = SessionNote
     template_name = 'clinical/list.html'
     context_object_name = 'notes'
@@ -120,7 +121,9 @@ class SessionNoteListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         return context
 
 
-class SessionNoteCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'clinical'
+    permission_action = 'create'
     model = SessionNote
     form_class = SessionNoteForm
     template_name = 'clinical/form.html'
@@ -155,7 +158,9 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView
         return response
 
 
-class SessionNoteUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
+class SessionNoteUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, UpdateView):
+    permission_resource = 'clinical'
+    permission_action = 'edit'
     model = SessionNote
     form_class = SessionNoteForm
     template_name = 'clinical/form.html'
@@ -199,7 +204,9 @@ class SessionNoteUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView
         return response
 
 
-class SessionNoteDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class SessionNoteDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'clinical'
+    permission_action = 'delete'
     model = SessionNote
     success_url = reverse_lazy('clinical:list')
 
@@ -230,7 +237,8 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView
         return response
 
 
-class TreatmentPlanListView(LoginRequiredMixin, TreatmentPlanContextMixin, ListView):
+class TreatmentPlanListView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, ListView):
+    permission_resource = 'clinical'
     model = TreatmentPlan
     template_name = 'clinical/treatment_plans.html'
     context_object_name = 'plans'
@@ -298,7 +306,9 @@ class TreatmentPlanListView(LoginRequiredMixin, TreatmentPlanContextMixin, ListV
         return context
 
 
-class TreatmentPlanCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, CreateView):
+class TreatmentPlanCreateView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, CreateView):
+    permission_resource = 'clinical'
+    permission_action = 'create'
     model = TreatmentPlan
     form_class = TreatmentPlanForm
     template_name = 'clinical/form.html'
@@ -328,7 +338,9 @@ class TreatmentPlanCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, Cre
         return response
 
 
-class TreatmentPlanUpdateView(LoginRequiredMixin, TreatmentPlanContextMixin, UpdateView):
+class TreatmentPlanUpdateView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, UpdateView):
+    permission_resource = 'clinical'
+    permission_action = 'edit'
     model = TreatmentPlan
     form_class = TreatmentPlanForm
     template_name = 'clinical/form.html'
@@ -364,7 +376,9 @@ class TreatmentPlanUpdateView(LoginRequiredMixin, TreatmentPlanContextMixin, Upd
         return response
 
 
-class TreatmentPlanDeleteView(LoginRequiredMixin, TreatmentPlanContextMixin, DeleteView):
+class TreatmentPlanDeleteView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, DeleteView):
+    permission_resource = 'clinical'
+    permission_action = 'delete'
     model = TreatmentPlan
 
     def get_queryset(self):
@@ -389,7 +403,9 @@ class TreatmentPlanDeleteView(LoginRequiredMixin, TreatmentPlanContextMixin, Del
         return response
 
 
-class TreatmentPlanCompleteReviewView(LoginRequiredMixin, TreatmentPlanContextMixin, View):
+class TreatmentPlanCompleteReviewView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, View):
+    permission_resource = 'clinical'
+    permission_action = 'edit'
     def post(self, request, *args, **kwargs):
         practice = self.get_practice()
         if not practice:
@@ -415,7 +431,9 @@ class TreatmentPlanCompleteReviewView(LoginRequiredMixin, TreatmentPlanContextMi
         return redirect('clinical:treatment_plans')
 
 
-class DiagnosisCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, CreateView):
+class DiagnosisCreateView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, CreateView):
+    permission_resource = 'clinical'
+    permission_action = 'create'
     model = Diagnosis
     form_class = DiagnosisForm
     template_name = 'clinical/form.html'
@@ -445,7 +463,9 @@ class DiagnosisCreateView(LoginRequiredMixin, TreatmentPlanContextMixin, CreateV
         return response
 
 
-class DiagnosisUpdateView(LoginRequiredMixin, TreatmentPlanContextMixin, UpdateView):
+class DiagnosisUpdateView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, UpdateView):
+    permission_resource = 'clinical'
+    permission_action = 'edit'
     model = Diagnosis
     form_class = DiagnosisForm
     template_name = 'clinical/form.html'
@@ -481,7 +501,9 @@ class DiagnosisUpdateView(LoginRequiredMixin, TreatmentPlanContextMixin, UpdateV
         return response
 
 
-class DiagnosisDeleteView(LoginRequiredMixin, TreatmentPlanContextMixin, DeleteView):
+class DiagnosisDeleteView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, DeleteView):
+    permission_resource = 'clinical'
+    permission_action = 'delete'
     model = Diagnosis
 
     def get_queryset(self):

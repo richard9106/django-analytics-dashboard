@@ -305,6 +305,13 @@ h1, h2, h3, p { margin-top: 0; }
 .team-member-card .sync-meta { grid-column: 1 / -1; }
 .team-member-actions { grid-column: 1 / -1; display: flex; gap: 14px; flex-wrap: wrap; }
 .team-member-actions form { margin: 0; }
+.team-permissions { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid var(--slate-200); }
+.team-permissions summary { margin-bottom: 10px; color: var(--brand-700); font-size: 12px; font-weight: 900; cursor: pointer; }
+.permission-matrix { display: grid; gap: 5px; margin-bottom: 12px; }
+.permission-row { display: grid; grid-template-columns: minmax(130px, 1fr) repeat(4, 54px); gap: 8px; align-items: center; min-height: 32px; color: var(--slate-700); font-size: 12px; }
+.permission-row label, .permission-row span { text-align: center; }
+.permission-row input { accent-color: var(--brand-600); }
+.permission-head { color: var(--slate-500); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .team-gmail-notice { padding: 14px 16px; border: 1px solid rgba(243, 111, 86, .28); border-radius: 16px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
 .team-gmail-notice strong { color: var(--slate-900); }
 .team-gmail-notice p { margin: 5px 0 8px; color: var(--slate-600); font-size: 13px; line-height: 1.5; }

@@ -17,6 +17,7 @@ from django.views import View
 from django.views.generic.edit import FormView
 
 from .access import get_practice_for_user, is_client_user, must_change_password
+from .access import DEFAULT_THERAPIST_PERMISSIONS, PERMISSION_ACTIONS, PERMISSION_RESOURCES
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
@@ -211,6 +212,19 @@ class TeamManagementView(LoginRequiredMixin, FormView):
             "gmail_connected": bool(practice and get_gmail_integration(practice)),
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
+        for member in context['team_members']:
+            permissions = member.permissions or DEFAULT_THERAPIST_PERMISSIONS
+            member.permission_rows = [
+                {
+                    'key': resource_key,
+                    'label': resource_label,
+                    'actions': [
+                        {'key': action_key, 'label': action_label, 'enabled': permissions.get(resource_key, {}).get(action_key, False)}
+                        for action_key, action_label in PERMISSION_ACTIONS
+                    ],
+                }
+                for resource_key, resource_label in PERMISSION_RESOURCES
+            ]
         return context
 
     def form_valid(self, form):
@@ -271,6 +285,20 @@ class TeamMemberActionView(LoginRequiredMixin, View):
                 return redirect("team_management")
             messages.success(request, f"{member_name} was permanently deleted.")
             return redirect("team_management")
+        if action == 'update_permissions':
+            if target.role != UserProfile.Role.THERAPIST:
+                messages.error(request, 'Only therapist permissions can be customized.')
+                return redirect('team_management')
+            target.permissions = {
+                resource_key: {
+                    action_key: request.POST.get(f'perm_{resource_key}_{action_key}') == 'on'
+                    for action_key, _action_label in PERMISSION_ACTIONS
+                }
+                for resource_key, _resource_label in PERMISSION_RESOURCES
+            }
+            target.save(update_fields=['permissions', 'updated_at'])
+            messages.success(request, f'Permissions updated for {target.user.get_full_name() or target.user.email}.')
+            return redirect('team_management')
         if target.role == UserProfile.Role.OWNER and action == "deactivate":
             owner_count = practice.user_profiles.filter(role=UserProfile.Role.OWNER, user__is_active=True).count()
             if owner_count <= 1:

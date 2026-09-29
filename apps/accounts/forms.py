@@ -224,6 +224,10 @@ class TeamMemberCreateForm(forms.Form):
             phone=self.cleaned_data.get("phone", ""),
             must_change_password=self.cleaned_data.get('password_mode') != 'custom',
         )
+        if profile.role == UserProfile.Role.THERAPIST:
+            from .access import DEFAULT_THERAPIST_PERMISSIONS
+
+            profile.permissions = DEFAULT_THERAPIST_PERMISSIONS.copy()
         profile.full_clean()
         profile.save()
         return user

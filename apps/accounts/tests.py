@@ -533,6 +533,29 @@ class TeamManagementViewTests(TestCase):
         self.assertRedirects(response, reverse("team_management"))
         self.assertFalse(get_user_model().objects.filter(pk=member.pk).exists())
 
+    def test_owner_can_update_therapist_permissions(self):
+        owner, practice = self.create_practice_user()
+        therapist_user = get_user_model().objects.create_user(username='therapist', email='therapist@example.com')
+        therapist_profile = UserProfile.objects.create(
+            user=therapist_user,
+            practice=practice,
+            role=UserProfile.Role.THERAPIST,
+            permissions={'billing': {'view': False, 'create': False, 'edit': False, 'delete': False}},
+        )
+
+        self.client.force_login(owner)
+        response = self.client.post(reverse('team_member_action', args=[therapist_profile.pk]), {
+            'action': 'update_permissions',
+            'perm_billing_view': 'on',
+            'perm_clients_view': 'on',
+            'perm_clients_create': 'on',
+        })
+
+        self.assertRedirects(response, reverse('team_management'))
+        therapist_profile.refresh_from_db()
+        self.assertTrue(therapist_profile.permissions['billing']['view'])
+        self.assertFalse(therapist_profile.permissions['billing']['create'])
+
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class PasswordResetTests(TestCase):

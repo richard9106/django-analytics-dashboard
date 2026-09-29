@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
 
-from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user, must_change_password
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user, must_change_password
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .forms import ClientDocumentForm
@@ -26,7 +26,8 @@ class PracticeContextMixin:
         return context
 
 
-class DocumentListView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, ListView):
+class DocumentListView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, PracticeContextMixin, ListView):
+    permission_resource = 'documents'
     model = ClientDocument
     template_name = 'documents/list.html'
     context_object_name = 'documents'
@@ -38,7 +39,9 @@ class DocumentListView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeCo
         return ClientDocument.objects.filter(practice=practice).select_related('client', 'uploaded_by')
 
 
-class DocumentCreateView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, CreateView):
+class DocumentCreateView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'documents'
+    permission_action = 'create'
     model = ClientDocument
     form_class = ClientDocumentForm
     template_name = 'documents/form.html'
@@ -63,7 +66,9 @@ class DocumentCreateView(LoginRequiredMixin, ClientPortalRedirectMixin, Practice
         return response
 
 
-class DocumentDeleteView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, DeleteView):
+class DocumentDeleteView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'documents'
+    permission_action = 'delete'
     model = ClientDocument
     success_url = reverse_lazy('documents:list')
 
@@ -93,7 +98,8 @@ class DocumentDeleteView(LoginRequiredMixin, ClientPortalRedirectMixin, Practice
         return response
 
 
-class DocumentDownloadView(LoginRequiredMixin, PracticeContextMixin, View):
+class DocumentDownloadView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'documents'
     def get(self, request, pk):
         if must_change_password(request.user):
             return redirect('force_password_change')
@@ -127,7 +133,9 @@ class DocumentDownloadView(LoginRequiredMixin, PracticeContextMixin, View):
         )
 
 
-class DocumentGoogleDriveExportView(LoginRequiredMixin, ClientPortalRedirectMixin, PracticeContextMixin, View):
+class DocumentGoogleDriveExportView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, PracticeContextMixin, View):
+    permission_resource = 'documents'
+    permission_action = 'edit'
     def post(self, request, pk):
         practice = self.get_practice()
         document = get_object_or_404(ClientDocument, pk=pk, practice=practice)

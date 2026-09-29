@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from apps.practices.models import ExternalIntegration
 from .forms import ClientForm
 from .models import Client
@@ -21,7 +21,8 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
         return context
 
 
-class ClientListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class ClientListView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'clients'
     model = Client
     template_name = 'clients/list.html'
     context_object_name = 'clients'
@@ -47,7 +48,9 @@ class ClientListView(LoginRequiredMixin, PracticeContextMixin, ListView):
         return context
 
 
-class ClientCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class ClientCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'clients'
+    permission_action = 'create'
     model = Client
     form_class = ClientForm
     template_name = 'clients/form.html'
@@ -79,7 +82,9 @@ class ClientCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
         return context
 
 
-class ClientUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
+class ClientUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, UpdateView):
+    permission_resource = 'clients'
+    permission_action = 'edit'
     model = Client
     form_class = ClientForm
     template_name = 'clients/form.html'
@@ -106,7 +111,9 @@ class ClientUpdateView(LoginRequiredMixin, PracticeContextMixin, UpdateView):
         return context
 
 
-class ClientDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class ClientDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'clients'
+    permission_action = 'delete'
     model = Client
     success_url = reverse_lazy('clients:list')
 
