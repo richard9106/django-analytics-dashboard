@@ -354,6 +354,11 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .form-panel { max-width: 980px; }
 .appointment-form { display: grid; gap: 20px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.filter-bar { margin: 4px 0 18px; padding: 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.74); }
+.filter-bar .field label { font-size: 12px; }
+.filter-bar .field input, .filter-bar .field select { min-height: 40px; }
+.filter-actions { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
+.filter-actions .btn { min-height: 40px; }
 .split-actions { justify-content: space-between; margin-top: 20px; }
 .split-actions form { margin: 0; }
 .signup-submit { width: 100%; min-height: 52px; }
@@ -524,6 +529,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .tour-card { padding: 22px; border-radius: 22px; }
   .quick-actions, .topbar-actions, .form-actions { width: 100%; display: grid; grid-template-columns: 1fr; }
   .quick-actions .btn, .topbar-actions .btn, .form-actions .btn { width: 100%; }
+  .filter-bar { grid-template-columns: 1fr; }
+  .filter-actions { display: grid; grid-template-columns: 1fr; }
+  .filter-actions .btn { width: 100%; }
   .profile-menu-panel { left: 0; right: auto; }
   .action-bar > .profile-menu { display: none; }
   .copy-link-row { grid-template-columns: 1fr; }

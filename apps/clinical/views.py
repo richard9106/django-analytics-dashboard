@@ -58,16 +58,56 @@ class SessionNoteListView(LoginRequiredMixin, PracticeContextMixin, ListView):
     template_name = 'clinical/list.html'
     context_object_name = 'notes'
 
+    def get_note_filters(self):
+        return {
+            'client': self.request.GET.get('client', ''),
+            'therapist': self.request.GET.get('therapist', ''),
+            'appointment': self.request.GET.get('appointment', ''),
+            'note_type': self.request.GET.get('note_type', ''),
+            'status': self.request.GET.get('status', ''),
+            'date_from': self.request.GET.get('date_from', ''),
+            'date_to': self.request.GET.get('date_to', ''),
+        }
+
     def get_queryset(self):
         practice = self.get_practice()
         if not practice:
             return SessionNote.objects.none()
 
-        return (
+        notes = (
             SessionNote.objects.filter(practice=practice)
             .select_related('client', 'therapist__user', 'appointment', 'treatment_plan')
             .order_by('-created_at')
         )
+        filters = self.get_note_filters()
+
+        if filters['client'].isdigit():
+            notes = notes.filter(client_id=filters['client'])
+        if filters['therapist'].isdigit():
+            notes = notes.filter(therapist_id=filters['therapist'])
+        if filters['appointment'].isdigit():
+            notes = notes.filter(appointment_id=filters['appointment'])
+        valid_note_types = {choice for choice, _label in SessionNote.NoteType.choices}
+        if filters['note_type'] in valid_note_types:
+            notes = notes.filter(note_type=filters['note_type'])
+        if filters['status'] == 'locked':
+            notes = notes.filter(is_locked=True)
+        elif filters['status'] == 'draft':
+            notes = notes.filter(is_locked=False)
+        try:
+            if filters['date_from']:
+                notes = notes.filter(updated_at__date__gte=date.fromisoformat(filters['date_from']))
+            if filters['date_to']:
+                notes = notes.filter(updated_at__date__lte=date.fromisoformat(filters['date_to']))
+        except ValueError:
+            pass
+        return notes
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['note_filters'] = self.get_note_filters()
+        context['note_type_choices'] = SessionNote.NoteType.choices
+        return context
 
 
 class SessionNoteCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):

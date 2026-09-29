@@ -382,6 +382,55 @@ class SessionNoteViewTests(TestCase):
         self.assertContains(response, f'id="note-modal-{note.pk}"')
         self.assertContains(response, reverse("clinical:edit", args=[note.pk]))
 
+    def test_note_list_can_filter_by_client_type_status_session_and_date(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        other_client = Client.objects.create(practice=practice, first_name="Lucia", last_name="Garcia")
+        other_appointment = Appointment.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=other_client,
+            starts_at=timezone.now() + timedelta(days=2),
+            ends_at=timezone.now() + timedelta(days=2, minutes=50),
+        )
+        visible_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            appointment=appointment,
+            note_type=SessionNote.NoteType.PROGRESS_NOTE,
+            content="Filtered visible note.",
+            is_locked=True,
+        )
+        hidden_note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=other_client,
+            appointment=other_appointment,
+            note_type=SessionNote.NoteType.GENERAL_NOTE,
+            content="Filtered hidden note.",
+        )
+        filter_date = timezone.localdate() - timedelta(days=1)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("clinical:list"), {
+            "client": str(client.pk),
+            "therapist": str(therapist.pk),
+            "appointment": str(appointment.pk),
+            "note_type": SessionNote.NoteType.PROGRESS_NOTE,
+            "status": "locked",
+            "date_from": filter_date.isoformat(),
+            "date_to": timezone.localdate().isoformat(),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Filtered visible note.")
+        self.assertNotContains(response, "Filtered hidden note.")
+        self.assertContains(response, 'value="locked" selected')
+        self.assertContains(response, 'Apply filters')
+        self.assertContains(response, reverse("clinical:list"))
+        self.assertIn(visible_note, response.context["notes"])
+        self.assertNotIn(hidden_note, response.context["notes"])
+
     def test_note_create_links_treatment_plan_and_progress(self):
         user, practice, therapist, client, appointment = self.create_practice_user()
         plan = TreatmentPlan.objects.create(
