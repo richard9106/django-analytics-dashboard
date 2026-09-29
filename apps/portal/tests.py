@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from apps.appointments.models import Appointment
 from apps.accounts.models import UserProfile
@@ -62,6 +64,51 @@ class ClientPortalViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f"{reverse('login')}?next={reverse('portal:dashboard')}")
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.portal.views.stripe.checkout.Session.create")
+    def test_client_can_open_stripe_checkout_for_own_invoice(self, mock_create):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        client.email = "maya@example.com"
+        client.save(update_fields=["email"])
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=client,
+            invoice_number="INV-PAY-001",
+            amount=Decimal("120.00"),
+            status=Invoice.Status.SENT,
+        )
+        mock_create.return_value = SimpleNamespace(url="https://checkout.stripe.test/invoice")
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("portal:invoice_pay", args=[invoice.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "https://checkout.stripe.test/invoice")
+        kwargs = mock_create.call_args.kwargs
+        self.assertEqual(kwargs["mode"], "payment")
+        self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 12000)
+        self.assertEqual(kwargs["customer_email"], "maya@example.com")
+        self.assertEqual(kwargs["metadata"]["invoice_id"], str(invoice.pk))
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.portal.views.stripe.checkout.Session.create")
+    def test_client_cannot_pay_another_clients_invoice(self, mock_create):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        other_client = Client.objects.create(practice=practice, first_name="Other", last_name="Client")
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=other_client,
+            invoice_number="INV-HIDDEN-PAY",
+            amount=Decimal("120.00"),
+            status=Invoice.Status.SENT,
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("portal:invoice_pay", args=[invoice.pk]))
+
+        self.assertEqual(response.status_code, 404)
+        mock_create.assert_not_called()
 
     def test_non_portal_user_is_forbidden(self):
         user = get_user_model().objects.create_user(username="therapist", password="StrongPass123!")

@@ -7,6 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -689,12 +690,22 @@ class StripeWebhookView(View):
 
         event_type = event.get('type')
         data_object = event.get('data', {}).get('object', {})
-        if event_type == 'checkout.session.completed':
+        if event_type in {'checkout.session.completed', 'checkout.session.async_payment_succeeded'}:
             subscription_id = data_object.get('subscription')
             if subscription_id:
                 stripe.api_key = settings.STRIPE_SECRET_KEY
                 stripe_subscription = stripe.Subscription.retrieve(subscription_id)
                 _sync_subscription_from_stripe(stripe_subscription)
+            invoice_id = (data_object.get('metadata') or {}).get('invoice_id')
+            if invoice_id and data_object.get('payment_status', 'paid') == 'paid':
+                Invoice.objects.filter(
+                    pk=invoice_id,
+                    practice_id=(data_object.get('metadata') or {}).get('practice_id'),
+                    client_id=(data_object.get('metadata') or {}).get('client_id'),
+                ).exclude(status=Invoice.Status.VOID).update(
+                    status=Invoice.Status.PAID,
+                    paid_at=timezone.now(),
+                )
         elif event_type in {'customer.subscription.updated', 'customer.subscription.deleted'}:
             _sync_subscription_from_stripe(data_object)
         elif event_type == 'invoice.payment_failed':

@@ -6,10 +6,12 @@ from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, FormView, ListView, TemplateView, UpdateView
+import stripe
+from django.conf import settings
 
 from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, get_practice_for_user
 from apps.accounts.models import UserProfile
@@ -122,6 +124,51 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'pending_intake_count': pending_intakes.count(),
         })
         return context
+
+
+class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        access = self.get_portal_access()
+        invoice = get_object_or_404(
+            Invoice,
+            pk=kwargs['pk'],
+            practice=access.practice,
+            client=access.client,
+        )
+        if invoice.status in {Invoice.Status.PAID, Invoice.Status.VOID} or invoice.amount <= 0:
+            messages.error(request, 'This invoice is not available for online payment.')
+            return redirect('portal:dashboard')
+        if not settings.STRIPE_SECRET_KEY:
+            messages.error(request, 'Online payments are not configured yet. Please contact the practice.')
+            return redirect('portal:dashboard')
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            session = stripe.checkout.Session.create(
+                mode='payment',
+                line_items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {'name': f'Invoice {invoice.invoice_number}'},
+                        'unit_amount': int(invoice.amount * 100),
+                    },
+                    'quantity': 1,
+                }],
+                customer_email=access.client.email or None,
+                success_url=request.build_absolute_uri(reverse('portal:dashboard')),
+                cancel_url=request.build_absolute_uri(reverse('portal:dashboard')),
+                metadata={
+                    'invoice_id': str(invoice.pk),
+                    'practice_id': str(invoice.practice_id),
+                    'client_id': str(invoice.client_id),
+                },
+            )
+        except stripe.error.StripeError:
+            messages.error(request, 'Stripe could not open payment checkout. Please try again later.')
+            return redirect('portal:dashboard')
+        return redirect(session.url)
 
 
 class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):

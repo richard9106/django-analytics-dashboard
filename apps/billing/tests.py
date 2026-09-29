@@ -847,3 +847,40 @@ class BillingViewTests(TestCase):
         self.assertEqual(subscription.status, PracticeSubscription.Status.ACTIVE)
         self.assertEqual(subscription.stripe_customer_id, "cus_123")
         self.assertEqual(subscription.stripe_subscription_id, "sub_123")
+
+    @override_settings(STRIPE_WEBHOOK_SECRET="webhook-secret-placeholder")
+    @patch("apps.billing.views.stripe.Webhook.construct_event")
+    def test_invoice_checkout_webhook_marks_matching_invoice_paid(self, mock_construct_event):
+        _user, practice, _therapist, client, _appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice,
+            client=client,
+            invoice_number="INV-PAY-001",
+            amount=Decimal("120.00"),
+            status=Invoice.Status.SENT,
+        )
+        mock_construct_event.return_value = {
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "payment_status": "paid",
+                    "metadata": {
+                        "invoice_id": str(invoice.pk),
+                        "practice_id": str(practice.pk),
+                        "client_id": str(client.pk),
+                    },
+                }
+            },
+        }
+
+        response = self.client.post(
+            reverse("billing:stripe_webhook"),
+            data=b"{}",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test-signature",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.PAID)
+        self.assertIsNotNone(invoice.paid_at)
