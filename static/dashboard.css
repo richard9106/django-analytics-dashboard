@@ -397,7 +397,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .hero-metric small { color: var(--slate-500); font-weight: 700; }
 .visual-band, .marketing-section, .marketing-band, .marketing-cta { width: min(1180px, calc(100% - 32px)); margin: 28px auto; }
 .visual-band { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(0, 1.22fr); gap: 32px; align-items: center; padding: clamp(30px, 5vw, 58px); border: 1px solid rgba(243, 111, 86, .2); border-radius: 0; background: radial-gradient(circle at top left, rgba(255, 227, 216, .86), transparent 34%), linear-gradient(135deg, #fff, var(--brand-50)); box-shadow: var(--shadow-2); }
-.calm-banner { margin: 28px 0; border-left: 0; border-right: 0; }
+.calm-banner { width: 100%; margin: 28px 0; border-left: 0; border-right: 0; }
 .calm-banner > div:first-child { max-width: 520px; margin-left: max(16px, calc((100vw - 1180px) / 2)); }
 .calm-banner .workflow-media { margin-right: max(16px, calc((100vw - 1180px) / 2)); }
 .visual-band h2 { margin: 0 0 12px; color: var(--slate-900); font-size: clamp(28px, 4vw, 42px); line-height: 1.1; letter-spacing: -.045em; }
