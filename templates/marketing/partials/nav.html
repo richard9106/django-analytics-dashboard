@@ -1,0 +1,15 @@
+<header class="marketing-nav" aria-label="NuviaMy navigation">
+  <input class="marketing-nav-check" id="marketing-nav-toggle" type="checkbox" aria-label="Toggle navigation">
+  <div class="marketing-nav-head">
+    <a class="brand" href="{% url 'home' %}" aria-label="NuviaMy home"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
+    <label class="marketing-menu-button" for="marketing-nav-toggle"><span>Menu</span><span class="menu-bars" aria-hidden="true"></span></label>
+  </div>
+  <nav class="marketing-nav-links">
+    <a href="{% url 'home' %}#features">Features</a>
+    <a href="{% url 'pricing' %}">Pricing</a>
+    <a href="{% url 'therapy_practice_management' %}">Practice software</a>
+    <a href="{% url 'clinical_notes_software' %}">Clinical notes</a>
+    <a href="{% url 'login' %}">Sign in</a>
+    <a class="btn btn-primary" href="{% url 'signup' %}">Start workspace</a>
+  </nav>
+</header>

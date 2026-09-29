@@ -52,6 +52,8 @@ class DashboardTests(TestCase):
         self.assertContains(response, '/static/favicon.svg')
         self.assertContains(response, 'Back to top')
         self.assertContains(response, reverse('pricing'))
+        self.assertContains(response, 'marketing-nav-toggle')
+        self.assertContains(response, 'marketing-menu-button')
 
     def test_pricing_page_is_public_and_shows_subscription_plans(self):
         response = self.client.get(reverse('pricing'))
