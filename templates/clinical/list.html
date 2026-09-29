@@ -30,31 +30,36 @@
           <div><h2>{{ practice.name|default:"Practice" }} notes</h2><p>Review, edit, lock, and manage clinical documentation.</p></div>
           <span class="badge brand">{{ notes|length }} notes</span>
         </div>
-        <form class="filter-bar" method="get" aria-label="Filter clinical notes">
-          <div class="field"><label for="filter-client">Client</label><select id="filter-client" name="client"><option value="">All clients</option>{% for client in note_clients %}<option value="{{ client.pk }}" {% if note_filters.client == client.pk|stringformat:"s" %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
-          <div class="field"><label for="filter-therapist">Therapist</label><select id="filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}" {% if note_filters.therapist == therapist.pk|stringformat:"s" %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>
-          <div class="field"><label for="filter-appointment">Session</label><select id="filter-appointment" name="appointment"><option value="">All sessions</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}" {% if note_filters.appointment == appointment.pk|stringformat:"s" %}selected{% endif %}>{{ appointment.client }} · {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
-          <div class="field"><label for="filter-note-type">Note type</label><select id="filter-note-type" name="note_type"><option value="">All types</option>{% for value,label in note_type_choices %}<option value="{{ value }}" {% if note_filters.note_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-          <div class="field"><label for="filter-status">Status</label><select id="filter-status" name="status"><option value="">All statuses</option><option value="draft" {% if note_filters.status == "draft" %}selected{% endif %}>Draft</option><option value="locked" {% if note_filters.status == "locked" %}selected{% endif %}>Locked</option></select></div>
-          <div class="field"><label for="filter-date-from">Updated from</label><input id="filter-date-from" name="date_from" type="date" value="{{ note_filters.date_from }}"></div>
-          <div class="field"><label for="filter-date-to">Updated to</label><input id="filter-date-to" name="date_to" type="date" value="{{ note_filters.date_to }}"></div>
-          <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Clear</a></div>
-        </form>
-        <div class="notes-list">
-          {% for note in notes %}
-            <article class="note-card">
-              <div class="note-card-head">
-                <div><h3>{{ note.get_note_type_display }} for {{ note.client }}</h3><p>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</p></div>
-                <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
-              </div>
-              {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
-              <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
-              {% if note.treatment_progress %}<p class="note-preview"><strong>Plan progress:</strong> {{ note.treatment_progress|truncatechars:160 }}</p>{% endif %}
-              <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
-            </article>
-          {% empty %}
-            <p class="empty-state">No clinical notes have been created yet.</p>
-          {% endfor %}
+        <div class="notes-workspace">
+          <details class="filter-sidebar" open>
+            <summary><span>Filters</span><strong>Show / hide</strong></summary>
+            <form class="filter-stack" method="get" aria-label="Filter clinical notes">
+              <div class="field"><label for="filter-client">Client</label><select id="filter-client" name="client"><option value="">All clients</option>{% for client in note_clients %}<option value="{{ client.pk }}" {% if note_filters.client == client.pk|stringformat:"s" %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="filter-therapist">Therapist</label><select id="filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}" {% if note_filters.therapist == therapist.pk|stringformat:"s" %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="filter-appointment">Session</label><select id="filter-appointment" name="appointment"><option value="">All sessions</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}" {% if note_filters.appointment == appointment.pk|stringformat:"s" %}selected{% endif %}>{{ appointment.client }} · {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="filter-note-type">Note type</label><select id="filter-note-type" name="note_type"><option value="">All types</option>{% for value,label in note_type_choices %}<option value="{{ value }}" {% if note_filters.note_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="filter-status">Status</label><select id="filter-status" name="status"><option value="">All statuses</option><option value="draft" {% if note_filters.status == "draft" %}selected{% endif %}>Draft</option><option value="locked" {% if note_filters.status == "locked" %}selected{% endif %}>Locked</option></select></div>
+              <div class="field"><label for="filter-date-from">Updated from</label><input id="filter-date-from" name="date_from" type="date" value="{{ note_filters.date_from }}"></div>
+              <div class="field"><label for="filter-date-to">Updated to</label><input id="filter-date-to" name="date_to" type="date" value="{{ note_filters.date_to }}"></div>
+              <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Clear</a></div>
+            </form>
+          </details>
+          <div class="notes-list">
+            {% for note in notes %}
+              <article class="note-card">
+                <div class="note-card-head">
+                  <div><h3>{{ note.get_note_type_display }} for {{ note.client }}</h3><p>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</p></div>
+                  <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
+                </div>
+                {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
+                <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
+                {% if note.treatment_progress %}<p class="note-preview"><strong>Plan progress:</strong> {{ note.treatment_progress|truncatechars:160 }}</p>{% endif %}
+                <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
+              </article>
+            {% empty %}
+              <p class="empty-state">No clinical notes have been created yet.</p>
+            {% endfor %}
+          </div>
         </div>
       </section>
 

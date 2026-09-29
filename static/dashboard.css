@@ -354,9 +354,14 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .form-panel { max-width: 980px; }
 .appointment-form { display: grid; gap: 20px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-.filter-bar { margin: 4px 0 18px; padding: 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.74); }
-.filter-bar .field label { font-size: 12px; }
-.filter-bar .field input, .filter-bar .field select { min-height: 40px; }
+.notes-workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; }
+.filter-sidebar { position: sticky; top: 88px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: linear-gradient(145deg, rgba(255,255,255,.94), var(--brand-50)); box-shadow: var(--shadow-1); overflow: hidden; }
+.filter-sidebar summary { min-height: 52px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--slate-900); font-weight: 900; cursor: pointer; list-style: none; }
+.filter-sidebar summary::-webkit-details-marker { display: none; }
+.filter-sidebar summary strong { color: var(--brand-700); font-size: 12px; }
+.filter-stack { padding: 0 14px 14px; display: grid; gap: 12px; }
+.filter-stack .field label { font-size: 12px; }
+.filter-stack .field input, .filter-stack .field select { min-height: 40px; }
 .filter-actions { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
 .filter-actions .btn { min-height: 40px; }
 .split-actions { justify-content: space-between; margin-top: 20px; }
@@ -529,7 +534,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .tour-card { padding: 22px; border-radius: 22px; }
   .quick-actions, .topbar-actions, .form-actions { width: 100%; display: grid; grid-template-columns: 1fr; }
   .quick-actions .btn, .topbar-actions .btn, .form-actions .btn { width: 100%; }
-  .filter-bar { grid-template-columns: 1fr; }
+  .notes-workspace { grid-template-columns: 1fr; }
+  .filter-sidebar { position: static; }
   .filter-actions { display: grid; grid-template-columns: 1fr; }
   .filter-actions .btn { width: 100%; }
   .profile-menu-panel { left: 0; right: auto; }
