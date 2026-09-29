@@ -242,3 +242,136 @@ class ProfileSettingsViewTests(TestCase):
         self.assertContains(response, "https://invoice.stripe.test/view")
         self.assertContains(response, "https://invoice.stripe.test/pdf")
         mock_invoice_list.assert_called_once_with(customer="cus_test", limit=10)
+
+
+class TeamManagementViewTests(TestCase):
+    def create_practice_user(self, role=UserProfile.Role.OWNER, plan=PracticeSubscription.Plan.GROUP):
+        user = get_user_model().objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="StrongPass123!",
+            first_name="Jane",
+            last_name="Smith",
+        )
+        practice = Practice.objects.create(name="NuviaMy Wellness")
+        TherapistProfile.objects.create(user=user, practice=practice, license_number="OWNER123", license_state="CA")
+        UserProfile.objects.create(user=user, practice=practice, role=role)
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=plan,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+        )
+        return user, practice
+
+    def team_payload(self, **overrides):
+        data = {
+            "role": UserProfile.Role.THERAPIST,
+            "first_name": "Laura",
+            "last_name": "Jones",
+            "email": "laura@example.com",
+            "phone": "555-0101",
+            "license_number": "THER123",
+            "license_state": "CA",
+            "specialty": "Anxiety care",
+        }
+        data.update(overrides)
+        return data
+
+    def test_team_management_requires_login(self):
+        response = self.client.get(reverse("team_management"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"{reverse('login')}?next={reverse('team_management')}")
+
+    def test_owner_can_view_team_management(self):
+        user, _practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("team_management"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Team management")
+        self.assertContains(response, "1 of 5")
+        self.assertContains(response, "Add team member")
+        self.assertContains(response, "owner@example.com")
+
+    def test_owner_can_create_therapist_team_member_with_temporary_password(self):
+        user, practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload(), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        member = get_user_model().objects.get(email="laura@example.com")
+        profile = member.nuvia_profile
+        therapist = member.therapist_profile
+        self.assertEqual(profile.practice, practice)
+        self.assertEqual(profile.role, UserProfile.Role.THERAPIST)
+        self.assertTrue(profile.must_change_password)
+        self.assertEqual(therapist.practice, practice)
+        self.assertContains(response, "Temporary password:")
+        self.assertContains(response, "Laura Jones")
+
+    def test_owner_can_create_admin_without_license(self):
+        user, practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload(
+            role=UserProfile.Role.ADMIN,
+            email="admin@example.com",
+            license_number="",
+            license_state="",
+        ))
+
+        self.assertRedirects(response, reverse("team_management"))
+        admin = get_user_model().objects.get(email="admin@example.com")
+        self.assertEqual(admin.nuvia_profile.practice, practice)
+        self.assertEqual(admin.nuvia_profile.role, UserProfile.Role.ADMIN)
+        self.assertFalse(hasattr(admin, "therapist_profile"))
+
+    def test_team_management_blocks_when_plan_limit_is_reached(self):
+        user, _practice = self.create_practice_user(plan=PracticeSubscription.Plan.SOLO)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Upgrade your plan before adding another internal user")
+        self.assertFalse(get_user_model().objects.filter(email="laura@example.com").exists())
+
+    def test_therapist_cannot_manage_team(self):
+        user, _practice = self.create_practice_user(role=UserProfile.Role.THERAPIST)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("team_management"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_client_user_is_redirected_away_from_team_management(self):
+        _owner, practice = self.create_practice_user()
+        client_user = get_user_model().objects.create_user(username="client", password="StrongPass123!")
+        UserProfile.objects.create(user=client_user, practice=practice, role=UserProfile.Role.CLIENT)
+
+        self.client.force_login(client_user)
+        response = self.client.get(reverse("team_management"))
+
+        self.assertRedirects(response, reverse("portal:dashboard"), fetch_redirect_response=False)
+
+    def test_internal_user_temp_password_change_redirects_to_dashboard(self):
+        user, practice = self.create_practice_user()
+        admin = get_user_model().objects.create_user(username="admin", password="TempPass123!")
+        UserProfile.objects.create(
+            user=admin,
+            practice=practice,
+            role=UserProfile.Role.ADMIN,
+            must_change_password=True,
+        )
+
+        self.client.force_login(admin)
+        response = self.client.post(reverse("force_password_change"), {
+            "new_password1": "NewStrongPass123!",
+            "new_password2": "NewStrongPass123!",
+        })
+
+        self.assertRedirects(response, reverse("dashboard"))

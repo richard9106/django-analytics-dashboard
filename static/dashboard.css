@@ -286,6 +286,11 @@ h1, h2, h3, p { margin-top: 0; }
 .plan-preview-list div { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--slate-100); }
 .plan-preview-list dt { color: var(--slate-500); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .plan-preview-list dd { margin: 0; color: var(--slate-900); font-weight: 900; }
+.team-list { display: grid; gap: 12px; }
+.team-member-card { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: start; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.78); }
+.team-member-card h3 { margin: 0; color: var(--slate-900); font-size: 18px; }
+.team-member-card p { margin: 4px 0 0; color: var(--slate-600); }
+.team-member-card .sync-meta { grid-column: 1 / -1; }
 .message-list { display: grid; gap: 8px; }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }
@@ -596,6 +601,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .client-grid { grid-template-columns: 1fr; }
   .document-grid { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
+  .team-member-card { grid-template-columns: 1fr; }
   .profile-detail-list div { grid-template-columns: 1fr; gap: 4px; }
   .client-meta div { grid-template-columns: 1fr; gap: 2px; }
   .modal-card { padding: 18px; }

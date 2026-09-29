@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team Management | NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page">
+  <div class="app-shell">
+    {% include 'partials/sidebar.html' with card_title='Team settings' card_text='Manage internal users while respecting your subscription seat limit.' %}
+
+    <main class="app-main">
+      <section class="action-bar" aria-label="Team actions">
+        <div class="quick-actions">
+          <a class="btn btn-soft" href="{% url 'profile_settings' %}">Profile settings</a>
+          {% if can_add_team_member %}<a class="btn btn-primary" href="#team-member-modal" data-modal-target="team-member-modal">+ Add team member</a>{% else %}<a class="btn btn-primary" href="{% url 'profile_settings' %}">Upgrade plan</a>{% endif %}
+        </div>
+        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      </section>
+
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Account</p><h1>Team management</h1><p>Add internal users, review roles, and keep your practice within plan limits.</p></div></header>
+
+      {% if messages %}<section class="message-list" aria-label="Team messages">{% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}</section>{% endif %}
+
+      <section class="profile-grid">
+        <article class="panel">
+          <div class="panel-head compact"><div><h2>Internal team</h2><p>Owners, admins, and therapists for {{ practice.name }}.</p></div><span class="badge brand">{{ team_members|length }} users</span></div>
+          <div class="team-list">
+            {% for member in team_members %}
+              <article class="team-member-card">
+                <div><h3>{{ member.user.get_full_name|default:member.user.email|default:member.user.username }}</h3><p>{{ member.user.email|default:'No email set' }}</p></div>
+                <span class="badge {% if member.role == 'owner' %}success{% elif member.role == 'admin' %}brand{% else %}warning{% endif %}">{{ member.get_role_display }}</span>
+                {% if member.user.therapist_profile %}<p class="sync-meta">License: {{ member.user.therapist_profile.license_number }} · {{ member.user.therapist_profile.license_state }}</p>{% endif %}
+                {% if member.must_change_password %}<p class="sync-meta">Temporary password change pending.</p>{% endif %}
+              </article>
+            {% empty %}
+              <p class="empty-state">No internal team members found.</p>
+            {% endfor %}
+          </div>
+        </article>
+
+        <aside class="panel subscription-panel">
+          <div class="panel-head compact"><div><h2>Plan seats</h2><p>Client portal users do not count against this limit.</p></div></div>
+          {% if subscription %}
+            <div class="subscription-summary">
+              <span class="badge success">{{ subscription.get_plan_display }}</span>
+              <h3>{{ subscription.internal_user_count }} of {{ subscription.internal_user_limit }}</h3>
+              <p>{{ subscription.internal_user_slots_remaining }} internal seat{{ subscription.internal_user_slots_remaining|pluralize }} remaining.</p>
+            </div>
+            {% if not can_add_team_member %}<p class="empty-state">Upgrade your plan before adding another internal user.</p><a class="btn btn-primary" href="{% url 'profile_settings' %}">Change subscription plan</a>{% endif %}
+          {% else %}
+            <p class="empty-state">No subscription is connected yet. Choose a plan to manage team limits.</p>
+            <a class="btn btn-primary" href="{% url 'pricing' %}">Choose a plan</a>
+          {% endif %}
+        </aside>
+      </section>
+
+      {% if can_add_team_member %}
+        <dialog class="modal-dialog" id="team-member-modal">
+          <div class="modal-card">
+            <div class="modal-head"><div><p class="eyebrow">Team</p><h2>Add team member</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <form class="appointment-form" method="post" action="{% url 'team_management' %}">
+              {% csrf_token %}
+              {% if form.errors %}<div class="form-error" data-team-form-errors>Please fix the team member details below.</div>{% endif %}
+              <div class="field-grid two">
+                <div class="field"><label for="team-role">Role</label><select id="team-role" name="role" required><option value="therapist" {% if form.role.value == 'therapist' %}selected{% endif %}>Therapist</option><option value="admin" {% if form.role.value == 'admin' %}selected{% endif %}>Practice Admin</option></select>{{ form.role.errors }}</div>
+                <div class="field"><label for="team-email">Email</label><input id="team-email" name="email" type="email" value="{{ form.email.value|default:'' }}" required>{{ form.email.errors }}</div>
+                <div class="field"><label for="team-first-name">First name</label><input id="team-first-name" name="first_name" value="{{ form.first_name.value|default:'' }}" required>{{ form.first_name.errors }}</div>
+                <div class="field"><label for="team-last-name">Last name</label><input id="team-last-name" name="last_name" value="{{ form.last_name.value|default:'' }}" required>{{ form.last_name.errors }}</div>
+                <div class="field"><label for="team-phone">Phone</label><input id="team-phone" name="phone" value="{{ form.phone.value|default:'' }}">{{ form.phone.errors }}</div>
+                <div class="field"><label for="team-specialty">Specialty</label><input id="team-specialty" name="specialty" value="{{ form.specialty.value|default:'' }}">{{ form.specialty.errors }}</div>
+                <div class="field"><label for="team-license-number">License number</label><input id="team-license-number" name="license_number" value="{{ form.license_number.value|default:'' }}">{{ form.license_number.errors }}</div>
+                <div class="field"><label for="team-license-state">License state</label><input id="team-license-state" name="license_state" value="{{ form.license_state.value|default:'' }}">{{ form.license_state.errors }}</div>
+              </div>
+              <p class="empty-state">NuviaMy will generate a temporary password and require the new user to change it at first login.</p>
+              <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create team member</button></div>
+            </form>
+          </div>
+        </dialog>
+      {% endif %}
+    </main>
+  </div>
+  <script>
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
+    if (document.querySelector('[data-team-form-errors]') && document.getElementById('team-member-modal')) document.getElementById('team-member-modal').showModal();
+  </script>
+</body>
+</html>

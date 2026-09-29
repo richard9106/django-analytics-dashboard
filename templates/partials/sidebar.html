@@ -27,17 +27,19 @@
     <a class="nav-item{% if request.resolver_match.namespace == 'intake' %} active{% endif %}" href="{% url 'intake:list' %}"><span>◌</span>Intake</a>
     <a class="nav-item nav-item-with-badge{% if request.resolver_match.namespace == 'portal_requests' %} active{% endif %}" href="{% url 'portal_requests:list' %}"><span>◇</span>Requests{% if open_portal_request_count %}<strong class="nav-badge">{{ open_portal_request_count }}</strong>{% endif %}</a>
     {% if google_workspace_connected %}<a class="nav-item{% if request.resolver_match.url_name == 'google_workspace' %} active{% endif %}" href="{% url 'practice_settings:google_workspace' %}"><span>G</span>My Google workspace</a>{% endif %}
-    <details class="sidebar-settings"{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'availability' %} open{% endif %}>
-      <summary class="nav-item{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'availability' %} active{% endif %}"><span>⚙</span>Settings</summary>
+    <details class="sidebar-settings"{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'availability' or request.resolver_match.url_name == 'team_management' %} open{% endif %}>
+      <summary class="nav-item{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'availability' or request.resolver_match.url_name == 'team_management' %} active{% endif %}"><span>⚙</span>Settings</summary>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'package_templates' %} active{% endif %}" href="{% url 'settings:package_templates' %}">Session packages</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'insurance' %} active{% endif %}" href="{% url 'settings:insurance' %}">Insurance</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'integrations' %} active{% endif %}" href="{% url 'practice_settings:integrations' %}">Integrations</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'availability' %} active{% endif %}" href="{% url 'practice_settings:availability' %}">Availability</a>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'team_management' %} active{% endif %}" href="{% url 'team_management' %}">Team</a>
       <a class="nav-item subitem{% if request.resolver_match.namespace == 'portal_settings' %} active{% endif %}" href="{% url 'portal_settings:portal_access' %}">Client portal</a>
     </details>
     <div class="mobile-account-menu" aria-label="Account navigation">
       <span class="mobile-account-name">{{ request.user.first_name|default:request.user.username }}</span>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'profile_settings' %} active{% endif %}" href="{% url 'profile_settings' %}">Profile settings</a>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'team_management' %} active{% endif %}" href="{% url 'team_management' %}">Team management</a>
       {% if request.user.is_staff %}<a class="nav-item subitem" href="/admin/">Admin</a>{% endif %}
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}

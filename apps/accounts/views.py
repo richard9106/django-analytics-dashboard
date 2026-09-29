@@ -2,9 +2,11 @@ from datetime import datetime, timezone as dt_timezone
 
 import stripe
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse, reverse_lazy
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormView
@@ -13,7 +15,8 @@ from .access import get_practice_for_user, is_client_user, must_change_password
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
-from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm
+from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, TeamMemberCreateForm
+from .models import UserProfile
 
 
 class RoleAwareLoginView(LoginView):
@@ -31,7 +34,9 @@ class RoleAwareLoginView(LoginView):
 class ForcePasswordChangeView(FormView):
     form_class = ForcePasswordChangeForm
     template_name = "accounts/force_password_change.html"
-    success_url = reverse_lazy("portal:dashboard")
+
+    def get_success_url(self):
+        return reverse_lazy("portal:dashboard") if is_client_user(self.request.user) else reverse_lazy("dashboard")
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -120,6 +125,62 @@ class ProfileSettingsView(LoginRequiredMixin, TemplateView):
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
         return context
+
+
+class TeamManagementView(LoginRequiredMixin, FormView):
+    form_class = TeamMemberCreateForm
+    template_name = "accounts/team.html"
+    success_url = reverse_lazy("team_management")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        if request.user.is_authenticated and is_client_user(request.user):
+            from django.shortcuts import redirect
+
+            return redirect("portal:dashboard")
+        practice = get_practice_for_user(request.user)
+        profile = getattr(request.user, "nuvia_profile", None)
+        if not practice or not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
+            raise PermissionDenied("Only practice owners and admins can manage team members.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_practice(self):
+        return get_practice_for_user(self.request.user)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["practice"] = self.get_practice()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        subscription = getattr(practice, "subscription", None) if practice else None
+        context.update({
+            "practice": practice,
+            "subscription": subscription,
+            "team_members": practice.user_profiles.exclude(role=UserProfile.Role.CLIENT).select_related("user", "user__therapist_profile") if practice else [],
+            "can_add_team_member": not subscription or subscription.can_add_internal_user(),
+            "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
+        })
+        return context
+
+    def form_valid(self, form):
+        user = form.save()
+        messages.success(
+            self.request,
+            f"Team member {user.get_full_name() or user.email} was created. Temporary password: {form.temporary_password}",
+        )
+        log_audit_event(
+            self.request,
+            AuditLog.Action.CREATE,
+            "accounts.UserProfile",
+            user.nuvia_profile.pk,
+            practice=user.nuvia_profile.practice,
+            metadata={"user_id": user.pk, "role": user.nuvia_profile.role},
+        )
+        return super().form_valid(form)
 
 
 class PracticeSignupView(FormView):

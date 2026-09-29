@@ -4,6 +4,7 @@ from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils.crypto import get_random_string
 
 from apps.accounts.models import UserProfile
 from apps.practices.models import Practice, TherapistProfile
@@ -119,3 +120,93 @@ class EmailAuthenticationForm(AuthenticationForm):
             if user:
                 self.cleaned_data["username"] = user.get_username()
         return super().clean()
+
+
+class TeamMemberCreateForm(forms.Form):
+    role = forms.ChoiceField(choices=(
+        (UserProfile.Role.THERAPIST, "Therapist"),
+        (UserProfile.Role.ADMIN, "Practice Admin"),
+    ))
+    first_name = forms.CharField(max_length=150)
+    last_name = forms.CharField(max_length=150)
+    email = forms.EmailField()
+    phone = forms.CharField(max_length=20, required=False)
+    license_number = forms.CharField(max_length=60, required=False)
+    license_state = forms.CharField(max_length=60, required=False)
+    specialty = forms.CharField(max_length=140, required=False)
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.temporary_password = ""
+
+    def build_username(self):
+        User = get_user_model()
+        base = self.cleaned_data["email"].split("@", 1)[0].strip().lower() or "user"
+        base = "".join(char for char in base if char.isalnum() or char in "._+-")[:140] or "user"
+        username = base
+        counter = 2
+        while User.objects.filter(username__iexact=username).exists():
+            suffix = f"-{counter}"
+            username = f"{base[:150 - len(suffix)]}{suffix}"
+            counter += 1
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if get_user_model().objects.filter(email__iexact=email).exists():
+            raise ValidationError("A user with this email already exists.")
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get("role")
+        license_number = cleaned_data.get("license_number")
+        license_state = cleaned_data.get("license_state")
+
+        if role == UserProfile.Role.THERAPIST:
+            if not license_number:
+                self.add_error("license_number", "Therapists need a license number.")
+            if not license_state:
+                self.add_error("license_state", "Therapists need a license state.")
+            if license_number and license_state and TherapistProfile.objects.filter(
+                license_number__iexact=license_number,
+                license_state__iexact=license_state,
+            ).exists():
+                self.add_error("license_number", "A therapist profile with this license already exists in that state.")
+
+        if self.practice:
+            subscription = getattr(self.practice, "subscription", None)
+            if subscription and not subscription.can_add_internal_user():
+                self.add_error("role", f"Your {subscription.get_plan_display()} plan has no internal user seats available.")
+        return cleaned_data
+
+    @transaction.atomic
+    def save(self):
+        User = get_user_model()
+        self.temporary_password = get_random_string(14)
+        user = User.objects.create_user(
+            username=self.build_username(),
+            email=self.cleaned_data["email"],
+            password=self.temporary_password,
+            first_name=self.cleaned_data["first_name"],
+            last_name=self.cleaned_data["last_name"],
+        )
+        if self.cleaned_data["role"] == UserProfile.Role.THERAPIST:
+            TherapistProfile.objects.create(
+                user=user,
+                practice=self.practice,
+                license_number=self.cleaned_data["license_number"],
+                license_state=self.cleaned_data["license_state"],
+                specialty=self.cleaned_data.get("specialty", ""),
+            )
+        profile = UserProfile(
+            user=user,
+            practice=self.practice,
+            role=self.cleaned_data["role"],
+            phone=self.cleaned_data.get("phone", ""),
+            must_change_password=True,
+        )
+        profile.full_clean()
+        profile.save()
+        return user
