@@ -11,7 +11,13 @@
     <a href="{% url 'therapy_practice_management' %}">Practice software</a>
     <a href="{% url 'clinical_notes_software' %}">Clinical notes</a>
     <a href="{% url 'help_center' %}">Help</a>
-    <a href="{% url 'login' %}">Sign in</a>
-    <a class="btn btn-primary" href="{% url 'signup' %}">Start workspace</a>
+    <a href="{% url 'cookie_policy' %}">Cookies</a>
+    {% if user.is_authenticated %}
+      {% if user.nuvia_profile.role == 'client' %}<a class="btn btn-secondary" href="{% url 'portal:dashboard' %}">Open portal</a>{% else %}<a class="btn btn-secondary" href="{% url 'dashboard' %}">Open dashboard</a>{% endif %}
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Sign out</button></form>
+    {% else %}
+      <a href="{% url 'login' %}">Sign in</a>
+      <a class="btn btn-primary" href="{% url 'signup' %}">Start workspace</a>
+    {% endif %}
   </nav>
 </header>

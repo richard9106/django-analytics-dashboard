@@ -54,6 +54,7 @@ urlpatterns = [
     path('pricing/', PricingPageView.as_view(), name='pricing'),
     path('help/', HelpCenterView.as_view(), name='help_center'),
     path('help/contact/', SupportContactView.as_view(), name='support_contact'),
+    path('cookie-policy/', TemplateView.as_view(template_name='marketing/cookie_policy.html'), name='cookie_policy'),
     path('therapy-practice-management-software/', TherapyPracticeManagementPageView.as_view(), name='therapy_practice_management'),
     path('therapy-scheduling-software/', TherapySchedulingPageView.as_view(), name='therapy_scheduling_software'),
     path('clinical-notes-software-for-therapists/', ClinicalNotesSoftwarePageView.as_view(), name='clinical_notes_software'),

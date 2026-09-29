@@ -62,6 +62,25 @@ class DashboardTests(TestCase):
         self.assertContains(response, '/static/marketing/mental-health-clinic-team.webp')
         self.assertContains(response, '/static/marketing/therapy-office-workflow.webp')
 
+    def test_home_page_shows_sign_in_for_visitors_and_dashboard_for_users(self):
+        visitor_response = self.client.get(reverse('home'))
+        self.assertContains(visitor_response, 'Sign in')
+        self.assertContains(visitor_response, 'Start workspace')
+
+        user, _practice, _therapist = self.create_practice_user()
+        self.client.force_login(user)
+        user_response = self.client.get(reverse('home'))
+        self.assertContains(user_response, 'Open dashboard')
+        self.assertContains(user_response, 'Sign out')
+        self.assertNotContains(user_response, '>Sign in</a>')
+
+    def test_cookie_policy_is_public(self):
+        response = self.client.get(reverse('cookie_policy'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cookie Policy')
+        self.assertContains(response, 'Session cookies')
+
     def test_pricing_page_is_public_and_shows_subscription_plans(self):
         response = self.client.get(reverse('pricing'))
 
