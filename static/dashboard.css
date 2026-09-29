@@ -369,7 +369,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-nav-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--slate-600); font-size: 14px; font-weight: 800; }
 .marketing-nav-links a:hover { color: var(--brand-700); }
 .marketing-nav a:focus-visible, .back-to-top:focus-visible, .content-links a:focus-visible { outline: 3px solid rgba(243, 111, 86, .28); outline-offset: 3px; border-radius: 12px; }
-.marketing-hero { width: min(1180px, calc(100% - 32px)); margin: 18px auto 0; min-height: 560px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; align-items: center; }
+.marketing-hero { position: relative; isolation: isolate; width: min(1180px, calc(100% - 32px)); margin: 18px auto 0; min-height: 620px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; align-items: center; padding: clamp(24px, 4vw, 44px); overflow: hidden; border-radius: 34px; background: linear-gradient(90deg, rgba(255,255,255,.94), rgba(255,255,255,.82) 46%, rgba(255,255,255,.56)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; box-shadow: var(--shadow-2); }
+.marketing-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 14% 18%, rgba(204, 251, 245, .72), transparent 30%), radial-gradient(circle at 90% 12%, rgba(243, 111, 86, .22), transparent 28%); }
 .hero-copy h1 { max-width: 760px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(40px, 5.8vw, 62px); line-height: 1.04; letter-spacing: -.055em; }
 .hero-copy p:not(.eyebrow) { max-width: 720px; color: var(--slate-600); font-size: 17px; line-height: 1.68; }
 .marketing-page .trust-list span { border-color: rgba(243, 111, 86, .22); background: rgba(255,255,255,.72); color: var(--slate-700); }
@@ -380,9 +381,6 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .product-illustration { position: relative; overflow: hidden; }
 .product-illustration::after { content: ""; position: absolute; right: -52px; bottom: -48px; width: 180px; height: 180px; border-radius: 999px; background: rgba(243, 111, 86, .12); pointer-events: none; }
 .marketing-photo { width: 100%; display: block; object-fit: cover; border-radius: 24px; border: 1px solid rgba(243, 111, 86, .18); box-shadow: var(--shadow-1); }
-.hero-photo-frame { position: relative; z-index: 1; margin: 0; overflow: hidden; border-radius: 26px; background: #fff; box-shadow: var(--shadow-1); }
-.hero-photo-frame figcaption { padding: 12px 14px; color: var(--slate-700); font-size: 13px; font-weight: 900; background: rgba(255,255,255,.94); }
-.hero-photo { aspect-ratio: 4 / 3; max-height: 280px; border-radius: 26px 26px 0 0; border: 0; box-shadow: none; }
 .therapy-scene { min-height: 150px; padding: 20px; border: 1px solid rgba(112, 82, 217, .13); border-radius: 24px; background: linear-gradient(160deg, rgba(255,255,255,.92), rgba(245,243,255,.82)); position: relative; overflow: hidden; }
 .therapy-scene::before { content: ""; position: absolute; left: 28px; right: 28px; bottom: 24px; height: 46px; border-radius: 999px 999px 18px 18px; background: linear-gradient(90deg, var(--coral-500), var(--brand-600)); opacity: .9; }
 .therapy-scene span { position: absolute; display: block; border-radius: 999px; background: #fff; box-shadow: var(--shadow-1); }
@@ -582,13 +580,13 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .marketing-nav-check:checked ~ .marketing-nav-links { max-height: 70vh; overflow-y: auto; padding-top: 12px; opacity: 1; transform: translateY(0); }
   .marketing-nav-links a { min-height: 42px; padding: 0 12px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.9); text-align: center; }
   .marketing-nav-links .btn { width: 100%; }
-  .marketing-hero { min-height: 0; padding: 22px 0; }
+  .marketing-hero { min-height: 0; padding: 22px; border-radius: 24px; background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.84)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; }
   .hero-copy h1 { font-size: 36px; }
   .hero-actions, .pricing-actions { display: grid; grid-template-columns: 1fr; }
   .hero-actions .btn, .pricing-actions .btn { width: 100%; }
   .hero-card, .marketing-band, .marketing-cta, .article-card { padding: 22px; border-radius: 22px; }
-  .hero-photo-frame, .proof-photo-card, .operations-photo-card, .narrative-media { border-radius: 22px; }
-  .hero-photo, .proof-photo-card img, .operations-photo-card img { border-radius: 22px 22px 0 0; }
+  .proof-photo-card, .operations-photo-card, .narrative-media { border-radius: 22px; }
+  .proof-photo-card img, .operations-photo-card img { border-radius: 22px 22px 0 0; }
   .proof-layout { gap: 16px; }
   .proof-photo-card img { min-height: 300px; max-height: 420px; }
   .operations-photo-card img { aspect-ratio: 16 / 11; }

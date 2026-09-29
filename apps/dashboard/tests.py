@@ -56,7 +56,7 @@ class DashboardTests(TestCase):
         self.assertContains(response, reverse('features'))
         self.assertContains(response, 'marketing-nav-toggle')
         self.assertContains(response, 'marketing-menu-button')
-        self.assertContains(response, '/static/marketing/therapy-practice-consultation.webp')
+        self.assertContains(response, '/static/marketing/therapy-practice-hero-banner.webp')
         self.assertContains(response, '/static/marketing/therapist-client-session.webp')
         self.assertContains(response, '/static/marketing/mental-health-clinic-team.webp')
         self.assertContains(response, '/static/marketing/therapy-office-workflow.webp')
