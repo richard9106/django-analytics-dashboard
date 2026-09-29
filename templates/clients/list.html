@@ -58,7 +58,7 @@
               <div class="client-card-body">
                 <div class="client-card-head">
                   <div>
-                    <h3>{{ client }}</h3>
+                    <h3><a class="client-name-link" href="{% url 'clients:detail' client.pk %}">{{ client }}</a></h3>
                     <p>{{ client.email|default:"No email on file" }}</p>
                   </div>
                   <span class="badge success">{{ client.get_status_display }}</span>

@@ -185,6 +185,26 @@ class ClientViewTests(TestCase):
         self.assertContains(response, "Delete client")
         self.assertNotContains(response, "Hidden Client")
 
+    def test_client_detail_is_scoped_and_shows_workspace_sections(self):
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
+        other_user, other_practice, _other_therapist = self.create_practice_user(
+            username='otherdoc', practice_name='Other Practice'
+        )
+        other_client = Client.objects.create(practice=other_practice, first_name='Hidden', last_name='Client')
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('clients:detail', args=[client.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Client workspace')
+        self.assertContains(response, 'Maya Johnson')
+        self.assertContains(response, 'Upcoming appointments')
+        self.assertContains(response, 'Treatment plans')
+        self.assertContains(response, 'Clinical notes')
+        self.assertContains(response, reverse('clients:list'))
+        self.assertEqual(self.client.get(reverse('clients:detail', args=[other_client.pk])).status_code, 404)
+
     def test_therapist_without_client_read_permission_is_forbidden(self):
         user, practice, _therapist = self.create_practice_user()
         profile = user.nuvia_profile
