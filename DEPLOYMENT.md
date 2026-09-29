@@ -109,6 +109,21 @@ VPS_PORT=22
 
 After setup, every push to `main` deploys the latest code, rebuilds containers, runs migrations, and collects static files.
 
+## Capacity Baseline
+
+The current VPS baseline is approximately:
+
+- 6 vCPU.
+- 11 GiB RAM and 4 GiB swap.
+- 193 GiB disk with about 171 GiB available at the last review.
+- Gunicorn configured for 4 workers and 2 threads.
+- PostgreSQL `max_connections=100`.
+- Nginx `worker_connections=768`.
+
+This is a reasonable starting point for a private beta and tens of concurrently active interactive users. It is not a guarantee for a large public launch. Capacity should be validated with an authenticated load test using realistic dashboard, calendar, portal, document, and billing traffic.
+
+Scale when sustained CPU exceeds roughly 70%, memory pressure/swap appears, database connections approach the configured limit, or p95 request latency exceeds the product target. The next production steps are a managed PostgreSQL instance, Redis/cache or queue workers where needed, centralized monitoring, and a second web replica behind a load balancer.
+
 ## Brevo SMTP
 
 In Brevo, create an SMTP key under **Settings > SMTP & API > SMTP**. Use the SMTP key, not the Brevo API key or account password. Also verify the sender/domain used by `DEFAULT_FROM_EMAIL`.
