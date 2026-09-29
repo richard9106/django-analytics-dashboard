@@ -60,7 +60,8 @@
             <div class="subscription-summary">
               <span class="badge {% if subscription.status == 'active' or subscription.status == 'trialing' %}success{% elif subscription.status == 'past_due' %}warning{% else %}brand{% endif %}">{{ subscription.status|title }}</span>
               <h3>{{ subscription.get_plan_display }}</h3>
-              <p>{{ subscription.get_billing_period_display }} billing{% if subscription_limit %} · {{ subscription_limit }}{% endif %}</p>
+              <p>{{ subscription.get_billing_period_display }} billing · {{ subscription.internal_user_count }} of {{ subscription.internal_user_limit }} internal users used</p>
+              <p>{{ subscription.internal_user_slots_remaining }} team seat{{ subscription.internal_user_slots_remaining|pluralize }} remaining before an upgrade is needed.</p>
             </div>
             {% if subscription.stripe_customer_id %}
               <form method="post" action="{% url 'billing:customer_portal' %}" class="profile-billing-actions">

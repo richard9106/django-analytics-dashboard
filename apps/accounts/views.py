@@ -64,12 +64,6 @@ class ForcePasswordChangeView(FormView):
 class ProfileSettingsView(LoginRequiredMixin, TemplateView):
     template_name = "accounts/profile_settings.html"
 
-    plan_limits = {
-        PracticeSubscription.Plan.SOLO: "1 user",
-        PracticeSubscription.Plan.GROUP: "Up to 5 users",
-        PracticeSubscription.Plan.CLINIC: "Up to 15 users",
-    }
-
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and is_client_user(request.user):
             from django.shortcuts import redirect
@@ -84,7 +78,6 @@ class ProfileSettingsView(LoginRequiredMixin, TemplateView):
         context.update({
             "practice": practice,
             "subscription": subscription,
-            "subscription_limit": self.plan_limits.get(subscription.plan, "") if subscription else "",
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
         return context

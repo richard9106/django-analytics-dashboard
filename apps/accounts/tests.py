@@ -32,6 +32,41 @@ class UserProfileModelTests(TestCase):
         profile.full_clean()
         self.assertEqual(str(profile), "practiceadmin - Practice Admin")
 
+    def test_internal_user_profile_respects_subscription_plan_limit(self):
+        practice = Practice.objects.create(name="NuviaMy Wellness")
+        owner = get_user_model().objects.create_user(username="owner")
+        owner_profile = UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        subscription = PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+        )
+        admin = get_user_model().objects.create_user(username="admin")
+        admin_profile = UserProfile(user=admin, practice=practice, role=UserProfile.Role.ADMIN)
+
+        owner_profile.full_clean()
+        self.assertEqual(subscription.internal_user_count, 1)
+        self.assertEqual(subscription.internal_user_slots_remaining, 0)
+        with self.assertRaisesMessage(ValidationError, "allows up to 1 internal user"):
+            admin_profile.full_clean()
+
+    def test_client_profile_does_not_count_against_subscription_plan_limit(self):
+        practice = Practice.objects.create(name="NuviaMy Wellness")
+        owner = get_user_model().objects.create_user(username="owner")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        subscription = PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+        )
+        client_user = get_user_model().objects.create_user(username="client")
+        client_profile = UserProfile(user=client_user, practice=practice, role=UserProfile.Role.CLIENT)
+
+        client_profile.full_clean()
+        self.assertEqual(subscription.internal_user_count, 1)
+
 
 class PracticeSignupViewTests(TestCase):
     def valid_payload(self, **overrides):
@@ -146,7 +181,8 @@ class ProfileSettingsViewTests(TestCase):
         self.assertContains(response, "Profile & subscription")
         self.assertContains(response, "Group Practice")
         self.assertContains(response, "Yearly billing")
-        self.assertContains(response, "Up to 5 users")
+        self.assertContains(response, "1 of 5 internal users used")
+        self.assertContains(response, "4 team seats remaining")
         self.assertNotContains(response, "cus_test")
         self.assertNotContains(response, "sub_test")
         self.assertContains(response, reverse("billing:customer_portal"))

@@ -344,5 +344,27 @@ class PracticeSubscription(models.Model):
     def is_active(self):
         return self.status == self.Status.ACTIVE
 
+    @property
+    def internal_user_limit(self):
+        return {
+            self.Plan.SOLO: 1,
+            self.Plan.GROUP: 5,
+            self.Plan.CLINIC: 15,
+        }[self.plan]
+
+    @property
+    def internal_user_count(self):
+        return self.practice.user_profiles.exclude(role="client").count()
+
+    @property
+    def internal_user_slots_remaining(self):
+        return max(self.internal_user_limit - self.internal_user_count, 0)
+
+    def can_add_internal_user(self, exclude_profile_id=None):
+        profiles = self.practice.user_profiles.exclude(role="client")
+        if exclude_profile_id:
+            profiles = profiles.exclude(pk=exclude_profile_id)
+        return profiles.count() < self.internal_user_limit
+
     def __str__(self):
         return f"{self.practice} - {self.get_plan_display()} ({self.get_status_display()})"
