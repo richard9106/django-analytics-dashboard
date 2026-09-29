@@ -552,7 +552,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .signup-shell { width: min(calc(100% - 24px), 1180px); grid-template-columns: 1fr; }
   .signup-intro { position: static; }
   .field-grid.two { grid-template-columns: 1fr; }
-  .marketing-nav { width: min(calc(100% - 24px), 1180px); display: grid; gap: 0; padding: 12px 0; }
+  .marketing-nav { width: min(calc(100% - 24px), 1180px); gap: 0; padding: 12px 0; }
   .marketing-nav-head { min-height: 46px; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
   .marketing-nav-head .brand { justify-self: start; }
   .marketing-menu-button { justify-self: end; }
