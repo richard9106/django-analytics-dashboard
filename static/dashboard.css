@@ -379,6 +379,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .hero-card-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; color: var(--slate-900); }
 .product-illustration { position: relative; overflow: hidden; }
 .product-illustration::after { content: ""; position: absolute; right: -52px; bottom: -48px; width: 180px; height: 180px; border-radius: 999px; background: rgba(243, 111, 86, .12); pointer-events: none; }
+.marketing-photo { width: 100%; display: block; object-fit: cover; border-radius: 24px; border: 1px solid rgba(243, 111, 86, .18); box-shadow: var(--shadow-1); }
+.hero-photo { position: relative; z-index: 1; aspect-ratio: 4 / 3; max-height: 280px; }
 .therapy-scene { min-height: 150px; padding: 20px; border: 1px solid rgba(112, 82, 217, .13); border-radius: 24px; background: linear-gradient(160deg, rgba(255,255,255,.92), rgba(245,243,255,.82)); position: relative; overflow: hidden; }
 .therapy-scene::before { content: ""; position: absolute; left: 28px; right: 28px; bottom: 24px; height: 46px; border-radius: 999px 999px 18px 18px; background: linear-gradient(90deg, var(--coral-500), var(--brand-600)); opacity: .9; }
 .therapy-scene span { position: absolute; display: block; border-radius: 999px; background: #fff; box-shadow: var(--shadow-1); }
@@ -395,10 +397,12 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .visual-band { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(0, 1.22fr); gap: 32px; align-items: center; padding: clamp(30px, 5vw, 58px); border: 1px solid rgba(243, 111, 86, .2); border-radius: 0; background: radial-gradient(circle at top left, rgba(255, 227, 216, .86), transparent 34%), linear-gradient(135deg, #fff, var(--brand-50)); box-shadow: var(--shadow-2); }
 .calm-banner { width: 100%; margin: 28px 0; border-left: 0; border-right: 0; }
 .calm-banner > div:first-child { max-width: 520px; margin-left: max(16px, calc((100vw - 1180px) / 2)); }
-.calm-banner .workflow-river { margin-right: max(16px, calc((100vw - 1180px) / 2)); }
+.calm-banner .workflow-media { margin-right: max(16px, calc((100vw - 1180px) / 2)); }
 .visual-band h2 { margin: 0 0 12px; color: var(--slate-900); font-size: clamp(28px, 4vw, 42px); line-height: 1.1; letter-spacing: -.045em; }
 .visual-band p:not(.eyebrow) { color: var(--slate-600); line-height: 1.65; margin-bottom: 0; }
 .workflow-river, .plan-visual { min-height: 190px; display: grid; align-content: center; gap: 12px; position: relative; }
+.workflow-media { display: grid; gap: 14px; }
+.workflow-photo { aspect-ratio: 16 / 9; max-height: 280px; }
 .workflow-river { grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; gap: 10px; }
 .workflow-river::before, .plan-visual::before { content: ""; position: absolute; inset: 22px 16px; border-radius: 28px; background: radial-gradient(circle at 20% 30%, rgba(20,184,166,.24), transparent 26%), radial-gradient(circle at 80% 65%, rgba(243,111,86,.24), transparent 28%); }
 .workflow-river span, .plan-visual span { position: relative; min-height: 62px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; border: 1px solid rgba(112,82,217,.16); border-radius: 18px; background: rgba(255,255,255,.94); color: var(--brand-700); font-weight: 900; box-shadow: var(--shadow-1); text-align: center; }
@@ -408,6 +412,10 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-section { padding: 36px 0; }
 .marketing-section h2, .marketing-band h2, .marketing-cta h2 { max-width: 760px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(28px, 4.2vw, 42px); line-height: 1.1; letter-spacing: -.045em; }
 .marketing-grid { display: grid; gap: 16px; margin-top: 20px; }
+.marketing-photo-pair { display: grid; grid-template-columns: .72fr 1.28fr; gap: 16px; margin: 24px 0; align-items: stretch; }
+.marketing-photo-pair figure { min-height: 100%; margin: 0; display: grid; align-content: end; overflow: hidden; border-radius: 26px; background: #fff; box-shadow: var(--shadow-1); }
+.marketing-photo-pair img { height: 100%; min-height: 320px; border-radius: 26px 26px 0 0; }
+.marketing-photo-pair figcaption { padding: 12px 14px; color: var(--slate-700); font-size: 13px; font-weight: 900; background: #fff; }
 .marketing-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .marketing-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .marketing-grid article { padding: 22px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 22px; background: rgba(255, 255, 255, .88); box-shadow: var(--shadow-1); }
@@ -468,7 +476,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .portal-grid { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .marketing-hero, .visual-band, .marketing-band, .marketing-grid.three, .marketing-grid.two, .pricing-grid { grid-template-columns: 1fr; }
-  .calm-banner > div:first-child, .calm-banner .workflow-river { margin-inline: max(16px, calc((100vw - 1180px) / 2)); }
+  .calm-banner > div:first-child, .calm-banner .workflow-media { margin-inline: max(16px, calc((100vw - 1180px) / 2)); }
   .pricing-card.featured { transform: none; }
   .login-card { justify-self: start; }
 }
@@ -566,6 +574,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .hero-actions, .pricing-actions { display: grid; grid-template-columns: 1fr; }
   .hero-actions .btn, .pricing-actions .btn { width: 100%; }
   .hero-card, .marketing-band, .marketing-cta, .article-card { padding: 22px; border-radius: 22px; }
+  .marketing-photo-pair { grid-template-columns: 1fr; }
+  .marketing-photo-pair img { min-height: 240px; max-height: 360px; }
   .visual-band { padding: 26px 0; }
   .workflow-river { min-height: 0; grid-template-columns: 1fr; }
   .workflow-river span, .workflow-river span:nth-child(odd), .workflow-river span:nth-child(even) { transform: none; }
