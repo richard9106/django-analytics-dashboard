@@ -80,6 +80,21 @@
         </article>
       </section>
 
+      <section class="performance-grid" aria-label="Practice performance">
+        <article class="panel performance-panel">
+          <div class="panel-head compact"><div><p class="eyebrow">Performance</p><h2>Revenue trend</h2><p>Paid invoices over the last six months.</p></div><span class="badge success">USD</span></div>
+          <div class="performance-chart revenue-chart">
+            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">${{ month.revenue|floatformat:0 }}</span><div class="chart-track"><span style="height: {{ month.revenue_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Performance data will appear after your first paid invoice.</p>{% endfor %}
+          </div>
+        </article>
+        <article class="panel performance-panel">
+          <div class="panel-head compact"><div><p class="eyebrow">Operations</p><h2>Session volume</h2><p>Appointments scheduled by month.</p></div><span class="badge brand">Sessions</span></div>
+          <div class="performance-chart appointments-chart">
+            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">{{ month.appointments }}</span><div class="chart-track"><span style="height: {{ month.appointment_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Session data will appear after appointments are scheduled.</p>{% endfor %}
+          </div>
+        </article>
+      </section>
+
       <section class="content-grid" id="today" data-tour-target="appointments">
         <article class="panel">
           <div class="panel-head">

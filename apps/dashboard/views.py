@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum
 from django.shortcuts import redirect
@@ -104,6 +106,44 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         return tasks
 
+    def get_performance_months(self, practice, today):
+        if not practice:
+            return []
+
+        def shift_month(value, offset):
+            month_index = value.year * 12 + value.month - 1 + offset
+            return date(month_index // 12, month_index % 12 + 1, 1)
+
+        months = []
+        for offset in range(-5, 1):
+            month_start = shift_month(today.replace(day=1), offset)
+            next_month = shift_month(month_start, 1)
+            start_at = timezone.make_aware(timezone.datetime.combine(month_start, timezone.datetime.min.time()))
+            end_at = timezone.make_aware(timezone.datetime.combine(next_month, timezone.datetime.min.time()))
+            revenue = Invoice.objects.filter(
+                practice=practice,
+                status=Invoice.Status.PAID,
+                paid_at__gte=start_at,
+                paid_at__lt=end_at,
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            appointments = Appointment.objects.filter(
+                practice=practice,
+                starts_at__gte=start_at,
+                starts_at__lt=end_at,
+            ).count()
+            months.append({
+                'label': month_start.strftime('%b'),
+                'revenue': revenue,
+                'appointments': appointments,
+            })
+
+        max_revenue = max((month['revenue'] for month in months), default=0)
+        max_appointments = max((month['appointments'] for month in months), default=0)
+        for month in months:
+            month['revenue_height'] = int(month['revenue'] / max_revenue * 100) if max_revenue else 6
+            month['appointment_height'] = int(month['appointments'] / max_appointments * 100) if max_appointments else 6
+        return months
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.localtime()
@@ -118,6 +158,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         practice_therapists = []
         monthly_revenue = 0
         active_client_count = 0
+        performance_months = self.get_performance_months(practice, today)
 
         if practice:
             today_appointments = (
@@ -159,6 +200,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'recent_invoices': recent_invoices,
             'practice_clients': practice_clients,
             'practice_therapists': practice_therapists,
+            'performance_months': performance_months,
         })
         return context
 

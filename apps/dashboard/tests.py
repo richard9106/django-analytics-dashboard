@@ -143,6 +143,8 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Laura')
         self.assertContains(response, '+ New client')
         self.assertContains(response, '+ New appointment')
+        self.assertContains(response, 'Revenue trend')
+        self.assertContains(response, 'Session volume')
         self.assertContains(response, 'Profile settings')
         self.assertContains(response, 'Sign out')
         self.assertNotContains(response, 'href="/admin/"')
