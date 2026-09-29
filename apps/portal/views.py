@@ -143,6 +143,9 @@ class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
         if not settings.STRIPE_SECRET_KEY:
             messages.error(request, 'Online payments are not configured yet. Please contact the practice.')
             return redirect('portal:dashboard')
+        if not access.practice.can_receive_client_payments:
+            messages.error(request, 'The practice has not finished setting up client payments yet. Please contact the practice.')
+            return redirect('portal:dashboard')
 
         stripe.api_key = settings.STRIPE_SECRET_KEY
         try:
@@ -157,6 +160,9 @@ class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
                     'quantity': 1,
                 }],
                 customer_email=access.client.email or None,
+                payment_intent_data={
+                    'transfer_data': {'destination': access.practice.stripe_connect_account_id},
+                },
                 success_url=request.build_absolute_uri(reverse('portal:dashboard')),
                 cancel_url=request.build_absolute_uri(reverse('portal:dashboard')),
                 metadata={

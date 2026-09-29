@@ -22,6 +22,10 @@ class Practice(models.Model):
     postal_code = models.CharField(max_length=20, blank=True)
     description = models.TextField(blank=True)
     public_booking_slug = models.SlugField(max_length=160, unique=True, blank=True)
+    stripe_connect_account_id = models.CharField(max_length=120, blank=True)
+    stripe_connect_details_submitted = models.BooleanField(default=False)
+    stripe_connect_charges_enabled = models.BooleanField(default=False)
+    stripe_connect_payouts_enabled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -38,6 +42,10 @@ class Practice(models.Model):
     
     def __str__(self):
         return str(self.name + ' - ' + self.get_practice_type_display())
+
+    @property
+    def can_receive_client_payments(self):
+        return bool(self.stripe_connect_account_id and self.stripe_connect_charges_enabled and self.stripe_connect_payouts_enabled)
     
 
 class TherapistProfile(models.Model):

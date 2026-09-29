@@ -8,6 +8,8 @@ from .views import (
     GoogleWorkspaceView,
     GmailSendView,
     IntegrationSettingsView,
+    StripeConnectOnboardingView,
+    StripeConnectReturnView,
 )
 from apps.appointments.views import AvailabilitySettingsView, WorkingHourCreateView, WorkingHourDeleteView
 
@@ -21,6 +23,8 @@ urlpatterns = [
     path('integrations/google/workspace/', GoogleWorkspaceView.as_view(), name='google_workspace'),
     path('integrations/google/send-email/', GmailSendView.as_view(), name='gmail_send'),
     path('integrations/dropbox/', DropboxIntegrationUpdateView.as_view(), name='dropbox_update'),
+    path('payments/stripe/connect/', StripeConnectOnboardingView.as_view(), name='stripe_connect'),
+    path('payments/stripe/connect/return/', StripeConnectReturnView.as_view(), name='stripe_connect_return'),
     path('availability/', AvailabilitySettingsView.as_view(), name='availability'),
     path('availability/new/', WorkingHourCreateView.as_view(), name='working_hour_create'),
     path('availability/<int:pk>/delete/', WorkingHourDeleteView.as_view(), name='working_hour_delete'),

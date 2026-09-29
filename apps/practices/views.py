@@ -1,14 +1,18 @@
 import secrets
 
+import stripe
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.accounts.models import UserProfile
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .forms import DropboxIntegrationForm, GmailSendForm, GoogleOAuthSelectionForm
@@ -24,9 +28,77 @@ from .google_oauth import (
 from .models import ExternalIntegration
 
 
+def _finance_practice_for_user(request):
+    practice = get_practice_for_user(request.user)
+    profile = getattr(request.user, 'nuvia_profile', None)
+    if not practice or not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
+        raise PermissionDenied('Only practice owners and admins can configure client payments.')
+    return practice
+
+
+def _sync_connect_account(practice, account):
+    practice.stripe_connect_details_submitted = bool(account.get('details_submitted'))
+    practice.stripe_connect_charges_enabled = bool(account.get('charges_enabled'))
+    practice.stripe_connect_payouts_enabled = bool(account.get('payouts_enabled'))
+    practice.save(update_fields=[
+        'stripe_connect_details_submitted',
+        'stripe_connect_charges_enabled',
+        'stripe_connect_payouts_enabled',
+        'updated_at',
+    ])
+
+
 class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
     def get_practice(self):
         return get_practice_for_user(self.request.user)
+
+
+class StripeConnectOnboardingView(PracticeContextMixin, View):
+    def get(self, request):
+        practice = _finance_practice_for_user(request)
+        if not settings.STRIPE_SECRET_KEY:
+            messages.error(request, 'Stripe client payments are not configured yet.')
+            return redirect('profile_settings')
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            if not practice.stripe_connect_account_id:
+                account = stripe.Account.create(
+                    type='express',
+                    capabilities={'card_payments': {'requested': True}, 'transfers': {'requested': True}},
+                    business_profile={'name': practice.name},
+                    metadata={'practice_id': str(practice.pk)},
+                )
+                practice.stripe_connect_account_id = account.get('id', '')
+                practice.save(update_fields=['stripe_connect_account_id', 'updated_at'])
+            account_link = stripe.AccountLink.create(
+                account=practice.stripe_connect_account_id,
+                refresh_url=request.build_absolute_uri(reverse('practice_settings:stripe_connect')),
+                return_url=request.build_absolute_uri(reverse('practice_settings:stripe_connect_return')),
+                type='account_onboarding',
+            )
+        except stripe.error.StripeError:
+            messages.error(request, 'Stripe could not open payment account setup. Please try again later.')
+            return redirect('profile_settings')
+        return redirect(account_link.url)
+
+
+class StripeConnectReturnView(PracticeContextMixin, View):
+    def get(self, request):
+        practice = _finance_practice_for_user(request)
+        if settings.STRIPE_SECRET_KEY and practice.stripe_connect_account_id:
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            try:
+                account = stripe.Account.retrieve(practice.stripe_connect_account_id)
+                _sync_connect_account(practice, account)
+            except stripe.error.StripeError:
+                messages.error(request, 'Stripe account status could not be refreshed.')
+                return redirect('profile_settings')
+        if practice.can_receive_client_payments:
+            messages.success(request, 'Client payment account connected. Practices can now receive invoice payments.')
+        else:
+            messages.warning(request, 'Stripe setup is not complete yet. Finish the remaining account requirements to receive payments.')
+        return redirect('profile_settings')
 
 
 class IntegrationSettingsView(PracticeContextMixin, TemplateView):

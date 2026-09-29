@@ -133,6 +133,10 @@ class ProfileSettingsView(LoginRequiredMixin, TemplateView):
         subscription_invoices, subscription_invoice_error = self.get_subscription_invoices(subscription)
         context.update({
             "practice": practice,
+            "can_manage_client_payments": bool(
+                hasattr(self.request.user, "nuvia_profile")
+                and self.request.user.nuvia_profile.role in {"owner", "admin"}
+            ),
             "subscription": subscription,
             "subscription_invoices": subscription_invoices,
             "subscription_invoice_error": subscription_invoice_error,

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from cryptography.fernet import Fernet
 from django.db import connection
@@ -44,6 +45,43 @@ class IntegrationSettingsTests(TestCase):
         self.assertContains(response, "Gmail: send email")
         self.assertContains(response, "Google Calendar sync")
         self.assertContains(response, "Dropbox")
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.practices.views.stripe.AccountLink.create")
+    @patch("apps.practices.views.stripe.Account.create")
+    def test_owner_can_start_stripe_connect_onboarding(self, mock_account_create, mock_link_create):
+        user, practice = self.create_practice_user()
+        mock_account_create.return_value = {"id": "acct_practice"}
+        mock_link_create.return_value = SimpleNamespace(url="https://connect.stripe.test/onboarding")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("practice_settings:stripe_connect"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "https://connect.stripe.test/onboarding")
+        practice.refresh_from_db()
+        self.assertEqual(practice.stripe_connect_account_id, "acct_practice")
+        mock_account_create.assert_called_once()
+        mock_link_create.assert_called_once()
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.practices.views.stripe.Account.retrieve")
+    def test_connect_return_syncs_payment_capabilities(self, mock_retrieve):
+        user, practice = self.create_practice_user()
+        practice.stripe_connect_account_id = "acct_practice"
+        practice.save(update_fields=["stripe_connect_account_id"])
+        mock_retrieve.return_value = {
+            "details_submitted": True,
+            "charges_enabled": True,
+            "payouts_enabled": True,
+        }
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("practice_settings:stripe_connect_return"))
+
+        self.assertRedirects(response, reverse("profile_settings"))
+        practice.refresh_from_db()
+        self.assertTrue(practice.can_receive_client_payments)
 
     @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret", GOOGLE_OAUTH_REDIRECT_URI="https://example.com/settings/integrations/google/callback/")
     def test_google_connect_builds_oauth_url_with_selected_scopes(self):

@@ -69,6 +69,10 @@ class ClientPortalViewTests(TestCase):
     @patch("apps.portal.views.stripe.checkout.Session.create")
     def test_client_can_open_stripe_checkout_for_own_invoice(self, mock_create):
         user, practice, _therapist, client, _access = self.create_portal_user()
+        practice.stripe_connect_account_id = "acct_practice"
+        practice.stripe_connect_charges_enabled = True
+        practice.stripe_connect_payouts_enabled = True
+        practice.save(update_fields=["stripe_connect_account_id", "stripe_connect_charges_enabled", "stripe_connect_payouts_enabled"])
         client.email = "maya@example.com"
         client.save(update_fields=["email"])
         invoice = Invoice.objects.create(
@@ -89,6 +93,7 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(kwargs["mode"], "payment")
         self.assertEqual(kwargs["line_items"][0]["price_data"]["unit_amount"], 12000)
         self.assertEqual(kwargs["customer_email"], "maya@example.com")
+        self.assertEqual(kwargs["payment_intent_data"]["transfer_data"]["destination"], "acct_practice")
         self.assertEqual(kwargs["metadata"]["invoice_id"], str(invoice.pk))
 
     @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
