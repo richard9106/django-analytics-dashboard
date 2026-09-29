@@ -27,7 +27,7 @@ SESSION_COOKIE_SECURE=true
 CSRF_COOKIE_SECURE=true
 SECURE_HSTS_SECONDS=31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS=true
-SECURE_HSTS_PRELOAD=false
+SECURE_HSTS_PRELOAD=true
 
 DJANGO_STORAGE_BACKEND=
 AWS_ACCESS_KEY_ID=
@@ -132,7 +132,7 @@ docker compose up -d --build web
 docker compose exec -T web python manage.py check
 ```
 
-These HTTPS settings assume that the site is served exclusively through HTTPS by Nginx. Do not enable HSTS before confirming that every production subdomain is HTTPS-only.
+These HTTPS settings assume that the site is served exclusively through HTTPS by Nginx. Do not enable HSTS/preload before confirming that every production subdomain is HTTPS-only.
 
 Password reset emails use this SMTP configuration. Team invitations use connected Gmail OAuth first; Brevo is the fallback when Gmail sending is not connected.
 
