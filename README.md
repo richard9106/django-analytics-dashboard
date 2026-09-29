@@ -17,19 +17,19 @@ This project is educational and portfolio-focused. It is designed with HIPAA-awa
 
 The current version includes these working modules:
 
-- `accounts`: signup, email-based login/logout, role/profile model, practice ownership setup, client password-change enforcement.
-- `practices`: practice and therapist profile models, tenant scoping, integration settings, encrypted Google OAuth tokens.
+- `accounts`: signup, email-based login/logout, password recovery, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary-password invitations, Gmail/SMTP delivery, and plan seat enforcement.
+- `practices`: practice and therapist profile models, tenant scoping, integration settings, encrypted Google OAuth tokens, and Stripe Connect payout onboarding.
 - `clients`: patient directory, create/edit/delete popups, practice-scoped client records, add note from client, assign package from client, create appointment popup from client workspace.
 - `appointments`: calendar view, Monday-start calendar, create/edit/delete popups, today highlighting, tenant-scoped appointment scheduling, availability validation, weekly recurrence, Google Calendar sync, Gmail reminder command.
 - `clinical`: clinical notes, diagnosis records, treatment plans, linked treatment progress, lock note behavior, review-due workflow.
-- `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, Stripe subscription checkout, 15-day trial, webhooks, practice subscription persistence.
+- `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, Stripe subscription checkout, plan changes with proration previews, SaaS invoice history, Stripe Customer Portal, Stripe Connect client payouts, 15-day trial, webhooks, and practice subscription persistence.
 - `documents`: client document upload/list/download/delete, file metadata, tenant-scoped downloads, Google Drive export, local storage with Cloudflare R2 production support.
-- `portal`: client-facing dashboard, portal access accounts, enforced temporary password change, visible documents, appointment change requests, intake packet completion.
+- `portal`: client-facing dashboard, portal access accounts, enforced temporary password change, visible documents, appointment change requests, intake packet completion, and Stripe Checkout invoice payments routed to the practice's connected account.
 - `intake`: practice intake templates, client packet assignment, client portal submission workflow.
 - `requests`: practice-side inbox for client portal requests and appointment change requests.
 - `notifications`: appointment reminder model and Gmail-based reminder delivery command.
 - `audit`: audit logging for sensitive workflows such as auth, documents, clinical notes, billing, portal, intake, and integrations.
-- `dashboard`: operational practice dashboard with today appointments, tasks, billing summary, recent invoices, quick actions, first-steps panel, and guided onboarding tour after Stripe checkout.
+- `dashboard`: operational practice dashboard with today appointments, tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a Gmail + Stripe setup gate, and a contextual guided onboarding tour.
 - `settings`: session package templates, insurance settings, availability, portal access, Google integrations, Google workspace.
 - `telehealth`: telehealth room model reserved for future provider integration.
 - `admin`: Django admin registration for core domain models, including subscriptions.
@@ -43,8 +43,11 @@ The current version includes these working modules:
 - Today appointments panel.
 - Tasks panel from notes, invoices, notifications, portal requests, and treatment plan reviews.
 - Recent billing activity.
-- First-steps setup panel for clients, availability, appointments, and portal access.
-- Guided onboarding tour launched from Stripe success via `/dashboard/?tour=1` and repeatable from the dashboard.
+- First-steps setup panel: connect Gmail, configure Stripe Connect, then add clients and availability.
+- New client creation is blocked until Gmail sending and Stripe Connect payouts are ready.
+- Six-month revenue trend and appointment volume charts.
+- Contextual guided tour moves through Overview, Appointments, Clients, Notes, Billing, Documents, Intake, Requests, Settings, and setup.
+- Tour completion is stored in browser local storage and hides the launch button.
 
 ### Clients
 
@@ -95,9 +98,13 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Expired, completed, or refunded packages cannot be used for sessions.
 - Printable invoices and superbills are available.
 - Insurance settings support common payer templates and practice-specific reimbursement rates.
+- Practice owners/admins can configure Stripe Connect from Profile Settings so client payments go to the practice.
+- Clients can pay eligible sent/overdue invoices from the portal through Stripe Checkout.
+- Signed Stripe webhooks mark client invoices as paid and record `paid_at`.
 - Stripe Checkout creates SaaS subscriptions for Solo, Group, and Clinic plans.
 - New signups are routed to Stripe Checkout with a 15-day free trial and card collection.
 - Stripe webhooks update local `PracticeSubscription` records for checkout completion, subscription updates/deletions, and failed payments.
+- Profile Settings includes plan switching, Stripe proration previews, SaaS invoice history, and Stripe Customer Portal access.
 
 ### Documents
 
@@ -119,12 +126,14 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Practice users manage portal requests from the request inbox.
 - Intake templates can be created and assigned to clients.
 - Clients can complete assigned intake packets from the portal.
+- Clients can pay their own open invoices; tenant and client ownership are checked before Checkout is created.
 
 ### Google Integrations
 
 - A single Google OAuth connection supports Gmail, Calendar, and Drive scopes.
 - OAuth tokens are encrypted at rest using Fernet through `FIELD_ENCRYPTION_KEY`.
 - Gmail is used for appointment reminder delivery when connected.
+- Connected Gmail can send team-member invitations with temporary passwords.
 - Google Calendar sync mirrors appointment records to Google.
 - Google Drive export uploads authorized client documents.
 - NuviaMy remains the source of truth; Google is treated as an external mirror/export target.
@@ -137,11 +146,14 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Checkout uses a 15-day trial with card collection.
 - Checkout success routes users to the dashboard guided tour.
 - Webhook endpoint: `/billing/stripe/webhook/`.
+- Stripe Connect onboarding is separate from the NuviaMy SaaS subscription and is used for practice client-payment payouts.
+- Client invoice Checkout uses destination transfers to the practice's connected Stripe account; NuviaMy does not receive those funds as the final payee.
 
 Required webhook events:
 
 ```text
 checkout.session.completed
+checkout.session.async_payment_succeeded
 customer.subscription.updated
 customer.subscription.deleted
 invoice.payment_failed
@@ -193,18 +205,17 @@ Any CVC
 Any ZIP
 ```
 
-## Next Recommended Work
+## Remaining Product Roadmap
 
-- Add SaaS subscription management screen for practice owners.
-- Add Stripe Customer Portal for card changes, invoices, and cancellation.
-- Enforce plan limits for Solo, Group, and Clinic users.
-- Add client portal payments for therapy invoices, separate from SaaS subscription billing.
-- Add document upload from the client portal.
-- Add recurring appointment series editing/cancellation controls.
+- Add manual payment-entry UI for cash, check, ACH, Zelle/Venmo, and externally processed cards.
+- Add role editing and richer team-member profile management.
+- Add secure two-way client/practice messaging.
+- Add data export and account/data retention workflows.
+- Add recurring appointment series editing and cancellation controls.
 - Add Google sync issue dashboard and reconnect state.
 - Add Dropbox OAuth/export support.
 - Define no-show/cancellation rules for package usage.
-- Rotate any credentials that were exposed outside the environment.
+- Complete production security, legal, HIPAA/BAA, backup, monitoring, and incident-response review before clinical use.
 
 ## Security And Compliance Direction
 

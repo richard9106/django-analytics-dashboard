@@ -147,12 +147,26 @@ Required events:
 
 ```text
 checkout.session.completed
+checkout.session.async_payment_succeeded
 customer.subscription.updated
 customer.subscription.deleted
 invoice.payment_failed
 ```
 
 Copy the endpoint signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+## Stripe Connect For Practice Payments
+
+Stripe Connect must be enabled for the NuviaMy Stripe platform before practices can receive client invoice payments. In the Stripe Dashboard:
+
+1. Enable Stripe Connect and complete the platform profile.
+2. Use the same mode as `STRIPE_SECRET_KEY` (test or live).
+3. Make sure the platform can create Express connected accounts with `card_payments` and `transfers` capabilities.
+4. Confirm the platform country and connected-account country support the requested capabilities.
+
+Practice owners or admins finish onboarding from **Profile Settings > Client payments**. Stripe hosts the legal, identity, and bank-account collection flow. NuviaMy stores only the connected account ID and capability status.
+
+Client invoice payments use destination transfers to the practice's connected account. They are separate from the NuviaMy SaaS subscription and do not use the practice's SaaS Stripe customer.
 
 ## Google OAuth Setup
 
