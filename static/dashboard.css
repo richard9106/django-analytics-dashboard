@@ -336,11 +336,12 @@ h1, h2, h3, p { margin-top: 0; }
 .modal-close { width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 12px; background: #fff; color: var(--slate-800); font-size: 24px; line-height: 1; cursor: pointer; }
 .modal-close:hover { background: var(--brand-50); color: var(--brand-700); }
 .tour-active { overflow: hidden; }
-.tour-overlay { position: fixed; inset: 0; z-index: 100; padding: 20px; display: grid; place-items: center; background: rgba(17, 24, 39, .48); backdrop-filter: blur(5px); }
+.tour-overlay { position: fixed; inset: 0; z-index: 100; display: block; pointer-events: none; }
 .tour-overlay[hidden] { display: none; }
-.tour-card { position: relative; width: min(620px, 100%); padding: 28px; border: 1px solid rgba(112, 82, 217, .2); border-radius: 28px; background: radial-gradient(circle at top right, rgba(204, 251, 245, .78), transparent 34%), linear-gradient(145deg, #fff, var(--brand-50)); box-shadow: 0 28px 90px rgba(15, 23, 42, .32); }
-.tour-card h2 { margin: 0 42px 10px 0; color: var(--slate-900); font-size: clamp(28px, 5vw, 40px); line-height: 1.08; letter-spacing: -.05em; }
-.tour-card p:not(.eyebrow) { color: var(--slate-600); font-size: 16px; line-height: 1.65; }
+.tour-spotlight { position: fixed; z-index: 101; border: 2px solid var(--coral-500); border-radius: 16px; box-shadow: 0 0 0 9999px rgba(17, 24, 39, .48), 0 0 0 6px rgba(243, 111, 86, .18); transition: top .24s ease, left .24s ease, width .24s ease, height .24s ease; pointer-events: none; }
+.tour-card { position: fixed; z-index: 102; width: min(420px, calc(100% - 32px)); padding: 22px; border: 1px solid rgba(112, 82, 217, .2); border-radius: 22px; background: radial-gradient(circle at top right, rgba(204, 251, 245, .78), transparent 34%), linear-gradient(145deg, #fff, var(--brand-50)); box-shadow: 0 22px 70px rgba(15, 23, 42, .32); pointer-events: auto; transition: top .24s ease, left .24s ease; }
+.tour-card h2 { margin: 0 42px 10px 0; color: var(--slate-900); font-size: clamp(24px, 4vw, 32px); line-height: 1.08; letter-spacing: -.05em; }
+.tour-card p:not(.eyebrow) { color: var(--slate-600); font-size: 14px; line-height: 1.6; }
 .tour-close { position: absolute; top: 18px; right: 18px; }
 .tour-progress { height: 8px; overflow: hidden; margin-bottom: 18px; border-radius: 999px; background: rgba(112, 82, 217, .12); }
 .tour-progress span { height: 100%; display: block; border-radius: inherit; background: linear-gradient(90deg, var(--brand-600), var(--aqua-500)); transition: width .22s ease; }

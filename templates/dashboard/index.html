@@ -13,7 +13,7 @@
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='HIPAA-aware build' card_text='Practice-scoped models, tests, and secure defaults are active.' %}
 
-    <main class="app-main">
+    <main class="app-main" data-tour-target="workspace">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
@@ -35,7 +35,7 @@
         </details>
       </section>
 
-      <section class="welcome-panel">
+      <section class="welcome-panel" data-tour-target="welcome">
         <div>
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
           <p>{{ dashboard_date_label }}</p>
@@ -43,7 +43,7 @@
         <button class="btn btn-secondary" type="button" data-tour-open>Start guided tour</button>
       </section>
 
-      <section class="onboarding-panel" aria-label="Recommended first steps">
+      <section class="onboarding-panel" aria-label="Recommended first steps" data-tour-target="setup">
         <div>
           <p class="eyebrow">First steps</p>
           <h2>Set up your practice in about 10 minutes.</h2>
@@ -57,7 +57,7 @@
         </div>
       </section>
 
-      <section class="stats" aria-label="Practice metrics">
+      <section class="stats" aria-label="Practice metrics" data-tour-target="metrics">
         <article class="stat-card">
           <span>Monthly revenue</span>
           <strong>${{ monthly_revenue }}</strong>
@@ -80,7 +80,7 @@
         </article>
       </section>
 
-      <section class="content-grid" id="today">
+      <section class="content-grid" id="today" data-tour-target="appointments">
         <article class="panel">
           <div class="panel-head">
             <div>
@@ -217,6 +217,7 @@
       </dialog>
 
       <div class="tour-overlay" data-tour-overlay hidden>
+        <div class="tour-spotlight" data-tour-spotlight aria-hidden="true"></div>
         <section class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tour-title">
           <button class="modal-close tour-close" type="button" data-tour-close aria-label="Close guided tour">×</button>
           <div class="tour-progress" aria-hidden="true"><span data-tour-progress></span></div>
@@ -238,30 +239,37 @@
       {
         title: 'Welcome to your practice command center',
         copy: 'The dashboard summarizes revenue, active clients, today\'s sessions, and tasks that need attention. Use it as your morning check-in.',
-        route: 'Dashboard → Metrics → Tasks',
+        route: 'Dashboard overview',
+        target: '[data-tour-target="welcome"]',
       },
       {
         title: 'Add clients before anything else',
         copy: 'Create client profiles first. Every appointment, document, invoice, note, and portal account is safely scoped back to a client and practice.',
-        route: 'Clients → New client',
+        route: 'Setup checklist',
+        target: '[data-tour-target="setup"]',
       },
       {
         title: 'Set availability and schedule sessions',
         copy: 'Define working hours, then create appointments. NuviaMy validates practice, therapist, and client relationships before saving.',
-        route: 'Settings → Availability → Appointments',
+        route: 'Practice metrics',
+        target: '[data-tour-target="metrics"]',
       },
       {
         title: 'Use notes, treatment plans, and billing together',
         copy: 'After sessions, document notes, connect treatment plans, and create invoices or superbills from the billing workspace.',
-        route: 'Notes & Treatment → Billing',
+        route: "Today's appointments",
+        target: '[data-tour-target="appointments"]',
       },
       {
         title: 'Activate the client-facing workflow',
         copy: 'When you are ready, enable portal access, assign intake packets, and connect Google for reminders, calendar sync, and Drive exports.',
-        route: 'Client portal → Intake → Integrations',
+        route: 'Primary navigation',
+        target: '.sidebar',
       },
     ];
     const tourOverlay = document.querySelector('[data-tour-overlay]');
+    const tourSpotlight = document.querySelector('[data-tour-spotlight]');
+    const tourCard = document.querySelector('.tour-card');
     const tourTitle = document.querySelector('[data-tour-title]');
     const tourCopy = document.querySelector('[data-tour-copy]');
     const tourRoute = document.querySelector('[data-tour-route]');
@@ -279,6 +287,29 @@
       tourProgress.style.width = `${((tourIndex + 1) / tourSteps.length) * 100}%`;
       tourPrev.disabled = tourIndex === 0;
       tourNext.textContent = tourIndex === tourSteps.length - 1 ? 'Finish tour' : 'Next';
+      positionTourStep();
+    }
+
+    function positionTourStep() {
+      const step = tourSteps[tourIndex];
+      const target = document.querySelector(step.target);
+      if (!target || !tourSpotlight || !tourCard) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      window.requestAnimationFrame(() => {
+        const rect = target.getBoundingClientRect();
+        const padding = 8;
+        tourSpotlight.style.top = `${Math.max(rect.top - padding, 8)}px`;
+        tourSpotlight.style.left = `${Math.max(rect.left - padding, 8)}px`;
+        tourSpotlight.style.width = `${rect.width + padding * 2}px`;
+        tourSpotlight.style.height = `${rect.height + padding * 2}px`;
+        const cardRect = tourCard.getBoundingClientRect();
+        let top = rect.bottom + 18;
+        if (top + cardRect.height > window.innerHeight - 16) top = rect.top - cardRect.height - 18;
+        top = Math.max(16, top);
+        const left = Math.min(Math.max(16, rect.left), window.innerWidth - cardRect.width - 16);
+        tourCard.style.top = `${top}px`;
+        tourCard.style.left = `${left}px`;
+      });
     }
 
     function openTour(force = false) {
@@ -288,6 +319,7 @@
       renderTourStep();
       tourOverlay.hidden = false;
       document.body.classList.add('tour-active');
+      positionTourStep();
       tourNext.focus();
     }
 
@@ -326,6 +358,8 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && tourOverlay && !tourOverlay.hidden) closeTour();
     });
+    window.addEventListener('resize', () => { if (tourOverlay && !tourOverlay.hidden) positionTourStep(); });
+    window.addEventListener('scroll', () => { if (tourOverlay && !tourOverlay.hidden) positionTourStep(); }, { passive: true });
     if (tourShouldOpen) openTour();
   </script>
 </body>

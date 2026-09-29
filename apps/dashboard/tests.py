@@ -158,6 +158,9 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Guided setup')
         self.assertContains(response, 'Set up your practice in about 10 minutes')
         self.assertContains(response, 'show-dashboard-tour')
+        self.assertContains(response, 'data-tour-spotlight')
+        self.assertContains(response, 'target: \'[data-tour-target="setup"]\'')
+        self.assertContains(response, 'data-tour-next')
 
     def test_client_login_redirects_to_portal(self):
         practice = Practice.objects.create(name='Nuvia Therapy')
