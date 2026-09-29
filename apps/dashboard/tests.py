@@ -1,7 +1,8 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -133,6 +134,29 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Back to home')
         self.assertContains(response, 'Create a practice account')
         self.assertNotContains(response, 'Use Django admin instead')
+
+    def test_help_center_is_public_and_searchable(self):
+        response = self.client.get(reverse('help_center'), {'q': 'Gmail'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Help Center')
+        self.assertContains(response, 'How do I connect Gmail?')
+        self.assertContains(response, reverse('support_contact'))
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend', SUPPORT_EMAIL='support@example.com')
+    def test_support_contact_sends_email(self):
+        response = self.client.post(reverse('support_contact'), {
+            'name': 'Jane Smith',
+            'email': 'jane@example.com',
+            'topic': 'setup',
+            'message': 'I need help connecting Gmail.',
+            'website': '',
+        })
+
+        self.assertRedirects(response, '/help/contact/?sent=1')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['support@example.com'])
+        self.assertIn('connecting Gmail', mail.outbox[0].body)
 
     def test_authenticated_user_can_view_dashboard(self):
         user, _practice, _therapist = self.create_practice_user()

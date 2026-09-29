@@ -48,6 +48,7 @@ EMAIL_HOST_PASSWORD=your-brevo-smtp-key
 EMAIL_USE_TLS=true
 EMAIL_USE_SSL=false
 DEFAULT_FROM_EMAIL=NuviaMy <noreply@nuviamy.com>
+SUPPORT_EMAIL=support@nuviamy.com
 
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Help Center | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="marketing-page support-page">
+  {% include 'marketing/partials/nav.html' %}
+  <main class="support-shell">
+    <header class="support-hero"><p class="eyebrow">NuviaMy Help Center</p><h1>Find your answer quickly.</h1><p>Practical guidance for setting up and running your therapy practice workspace.</p><form method="get" class="support-search"><label class="sr-only" for="support-q">Search help</label><input id="support-q" name="q" value="{{ query }}" placeholder="Search setup, billing, Gmail, Stripe..." type="search"><button class="btn btn-primary" type="submit">Search</button></form></header>
+    <section class="support-grid" aria-label="Frequently asked questions">
+      {% for faq in faqs %}<details class="support-faq"{% if query %} open{% endif %}><summary>{{ faq.question }}</summary><p>{{ faq.answer }}</p></details>{% empty %}<p class="empty-state">No matching help articles. Try another search or contact support.</p>{% endfor %}
+    </section>
+    <section class="support-contact-card"><div><p class="eyebrow">Still need help?</p><h2>Contact support</h2><p>Tell us what you were trying to do. Please do not include clinical notes, diagnoses, or other sensitive client information.</p></div><a class="btn btn-secondary" href="{% url 'support_contact' %}">Contact support</a></section>
+  </main>
+</body>
+</html>

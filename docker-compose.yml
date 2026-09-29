@@ -51,6 +51,7 @@ services:
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-false}
       EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-NuviaMy <noreply@nuviamy.com>}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@nuviamy.com}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
       GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}

@@ -1,10 +1,13 @@
 from datetime import date
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
+from django.contrib import messages
+from django.core.mail import EmailMessage
 from django.db.models import Sum
 from django.shortcuts import redirect
 from django.utils import timezone
-from django.views.generic import TemplateView
+from django.views.generic import FormView, TemplateView
 
 from apps.accounts.access import get_practice_for_user, is_client_user
 from apps.appointments.models import Appointment
@@ -13,6 +16,8 @@ from apps.clients.models import Client
 from apps.clinical.models import SessionNote, TreatmentPlan
 from apps.notifications.models import Notification
 from apps.portal.models import ClientPortalRequest
+from .forms import SupportContactForm
+from .support import FAQS
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -203,6 +208,52 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'performance_months': performance_months,
         })
         return context
+
+
+class HelpCenterView(TemplateView):
+    template_name = 'support/help_center.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        query = self.request.GET.get('q', '').strip()
+        faqs = FAQS
+        if query:
+            terms = query.lower().split()
+            faqs = [faq for faq in FAQS if all(term in f"{faq['question']} {faq['answer']} {faq['tags']}".lower() for term in terms)]
+        context.update({'faqs': faqs, 'query': query})
+        return context
+
+
+class SupportContactView(FormView):
+    template_name = 'support/contact.html'
+    form_class = SupportContactForm
+    success_url = '/help/contact/?sent=1'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.user.is_authenticated:
+            initial.update({'name': self.request.user.get_full_name(), 'email': self.request.user.email})
+        return initial
+
+    def form_valid(self, form):
+        message = EmailMessage(
+            subject=f"NuviaMy support: {form.cleaned_data['topic']}",
+            body=(
+                f"Name: {form.cleaned_data['name']}\n"
+                f"Email: {form.cleaned_data['email']}\n"
+                f"Topic: {form.cleaned_data['topic']}\n\n"
+                f"{form.cleaned_data['message']}"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[settings.SUPPORT_EMAIL],
+            reply_to=[form.cleaned_data['email']],
+        )
+        try:
+            message.send(fail_silently=False)
+        except Exception:
+            messages.error(self.request, 'Support is temporarily unavailable. Please try again later.')
+            return self.form_invalid(form)
+        return super().form_valid(form)
 
 
 class HomePageView(TemplateView):
