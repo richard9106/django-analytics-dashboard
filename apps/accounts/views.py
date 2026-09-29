@@ -11,7 +11,7 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.crypto import get_random_string
-from django.views.generic import TemplateView
+from django.views.generic import FormView, TemplateView
 from django.views import View
 from django.views.generic.edit import FormView
 
@@ -21,7 +21,7 @@ from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
 from apps.practices.google_oauth import send_gmail_message
 from apps.appointments.reminders import get_gmail_integration
-from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, TeamMemberCreateForm
+from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, ProfileDetailsForm, TeamMemberCreateForm
 from .models import UserProfile
 
 
@@ -96,8 +96,20 @@ class ForcePasswordChangeView(FormView):
         return super().form_valid(form)
 
 
-class ProfileSettingsView(LoginRequiredMixin, TemplateView):
+class ProfileSettingsView(LoginRequiredMixin, FormView):
     template_name = "accounts/profile_settings.html"
+    form_class = ProfileDetailsForm
+    success_url = reverse_lazy("profile_settings")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, 'Profile details updated. Gmail and Stripe connections were not changed.')
+        return super().form_valid(form)
 
     def get_subscription_invoices(self, subscription):
         if not subscription or not subscription.stripe_customer_id or not settings.STRIPE_SECRET_KEY:
@@ -130,9 +142,12 @@ class ProfileSettingsView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         practice = get_practice_for_user(self.request.user)
         subscription = getattr(practice, "subscription", None) if practice else None
+        google_integration = practice.external_integrations.filter(provider='google').first() if practice else None
         subscription_invoices, subscription_invoice_error = self.get_subscription_invoices(subscription)
         context.update({
             "practice": practice,
+            "profile_form": self.get_form(),
+            "google_integration": google_integration,
             "can_manage_client_payments": bool(
                 hasattr(self.request.user, "nuvia_profile")
                 and self.request.user.nuvia_profile.role in {"owner", "admin"}

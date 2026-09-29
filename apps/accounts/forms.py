@@ -211,3 +211,38 @@ class TeamMemberCreateForm(forms.Form):
         profile.full_clean()
         profile.save()
         return user
+
+
+class ProfileDetailsForm(forms.Form):
+    first_name = forms.CharField(max_length=150)
+    last_name = forms.CharField(max_length=150, required=False)
+    email = forms.EmailField()
+    phone = forms.CharField(max_length=20, required=False)
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        if user and not self.is_bound:
+            self.initial.update({
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'phone': getattr(user.nuvia_profile, 'phone', ''),
+            })
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if get_user_model().objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
+            raise ValidationError('A user with this email already exists.')
+        return email
+
+    def save(self):
+        user = self.user
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.email = self.cleaned_data['email']
+        user.save(update_fields=['first_name', 'last_name', 'email'])
+        profile = user.nuvia_profile
+        profile.phone = self.cleaned_data['phone']
+        profile.save(update_fields=['phone', 'updated_at'])
+        return user

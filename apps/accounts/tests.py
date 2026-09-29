@@ -168,6 +168,35 @@ class ProfileSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f"{reverse('login')}?next={reverse('profile_settings')}")
 
+    def test_profile_settings_can_edit_login_details_without_changing_integrations(self):
+        user, practice = self.create_practice_user()
+        practice.stripe_connect_account_id = "acct_practice"
+        practice.save(update_fields=["stripe_connect_account_id"])
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status="active",
+            stripe_customer_id="cus_test",
+            stripe_subscription_id="sub_test",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("profile_settings"), {
+            "first_name": "Janet",
+            "last_name": "Smith",
+            "email": "janet@example.com",
+            "phone": "555-0199",
+        })
+
+        self.assertRedirects(response, reverse("profile_settings"))
+        user.refresh_from_db()
+        practice.refresh_from_db()
+        self.assertEqual(user.email, "janet@example.com")
+        self.assertEqual(user.nuvia_profile.phone, "555-0199")
+        self.assertEqual(practice.stripe_connect_account_id, "acct_practice")
+        self.assertEqual(practice.subscription.stripe_customer_id, "cus_test")
+
     def test_profile_settings_shows_subscription(self):
         user, practice = self.create_practice_user()
         PracticeSubscription.objects.create(

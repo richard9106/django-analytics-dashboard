@@ -53,13 +53,14 @@
 
       <section class="profile-grid">
         <article class="panel">
-          <div class="panel-head compact"><div><h2>Your profile</h2><p>Signed-in user details.</p></div></div>
+          <div class="panel-head compact"><div><h2>Your profile</h2><p>Signed-in user details.</p></div><button class="btn btn-secondary" type="button" data-modal-target="profile-edit-modal">Edit profile</button></div>
           <dl class="profile-detail-list">
             <div><dt>Name</dt><dd>{{ request.user.get_full_name|default:request.user.username }}</dd></div>
             <div><dt>Email</dt><dd>{{ request.user.email|default:'Not set' }}</dd></div>
             <div><dt>Practice</dt><dd>{% if practice %}{{ practice.name }}{% else %}Not assigned{% endif %}</dd></div>
             <div><dt>Role</dt><dd>{{ profile_role_label }}</dd></div>
           </dl>
+          <p class="empty-state">Your login email is separate from the Gmail account connected through OAuth and the Stripe payout account managed by Stripe.</p>
         </article>
 
         <article class="panel subscription-panel">
@@ -94,6 +95,7 @@
           {% endif %}
         </article>
       </section>
+      <dialog class="modal-dialog" id="profile-edit-modal"{% if profile_form.errors %} data-profile-errors{% endif %}><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Account</p><h2>Edit profile</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div><form class="appointment-form" method="post" action="{% url 'profile_settings' %}">{% csrf_token %}{% if profile_form.errors %}<div class="form-error">Please correct the profile details below.</div>{% endif %}<div class="field-grid two"><div class="field"><label for="id_first_name">First name</label>{{ profile_form.first_name }}{{ profile_form.first_name.errors }}</div><div class="field"><label for="id_last_name">Last name</label>{{ profile_form.last_name }}{{ profile_form.last_name.errors }}</div><div class="field full"><label for="id_email">Login email</label>{{ profile_form.email }}{{ profile_form.email.errors }}</div><div class="field full"><label for="id_phone">Phone</label>{{ profile_form.phone }}{{ profile_form.phone.errors }}</div></div><p class="empty-state">Changing this login email does not disconnect Gmail OAuth or change your Stripe subscription/Connect account.</p><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save profile</button></div></form></div></dialog>
       {% if can_manage_client_payments %}
         <section class="panel client-payments-panel" id="client-payments">
           <div class="panel-head compact"><div><h2>Client payments</h2><p>Connect the practice's Stripe payout account so client invoice payments go to the practice, not NuviaMy.</p></div><span class="badge {% if practice.can_receive_client_payments %}success{% else %}warning{% endif %}">{% if practice.can_receive_client_payments %}Ready to collect{% else %}Setup needed{% endif %}</span></div>
@@ -143,6 +145,7 @@
   <script>
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
+    if (document.querySelector('[data-profile-errors]')) document.querySelector('[data-profile-errors]').showModal();
     const planForm = document.querySelector('[data-plan-change-form]');
     if (planForm) {
       const planSelect = planForm.querySelector('[data-plan-select]');
