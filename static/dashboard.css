@@ -369,9 +369,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .marketing-nav-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--slate-600); font-size: 14px; font-weight: 800; }
 .marketing-nav-links a:hover { color: var(--brand-700); }
 .marketing-nav a:focus-visible, .back-to-top:focus-visible, .content-links a:focus-visible { outline: 3px solid rgba(243, 111, 86, .28); outline-offset: 3px; border-radius: 12px; }
-.marketing-hero { position: relative; isolation: isolate; width: 100%; margin: 0; min-height: 620px; display: grid; grid-template-columns: minmax(16px, 1fr) minmax(0, 1180px) minmax(16px, 1fr); gap: 0; align-items: center; padding: clamp(24px, 4vw, 44px) 0; overflow: hidden; border-radius: 0; background: linear-gradient(90deg, rgba(255,255,255,.94), rgba(255,255,255,.82) 46%, rgba(255,255,255,.56)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; box-shadow: var(--shadow-2); }
-.marketing-hero > .hero-copy { grid-column: 2; width: min(58%, 720px); }
-.marketing-hero > .hero-card { grid-column: 2; justify-self: end; width: min(40%, 460px); align-self: center; }
+.marketing-hero { position: relative; isolation: isolate; width: 100%; margin: 0; min-height: 620px; display: grid; grid-template-columns: minmax(16px, 1fr) minmax(0, 690px) minmax(300px, 460px) minmax(16px, 1fr); column-gap: 30px; align-items: center; padding: clamp(24px, 4vw, 44px) 0; overflow: hidden; border-radius: 0; background: linear-gradient(90deg, rgba(255,255,255,.94), rgba(255,255,255,.82) 46%, rgba(255,255,255,.56)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; box-shadow: var(--shadow-2); }
+.marketing-hero > .hero-copy { grid-column: 2; }
+.marketing-hero > .hero-card { grid-column: 3; justify-self: stretch; align-self: center; }
 .marketing-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 14% 18%, rgba(204, 251, 245, .72), transparent 30%), radial-gradient(circle at 90% 12%, rgba(243, 111, 86, .22), transparent 28%); }
 .hero-copy h1 { max-width: 760px; margin-bottom: 18px; color: var(--slate-900); font-size: clamp(40px, 5.8vw, 62px); line-height: 1.04; letter-spacing: -.055em; }
 .hero-copy p:not(.eyebrow) { max-width: 720px; color: var(--slate-600); font-size: 17px; line-height: 1.68; }
