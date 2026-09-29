@@ -86,20 +86,39 @@
           {% endif %}
         </article>
       </section>
+      <section class="panel subscription-invoices-panel">
+        <div class="panel-head compact"><div><h2>My NuviaMy invoices</h2><p>Stripe invoices for this practice subscription. These are separate from invoices you send to clients.</p></div></div>
+        {% if subscription_invoice_error %}
+          <p class="empty-state">Stripe invoices could not be loaded right now. You can still open Stripe billing management above.</p>
+        {% elif subscription_invoices %}
+          <div class="invoice-table-wrap">
+            <table>
+              <thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th>Amount</th><th>Links</th></tr></thead>
+              <tbody>
+                {% for invoice in subscription_invoices %}
+                  <tr><td>{{ invoice.number }}</td><td>{% if invoice.created_at %}{{ invoice.created_at|date:"M j, Y" }}{% else %}-{% endif %}</td><td><span class="badge brand">{{ invoice.status }}</span></td><td>{{ invoice.amount }}</td><td>{% if invoice.hosted_invoice_url %}<a class="inline-link" href="{{ invoice.hosted_invoice_url }}" target="_blank" rel="noopener">View</a>{% endif %}{% if invoice.invoice_pdf %} <a class="inline-link" href="{{ invoice.invoice_pdf }}" target="_blank" rel="noopener">PDF</a>{% endif %}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="empty-state">No Stripe subscription invoices are available yet.</p>
+        {% endif %}
+      </section>
       {% if subscription %}
         <dialog class="modal-dialog" id="plan-change-modal">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Subscription</p><h2>Change plan</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
             <form class="appointment-form" method="post" action="{% url 'billing:change_plan' subscription.plan subscription.billing_period %}" data-plan-change-form>
               {% csrf_token %}
-              <div class="field"><label for="plan-change-select">Plan</label><select id="plan-change-select" name="selected_plan" data-plan-select><option value="solo" data-monthly-url="{% url 'billing:change_plan' 'solo' 'monthly' %}" data-yearly-url="{% url 'billing:change_plan' 'solo' 'yearly' %}" data-monthly-current="{% if subscription.plan == 'solo' and subscription.billing_period == 'monthly' %}1{% else %}0{% endif %}" data-yearly-current="{% if subscription.plan == 'solo' and subscription.billing_period == 'yearly' %}1{% else %}0{% endif %}" {% if subscription.plan == 'solo' %}selected{% endif %}>Solo Therapist · up to 1 internal user</option><option value="group" data-monthly-url="{% url 'billing:change_plan' 'group' 'monthly' %}" data-yearly-url="{% url 'billing:change_plan' 'group' 'yearly' %}" data-monthly-current="{% if subscription.plan == 'group' and subscription.billing_period == 'monthly' %}1{% else %}0{% endif %}" data-yearly-current="{% if subscription.plan == 'group' and subscription.billing_period == 'yearly' %}1{% else %}0{% endif %}" {% if subscription.plan == 'group' %}selected{% endif %}>Group Practice · up to 5 internal users</option><option value="clinic" data-monthly-url="{% url 'billing:change_plan' 'clinic' 'monthly' %}" data-yearly-url="{% url 'billing:change_plan' 'clinic' 'yearly' %}" data-monthly-current="{% if subscription.plan == 'clinic' and subscription.billing_period == 'monthly' %}1{% else %}0{% endif %}" data-yearly-current="{% if subscription.plan == 'clinic' and subscription.billing_period == 'yearly' %}1{% else %}0{% endif %}" {% if subscription.plan == 'clinic' %}selected{% endif %}>Clinic · up to 15 internal users</option></select></div>
+              <div class="field"><label for="plan-change-select">Plan</label><select id="plan-change-select" name="selected_plan" data-plan-select><option value="solo" data-monthly-url="{% url 'billing:change_plan' 'solo' 'monthly' %}" data-yearly-url="{% url 'billing:change_plan' 'solo' 'yearly' %}" data-monthly-preview-url="{% url 'billing:plan_preview' 'solo' 'monthly' %}" data-yearly-preview-url="{% url 'billing:plan_preview' 'solo' 'yearly' %}" data-monthly-current="{% if subscription.plan == 'solo' and subscription.billing_period == 'monthly' %}1{% else %}0{% endif %}" data-yearly-current="{% if subscription.plan == 'solo' and subscription.billing_period == 'yearly' %}1{% else %}0{% endif %}" {% if subscription.plan == 'solo' %}selected{% endif %}>Solo Therapist · up to 1 internal user</option><option value="group" data-monthly-url="{% url 'billing:change_plan' 'group' 'monthly' %}" data-yearly-url="{% url 'billing:change_plan' 'group' 'yearly' %}" data-monthly-preview-url="{% url 'billing:plan_preview' 'group' 'monthly' %}" data-yearly-preview-url="{% url 'billing:plan_preview' 'group' 'yearly' %}" data-monthly-current="{% if subscription.plan == 'group' and subscription.billing_period == 'monthly' %}1{% else %}0{% endif %}" data-yearly-current="{% if subscription.plan == 'group' and subscription.billing_period == 'yearly' %}1{% else %}0{% endif %}" {% if subscription.plan == 'group' %}selected{% endif %}>Group Practice · up to 5 internal users</option><option value="clinic" data-monthly-url="{% url 'billing:change_plan' 'clinic' 'monthly' %}" data-yearly-url="{% url 'billing:change_plan' 'clinic' 'yearly' %}" data-monthly-preview-url="{% url 'billing:plan_preview' 'clinic' 'monthly' %}" data-yearly-preview-url="{% url 'billing:plan_preview' 'clinic' 'yearly' %}" data-monthly-current="{% if subscription.plan == 'clinic' and subscription.billing_period == 'monthly' %}1{% else %}0{% endif %}" data-yearly-current="{% if subscription.plan == 'clinic' and subscription.billing_period == 'yearly' %}1{% else %}0{% endif %}" {% if subscription.plan == 'clinic' %}selected{% endif %}>Clinic · up to 15 internal users</option></select></div>
               <fieldset class="billing-period-options">
                 <legend>Billing period</legend>
                 <label><input type="radio" name="selected_period" value="monthly" data-period-radio {% if subscription.billing_period == 'monthly' %}checked{% endif %}> Monthly</label>
                 <label><input type="radio" name="selected_period" value="yearly" data-period-radio {% if subscription.billing_period == 'yearly' %}checked{% endif %}> Annual</label>
               </fieldset>
-              <p class="empty-state" data-plan-change-status>Choose a different plan or billing period to continue.</p>
-              <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit" data-plan-change-submit>Change plan</button></div>
+              <div class="plan-preview-box" data-plan-preview-box><p data-plan-change-status>Choose a different plan or billing period, then preview the Stripe estimate.</p></div>
+              <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-secondary" type="button" data-plan-preview>Preview change</button><button class="btn btn-primary" type="submit" data-plan-change-submit>Confirm plan change</button></div>
             </form>
           </div>
         </dialog>
@@ -114,18 +133,45 @@
       const planSelect = planForm.querySelector('[data-plan-select]');
       const periodRadios = planForm.querySelectorAll('[data-period-radio]');
       const submit = planForm.querySelector('[data-plan-change-submit]');
+      const previewButton = planForm.querySelector('[data-plan-preview]');
       const status = planForm.querySelector('[data-plan-change-status]');
+      const previewBox = planForm.querySelector('[data-plan-preview-box]');
+      let previewLoaded = false;
       const updatePlanAction = () => {
         const selectedOption = planSelect.options[planSelect.selectedIndex];
         const period = planForm.querySelector('[data-period-radio]:checked').value;
         planForm.action = selectedOption.dataset[`${period}Url`];
         const isCurrent = selectedOption.dataset[`${period}Current`] === '1';
-        submit.disabled = isCurrent;
-        submit.textContent = isCurrent ? 'Current plan' : 'Change plan';
-        status.textContent = isCurrent ? 'This is already your active plan.' : 'Stripe will update the subscription and apply prorations if needed.';
+        previewLoaded = false;
+        submit.disabled = true;
+        previewButton.disabled = isCurrent;
+        submit.textContent = isCurrent ? 'Current plan' : 'Confirm plan change';
+        status.textContent = isCurrent ? 'This is already your active plan.' : 'Preview the Stripe estimate before confirming this change.';
+      };
+      const previewPlanChange = async () => {
+        const selectedOption = planSelect.options[planSelect.selectedIndex];
+        const period = planForm.querySelector('[data-period-radio]:checked').value;
+        const previewUrl = selectedOption.dataset[`${period}PreviewUrl`];
+        previewButton.disabled = true;
+        status.textContent = 'Loading Stripe estimate...';
+        try {
+          const response = await fetch(previewUrl, { method: 'POST', headers: { 'X-CSRFToken': planForm.querySelector('[name=csrfmiddlewaretoken]').value } });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Stripe preview failed.');
+          previewBox.innerHTML = `<dl class="plan-preview-list"><div><dt>Estimated amount due</dt><dd>${data.amount_due || 'Shown in Stripe Checkout'}</dd></div><div><dt>Estimated subtotal</dt><dd>${data.subtotal || 'Shown in Stripe Checkout'}</dd></div>${data.credit ? `<div><dt>Estimated credit</dt><dd>${data.credit}</dd></div>` : ''}</dl><p>${data.summary}</p>`;
+          previewLoaded = true;
+          submit.disabled = false;
+        } catch (error) {
+          previewBox.innerHTML = `<p>${error.message}</p>`;
+          submit.disabled = true;
+        } finally {
+          previewButton.disabled = false;
+        }
       };
       planSelect.addEventListener('change', updatePlanAction);
       periodRadios.forEach((radio) => radio.addEventListener('change', updatePlanAction));
+      previewButton.addEventListener('click', previewPlanChange);
+      planForm.addEventListener('submit', (event) => { if (!previewLoaded) event.preventDefault(); });
       updatePlanAction();
     }
   </script>

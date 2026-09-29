@@ -713,6 +713,70 @@ class BillingViewTests(TestCase):
     @override_settings(
         STRIPE_SECRET_KEY="stripe-secret-placeholder",
         STRIPE_PRICE_IDS={
+            "solo": {"monthly": "price_solo_monthly", "yearly": "price_solo_yearly"},
+            "group": {"monthly": "price_group_monthly", "yearly": "price_group_yearly"},
+            "clinic": {"monthly": "price_clinic_monthly", "yearly": "price_clinic_yearly"},
+        },
+    )
+    @patch("apps.billing.views.stripe.Invoice.create_preview")
+    @patch("apps.billing.views.stripe.Subscription.retrieve")
+    def test_plan_preview_returns_stripe_proration_estimate(self, mock_retrieve, mock_upcoming):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.SOLO,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_123",
+            stripe_price_id="price_solo_monthly",
+        )
+        mock_retrieve.return_value = {"items": {"data": [{"id": "si_123"}]}}
+        mock_upcoming.return_value = {
+            "currency": "usd",
+            "subtotal": 5900,
+            "amount_due": 3900,
+            "lines": {"data": [{"amount": -2000}, {"amount": 5900}]},
+        }
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:plan_preview", args=["group", "monthly"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["amount_due"], "USD 39.00")
+        self.assertEqual(response.json()["subtotal"], "USD 59.00")
+        self.assertEqual(response.json()["credit"], "USD 20.00")
+        mock_upcoming.assert_called_once_with(
+            customer="cus_123",
+            subscription="sub_123",
+            subscription_details={
+                "items": [{"id": "si_123", "price": "price_group_monthly"}],
+                "proration_behavior": "create_prorations",
+            },
+        )
+
+    def test_plan_preview_blocks_downgrade_when_internal_users_exceed_target_limit(self):
+        user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        second_user = get_user_model().objects.create_user(username="second")
+        UserProfile.objects.create(user=second_user, practice=practice, role=UserProfile.Role.ADMIN)
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.GROUP,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status=PracticeSubscription.Status.ACTIVE,
+            stripe_customer_id="cus_123",
+            stripe_subscription_id="sub_123",
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:plan_preview", args=["solo", "monthly"]))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("allows up to 1", response.json()["error"])
+
+    @override_settings(
+        STRIPE_SECRET_KEY="stripe-secret-placeholder",
+        STRIPE_PRICE_IDS={
             "solo": {"monthly": "price_solo_monthly", "yearly": ""},
             "group": {"monthly": "", "yearly": ""},
             "clinic": {"monthly": "", "yearly": ""},

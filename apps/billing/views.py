@@ -4,7 +4,7 @@ import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -36,6 +36,16 @@ def _period_end_from_subscription(stripe_subscription):
     if not period_end:
         return None
     return datetime.fromtimestamp(period_end, tz=dt_timezone.utc)
+
+
+def _format_stripe_amount(amount, currency='usd'):
+    amount = amount or 0
+    return f"{currency.upper()} {amount / 100:,.2f}"
+
+
+def _subscription_item_id(stripe_subscription):
+    items = stripe_subscription.get('items', {}).get('data', [])
+    return items[0].get('id', '') if items else ''
 
 
 def _sync_subscription_from_stripe(stripe_subscription, practice=None):
@@ -596,6 +606,71 @@ class StripeChangePlanView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
         subscription.save(update_fields=['plan', 'billing_period', 'stripe_price_id', 'updated_at'])
         messages.success(request, f'Plan changed to {PracticeSubscription.Plan(plan).label}.')
         return redirect('profile_settings')
+
+
+class StripePlanPreviewView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        plan = kwargs.get('plan')
+        period = kwargs.get('period')
+        practice = get_practice_for_user(request.user)
+        price_id = _stripe_price_id(plan, period)
+        if plan not in PracticeSubscription.Plan.values or period not in PracticeSubscription.BillingPeriod.values:
+            return JsonResponse({'error': 'Unknown subscription plan.'}, status=400)
+        if not practice:
+            return JsonResponse({'error': 'Create a practice workspace before changing plans.'}, status=400)
+
+        internal_user_count = practice.user_profiles.exclude(role='client').count()
+        target_limit = PracticeSubscription.internal_user_limit_for_plan(plan)
+        if internal_user_count > target_limit:
+            return JsonResponse({
+                'error': (
+                    f'This practice has {internal_user_count} internal users. '
+                    f'The {PracticeSubscription.Plan(plan).label} plan allows up to {target_limit}.'
+                )
+            }, status=400)
+
+        subscription = getattr(practice, 'subscription', None)
+        if not subscription or not subscription.stripe_subscription_id:
+            return JsonResponse({
+                'summary': 'Stripe Checkout will show the first subscription invoice before payment.',
+                'amount_due': '',
+                'subtotal': '',
+                'credit': '',
+                'currency': 'USD',
+            })
+        if not settings.STRIPE_SECRET_KEY or not price_id:
+            return JsonResponse({'error': 'Online subscription previews are not configured yet.'}, status=400)
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+            item_id = _subscription_item_id(stripe_subscription)
+            if not item_id:
+                return JsonResponse({'error': 'Stripe could not find the active subscription item.'}, status=400)
+            preview = stripe.Invoice.create_preview(
+                customer=subscription.stripe_customer_id,
+                subscription=subscription.stripe_subscription_id,
+                subscription_details={
+                    'items': [{'id': item_id, 'price': price_id}],
+                    'proration_behavior': 'create_prorations',
+                },
+            )
+        except stripe.error.StripeError:
+            return JsonResponse({'error': 'Stripe could not preview this plan change. Please try again later.'}, status=400)
+
+        currency = preview.get('currency', 'usd')
+        subtotal = preview.get('subtotal', 0)
+        amount_due = preview.get('amount_due', 0)
+        credit = sum(line.get('amount', 0) for line in preview.get('lines', {}).get('data', []) if line.get('amount', 0) < 0)
+        return JsonResponse({
+            'summary': 'Stripe estimate based on your current billing period. Final taxes or payment timing may vary in Stripe.',
+            'amount_due': _format_stripe_amount(amount_due, currency),
+            'subtotal': _format_stripe_amount(subtotal, currency),
+            'credit': _format_stripe_amount(abs(credit), currency) if credit else '',
+            'currency': currency.upper(),
+        })
 
 
 @method_decorator(csrf_exempt, name='dispatch')

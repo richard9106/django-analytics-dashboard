@@ -1,6 +1,8 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.models import UserProfile
@@ -204,3 +206,39 @@ class ProfileSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("profile_settings"))
         self.assertContains(response, 'class="mobile-account-menu"')
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.accounts.views.stripe.Invoice.list")
+    def test_profile_settings_shows_stripe_subscription_invoices(self, mock_invoice_list):
+        user, practice = self.create_practice_user()
+        PracticeSubscription.objects.create(
+            practice=practice,
+            plan=PracticeSubscription.Plan.GROUP,
+            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
+            status="active",
+            stripe_customer_id="cus_test",
+            stripe_subscription_id="sub_test",
+        )
+        mock_invoice_list.return_value = {
+            "data": [{
+                "id": "in_123",
+                "number": "NUVIA-001",
+                "status": "paid",
+                "currency": "usd",
+                "amount_paid": 7900,
+                "created": 1704067200,
+                "hosted_invoice_url": "https://invoice.stripe.test/view",
+                "invoice_pdf": "https://invoice.stripe.test/pdf",
+            }]
+        }
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("profile_settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "My NuviaMy invoices")
+        self.assertContains(response, "NUVIA-001")
+        self.assertContains(response, "USD 79.00")
+        self.assertContains(response, "https://invoice.stripe.test/view")
+        self.assertContains(response, "https://invoice.stripe.test/pdf")
+        mock_invoice_list.assert_called_once_with(customer="cus_test", limit=10)

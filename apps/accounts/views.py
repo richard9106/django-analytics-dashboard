@@ -1,3 +1,7 @@
+from datetime import datetime, timezone as dt_timezone
+
+import stripe
+from django.conf import settings
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
@@ -64,6 +68,26 @@ class ForcePasswordChangeView(FormView):
 class ProfileSettingsView(LoginRequiredMixin, TemplateView):
     template_name = "accounts/profile_settings.html"
 
+    def get_subscription_invoices(self, subscription):
+        if not subscription or not subscription.stripe_customer_id or not settings.STRIPE_SECRET_KEY:
+            return [], False
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            invoices = stripe.Invoice.list(customer=subscription.stripe_customer_id, limit=10)
+        except stripe.error.StripeError:
+            return [], True
+        return [
+            {
+                "number": invoice.get("number") or invoice.get("id", "Invoice"),
+                "status": invoice.get("status", "unknown").title(),
+                "amount": f"{invoice.get('currency', 'usd').upper()} {(invoice.get('amount_paid') or invoice.get('amount_due') or 0) / 100:,.2f}",
+                "created_at": datetime.fromtimestamp(invoice.get("created", 0), tz=dt_timezone.utc) if invoice.get("created") else None,
+                "hosted_invoice_url": invoice.get("hosted_invoice_url", ""),
+                "invoice_pdf": invoice.get("invoice_pdf", ""),
+            }
+            for invoice in invoices.get("data", [])
+        ], False
+
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and is_client_user(request.user):
             from django.shortcuts import redirect
@@ -75,9 +99,12 @@ class ProfileSettingsView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         practice = get_practice_for_user(self.request.user)
         subscription = getattr(practice, "subscription", None) if practice else None
+        subscription_invoices, subscription_invoice_error = self.get_subscription_invoices(subscription)
         context.update({
             "practice": practice,
             "subscription": subscription,
+            "subscription_invoices": subscription_invoices,
+            "subscription_invoice_error": subscription_invoice_error,
             "subscription_plan_options": [
                 {
                     "plan": plan,

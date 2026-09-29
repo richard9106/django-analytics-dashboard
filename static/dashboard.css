@@ -278,6 +278,14 @@ h1, h2, h3, p { margin-top: 0; }
 .billing-period-options legend { padding: 0 6px; color: var(--slate-500); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .billing-period-options label { min-height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--slate-200); border-radius: 999px; background: #fff; color: var(--slate-800); font-weight: 900; cursor: pointer; }
 .billing-period-options input { accent-color: var(--brand-600); }
+.subscription-invoices-panel { margin-top: 18px; }
+.invoice-table-wrap { max-width: 100%; overflow-x: auto; }
+.plan-preview-box { padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255,255,255,.78); }
+.plan-preview-box p { margin: 0; color: var(--slate-600); line-height: 1.55; }
+.plan-preview-list { display: grid; gap: 10px; margin: 0 0 12px; }
+.plan-preview-list div { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--slate-100); }
+.plan-preview-list dt { color: var(--slate-500); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.plan-preview-list dd { margin: 0; color: var(--slate-900); font-weight: 900; }
 .message-list { display: grid; gap: 8px; }
 .portal-page { background: radial-gradient(circle at 12% 8%, rgba(204, 251, 245, .55), transparent 28%), var(--slate-50); }
 .portal-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0; display: grid; grid-auto-rows: max-content; gap: 18px; }

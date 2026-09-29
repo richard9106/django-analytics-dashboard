@@ -25,6 +25,7 @@ from .views import (
     SessionPackageTemplateUpdateView,
     StripeCustomerPortalView,
     StripeChangePlanView,
+    StripePlanPreviewView,
     StripeSubscribeCancelView,
     StripeSubscribeSuccessView,
     StripeSubscribeView,
@@ -50,6 +51,7 @@ urlpatterns = [
     path('subscribe/cancel/', StripeSubscribeCancelView.as_view(), name='subscribe_cancel'),
     path('stripe/customer-portal/', StripeCustomerPortalView.as_view(), name='customer_portal'),
     path('stripe/change-plan/<str:plan>/<str:period>/', StripeChangePlanView.as_view(), name='change_plan'),
+    path('stripe/plan-preview/<str:plan>/<str:period>/', StripePlanPreviewView.as_view(), name='plan_preview'),
     path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe_webhook'),
 ]
 
