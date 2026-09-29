@@ -123,6 +123,10 @@ EMAIL_HOST_PASSWORD=your-brevo-smtp-key
 EMAIL_USE_TLS=true
 EMAIL_USE_SSL=false
 DEFAULT_FROM_EMAIL=NuviaMy <noreply@nuviamy.com>
+
+GUNICORN_WORKERS=4
+GUNICORN_THREADS=2
+GUNICORN_TIMEOUT=120
 ```
 
 After changing the VPS `.env`, restart the web container:
