@@ -51,6 +51,7 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'https://nuviamy.com/')
         self.assertContains(response, '/static/favicon.svg')
         self.assertContains(response, 'Back to top')
+        self.assertContains(response, '>Home</a>')
         self.assertContains(response, reverse('pricing'))
         self.assertContains(response, reverse('features'))
         self.assertContains(response, 'marketing-nav-toggle')
