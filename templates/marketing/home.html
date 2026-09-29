@@ -43,18 +43,28 @@
   <main>
     <section class="marketing-hero">
       <div class="hero-copy">
-        <p class="eyebrow">Therapy Practice Management SaaS</p>
+        <p class="eyebrow coral-eyebrow">Therapy Practice Management SaaS</p>
         <h1>Practice management software for therapists who want calmer clinical operations.</h1>
         <p>NuviaMy helps therapists, counselors, psychologists, behavioral health providers, and mental health practices manage appointments, clinical notes, treatment plans, client intake, billing, documents, reminders, and portal workflows from one polished workspace.</p>
         <div class="hero-actions"><a class="btn btn-primary" href="{% url 'signup' %}">Create a practice account</a><a class="btn btn-secondary" href="{% url 'pricing' %}">View pricing</a></div>
         <div class="trust-list"><span>HIPAA-aware architecture</span><span>Practice-scoped data</span><span>Server-rendered Django SaaS</span><span>Built for therapists</span></div>
       </div>
-      <aside class="hero-card" aria-label="NuviaMy product overview">
-        <div class="hero-card-top"><span class="badge success">Live workspace</span><strong>Today in your practice</strong></div>
-        <div class="hero-metric"><span>Appointments</span><strong>12</strong><small>sessions scheduled</small></div>
-        <div class="hero-metric"><span>Clinical notes</span><strong>4</strong><small>drafts ready to lock</small></div>
-        <div class="hero-metric"><span>Treatment plans</span><strong>2</strong><small>reviews due</small></div>
+      <aside class="hero-card product-illustration" aria-label="NuviaMy product overview">
+        <div class="hero-card-top"><span class="badge coral">Today</span><strong>Gentle operating rhythm</strong></div>
+        <div class="therapy-scene" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="hero-metric coral-line"><span>Appointments</span><strong>12</strong><small>sessions scheduled with conflict checks</small></div>
+        <div class="hero-metric"><span>Clinical notes</span><strong>4</strong><small>drafts ready to review and lock</small></div>
+        <div class="hero-metric aqua-line"><span>Treatment plans</span><strong>2</strong><small>reviews due with clear follow-up</small></div>
       </aside>
+    </section>
+
+    <section class="visual-band calm-banner" aria-label="NuviaMy clinical workflow illustration">
+      <div>
+        <p class="eyebrow coral-eyebrow">From inquiry to follow-up</p>
+        <h2>A calmer path through every client workflow.</h2>
+        <p>Shape intake, scheduling, therapy documentation, billing, and portal communication into one steady practice rhythm—without making sensitive clinical work feel like generic admin software.</p>
+      </div>
+      <div class="workflow-river" aria-hidden="true"><span>Intake</span><span>Session</span><span>Notes</span><span>Billing</span><span>Portal</span></div>
     </section>
 
     <section class="marketing-section" id="features">
@@ -67,6 +77,18 @@
         <article><h3>Billing and superbills</h3><p>Create invoices, session packages, package usage, printable invoices, superbills, insurance payer settings, and billing follow-up tasks.</p></article>
         <article><h3>Documents and Google Drive</h3><p>Upload practice documents, control client visibility, export documents to Google Drive, and keep NuviaMy as the source of truth.</p></article>
         <article><h3>Reminders and requests</h3><p>Send Gmail-powered appointment reminders and manage client portal requests from a practice-scoped inbox.</p></article>
+      </div>
+    </section>
+
+    <section class="marketing-section content-links" aria-label="Therapy software guides">
+      <p class="eyebrow coral-eyebrow">Therapy software guides</p>
+      <h2>Explore focused resources for mental health practice software.</h2>
+      <div class="marketing-grid three">
+        <article><h3><a href="{% url 'therapy_practice_management' %}">Therapy practice management software</a></h3><p>How private practices can bring scheduling, documentation, billing, and client communication into one trusted workspace.</p></article>
+        <article><h3><a href="{% url 'therapy_scheduling_software' %}">Therapy scheduling software</a></h3><p>Availability, recurring appointments, reminders, Google Calendar workflows, and request handling for therapists.</p></article>
+        <article><h3><a href="{% url 'clinical_notes_software' %}">Clinical notes software</a></h3><p>Progress notes, intake notes, treatment plans, diagnoses, goals, and review routines built for mental health teams.</p></article>
+        <article><h3><a href="{% url 'client_portal_software' %}">Client portal software</a></h3><p>Appointment visibility, intake packets, documents, invoices, and requests in a dedicated client-facing portal.</p></article>
+        <article><h3><a href="{% url 'mental_health_billing_software' %}">Mental health billing software</a></h3><p>Invoices, superbills, session packages, payer settings, and billing follow-up connected to client care.</p></article>
       </div>
     </section>
 

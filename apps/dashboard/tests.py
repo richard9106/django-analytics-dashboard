@@ -67,6 +67,23 @@ class DashboardTests(TestCase):
         self.assertContains(response, '10% annual discount')
         self.assertContains(response, 'FAQPage')
 
+    def test_seo_content_pages_are_public(self):
+        pages = [
+            ('therapy_practice_management', 'Therapy practice management software'),
+            ('therapy_scheduling_software', 'Therapy scheduling software'),
+            ('clinical_notes_software', 'Clinical notes software for therapists'),
+            ('client_portal_software', 'Client portal software for therapists'),
+            ('mental_health_billing_software', 'Mental health billing software'),
+        ]
+
+        for route_name, expected_copy in pages:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, expected_copy)
+                self.assertContains(response, 'https://nuviamy.com/')
+                self.assertContains(response, '/static/favicon.svg')
+
     def test_robots_and_sitemap_load(self):
         robots = self.client.get(reverse('robots_txt'))
         sitemap = self.client.get(reverse('sitemap_xml'))
@@ -76,6 +93,11 @@ class DashboardTests(TestCase):
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, '<loc>https://nuviamy.com/</loc>')
         self.assertContains(sitemap, '<loc>https://nuviamy.com/pricing/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/therapy-practice-management-software/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/therapy-scheduling-software/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/clinical-notes-software-for-therapists/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/client-portal-software-for-therapists/</loc>')
+        self.assertContains(sitemap, '<loc>https://nuviamy.com/mental-health-billing-software/</loc>')
 
     def test_favicon_redirects_to_svg_icon(self):
         response = self.client.get(reverse('favicon'))

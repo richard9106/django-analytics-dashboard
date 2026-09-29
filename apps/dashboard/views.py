@@ -169,3 +169,23 @@ class HomePageView(TemplateView):
 
 class PricingPageView(TemplateView):
     template_name = 'marketing/pricing.html'
+
+
+class TherapyPracticeManagementPageView(TemplateView):
+    template_name = 'marketing/therapy_practice_management.html'
+
+
+class TherapySchedulingPageView(TemplateView):
+    template_name = 'marketing/therapy_scheduling.html'
+
+
+class ClinicalNotesSoftwarePageView(TemplateView):
+    template_name = 'marketing/clinical_notes_software.html'
+
+
+class ClientPortalSoftwarePageView(TemplateView):
+    template_name = 'marketing/client_portal_software.html'
+
+
+class MentalHealthBillingSoftwarePageView(TemplateView):
+    template_name = 'marketing/mental_health_billing_software.html'

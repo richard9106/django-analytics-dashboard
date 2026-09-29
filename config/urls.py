@@ -5,7 +5,16 @@ from django.views.generic import RedirectView, TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 
-from apps.dashboard.views import DashboardView, HomePageView, PricingPageView
+from apps.dashboard.views import (
+    ClinicalNotesSoftwarePageView,
+    ClientPortalSoftwarePageView,
+    DashboardView,
+    HomePageView,
+    MentalHealthBillingSoftwarePageView,
+    PricingPageView,
+    TherapyPracticeManagementPageView,
+    TherapySchedulingPageView,
+)
 from apps.billing.urls import settings_patterns
 from apps.accounts.views import ForcePasswordChangeView, RoleAwareLoginView
 from apps.portal.settings_urls import urlpatterns as portal_settings_patterns
@@ -35,6 +44,11 @@ urlpatterns = [
     path('summernote/', include('django_summernote.urls')),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('pricing/', PricingPageView.as_view(), name='pricing'),
+    path('therapy-practice-management-software/', TherapyPracticeManagementPageView.as_view(), name='therapy_practice_management'),
+    path('therapy-scheduling-software/', TherapySchedulingPageView.as_view(), name='therapy_scheduling_software'),
+    path('clinical-notes-software-for-therapists/', ClinicalNotesSoftwarePageView.as_view(), name='clinical_notes_software'),
+    path('client-portal-software-for-therapists/', ClientPortalSoftwarePageView.as_view(), name='client_portal_software'),
+    path('mental-health-billing-software/', MentalHealthBillingSoftwarePageView.as_view(), name='mental_health_billing_software'),
     path('robots.txt', TemplateView.as_view(template_name='marketing/robots.txt', content_type='text/plain'), name='robots_txt'),
     path('sitemap.xml', TemplateView.as_view(template_name='marketing/sitemap.xml', content_type='application/xml'), name='sitemap_xml'),
     path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True), name='favicon'),
