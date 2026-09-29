@@ -91,9 +91,9 @@ h1, h2, h3, p { margin-top: 0; }
 .app-main { min-width: 0; padding: 24px; display: grid; grid-auto-rows: max-content; align-content: start; gap: 18px; }
 .topbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 18px 22px; box-shadow: var(--shadow-1); }
 .topbar h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); line-height: 1.1; letter-spacing: -.04em; }
-.compact-topbar { min-height: 0; padding: 10px 14px; border-radius: 14px; background: linear-gradient(135deg, #fff, var(--brand-50)); }
-.compact-topbar .eyebrow { margin-bottom: 3px; padding: 3px 8px; font-size: 11px; }
-.compact-topbar h1 { font-size: clamp(20px, 2.2vw, 24px); }
+.compact-topbar { min-height: 0; padding: 4px 0 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.compact-topbar .eyebrow { display: none; }
+.compact-topbar h1 { font-size: clamp(24px, 2.8vw, 32px); }
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .topbar-actions form { margin: 0; }
 .action-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 8px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 14px; background: radial-gradient(circle at top left, rgba(204, 251, 245, .62), transparent 34%), linear-gradient(135deg, #fff, var(--brand-50)); box-shadow: var(--shadow-1); }
