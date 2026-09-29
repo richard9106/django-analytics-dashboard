@@ -1,4 +1,5 @@
 import secrets
+import logging
 
 import stripe
 from django.conf import settings
@@ -26,6 +27,8 @@ from .google_oauth import (
     token_expiry_from_response,
 )
 from .models import ExternalIntegration
+
+logger = logging.getLogger(__name__)
 
 
 def _finance_practice_for_user(request):
@@ -77,8 +80,10 @@ class StripeConnectOnboardingView(PracticeContextMixin, View):
                 return_url=request.build_absolute_uri(reverse('practice_settings:stripe_connect_return')),
                 type='account_onboarding',
             )
-        except stripe.error.StripeError:
-            messages.error(request, 'Stripe could not open payment account setup. Please try again later.')
+        except stripe.error.StripeError as error:
+            logger.exception('Stripe Connect onboarding failed for practice %s', practice.pk)
+            detail = getattr(error, 'user_message', None) or 'Stripe Connect is not enabled for this platform or account.'
+            messages.error(request, f'Client payment setup: {detail}')
             return redirect('profile_settings')
         return redirect(account_link.url)
 
