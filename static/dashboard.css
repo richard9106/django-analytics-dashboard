@@ -553,9 +553,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .signup-intro { position: static; }
   .field-grid.two { grid-template-columns: 1fr; }
   .marketing-nav { width: min(calc(100% - 24px), 1180px); display: grid; gap: 0; padding: 12px 0; }
-  .marketing-nav-head { min-height: 46px; width: 100%; }
-  .marketing-nav-head .brand { margin-right: auto; }
-  .marketing-menu-button { justify-self: end; margin-left: auto; }
+  .marketing-nav-head { min-height: 46px; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .marketing-nav-head .brand { justify-self: start; }
+  .marketing-menu-button { justify-self: end; }
   .marketing-menu-button { min-height: 40px; padding: 0 12px; border: 1px solid rgba(243, 111, 86, .26); border-radius: 12px; display: inline-flex; align-items: center; gap: 9px; background: #fff; color: #9f2f1e; font-size: 13px; font-weight: 900; cursor: pointer; }
   .marketing-nav-links { max-height: 0; overflow: hidden; display: grid; grid-template-columns: 1fr; gap: 8px; opacity: 0; transform: translateY(-4px); transition: max-height .24s ease, opacity .2s ease, transform .2s ease, padding .2s ease; }
   .marketing-nav-check:checked ~ .marketing-nav-links { max-height: 70vh; overflow-y: auto; padding-top: 12px; opacity: 1; transform: translateY(0); }
