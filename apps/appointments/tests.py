@@ -150,6 +150,24 @@ class AppointmentModelTests(TestCase):
 
         appointment.full_clean()
 
+    def test_appointment_rejects_day_without_a_configured_range(self):
+        configured_day = timezone.localtime(self.starts_at).weekday()
+        PracticeWorkingHour.objects.create(
+            practice=self.practice,
+            weekday=configured_day,
+            starts_at="09:00",
+            ends_at="17:00",
+        )
+        local_start = timezone.localtime(self.starts_at) + timedelta(days=1)
+        local_start = local_start.replace(hour=10, minute=0, second=0, microsecond=0)
+        appointment = self.build_appointment(
+            starts_at=local_start,
+            ends_at=local_start + timedelta(minutes=50),
+        )
+
+        with self.assertRaisesMessage(ValidationError, "working hours"):
+            appointment.full_clean()
+
     def test_send_appointment_reminder_uses_connected_gmail(self):
         self.client.email = "client@example.com"
         self.client.save(update_fields=["email"])

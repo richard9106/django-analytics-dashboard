@@ -56,6 +56,7 @@
               <p>Switch between day, week, and month views. Shaded time is outside configured availability.</p>
             </div>
             <div class="calendar-actions">
+              <a class="btn btn-soft" href="{% url 'practice_settings:availability' %}">Manage availability</a>
               <a class="btn btn-secondary" href="{{ previous_period_url }}">Previous</a>
               <a class="btn btn-soft" href="{{ today_period_url }}">Today</a>
               <a class="btn btn-secondary" href="{{ next_period_url }}">Next</a>

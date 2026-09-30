@@ -134,8 +134,12 @@ class Appointment(models.Model):
         if self.practice_id and self.starts_at and self.ends_at:
             local_start = timezone.localtime(self.starts_at)
             local_end = timezone.localtime(self.ends_at)
+            configured_hours = self.practice.working_hours.filter(active=True)
             working_hours = self.practice.working_hours.filter(active=True, weekday=local_start.weekday())
-            if working_hours.exists() and not working_hours.filter(starts_at__lte=local_start.time(), ends_at__gte=local_end.time()).exists():
+            if configured_hours.exists() and not working_hours.filter(
+                starts_at__lte=local_start.time(),
+                ends_at__gte=local_end.time(),
+            ).exists():
                 errors["starts_at"] = "Appointment must be within practice working hours."
 
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
