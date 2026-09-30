@@ -366,7 +366,7 @@ h1, h2, h3, p { margin-top: 0; }
 .account-settings-surface { overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-1); }
 .account-settings-surface > .settings-section { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .account-settings-surface .settings-overview { gap: 0; padding: 0; }
-.account-settings-surface .settings-overview .settings-section-card { padding: 24px; }
+.account-settings-surface .settings-overview .settings-section-card { padding: 24px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .account-settings-surface .settings-overview .settings-section-card + .settings-section-card { border-left: 1px solid var(--slate-100); }
 .settings-sections-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--slate-100); }
 .account-settings-surface .settings-sections-grid > .settings-section { min-width: 0; margin: 0; padding: 24px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
