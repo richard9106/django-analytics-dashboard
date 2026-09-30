@@ -1,4 +1,4 @@
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -471,6 +471,35 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(appointment.practice, practice)
         self.assertEqual(appointment.client, client)
         self.assertEqual(appointment.therapist, therapist)
+
+    def test_appointment_create_outside_configured_day_returns_form_error_not_500(self):
+        user, practice, therapist, client = self.create_practice_user()
+        target_date = timezone.localdate() + timedelta(days=1)
+        PracticeWorkingHour.objects.create(
+            practice=practice,
+            weekday=(target_date.weekday() + 1) % 7,
+            starts_at='09:00',
+            ends_at='17:00',
+        )
+        starts_at = timezone.make_aware(datetime.combine(target_date, time(10, 0)))
+        ends_at = starts_at + timedelta(minutes=50)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:create'), {
+            'client': client.pk,
+            'therapist': therapist.pk,
+            'starts_at': starts_at.strftime('%Y-%m-%dT%H:%M'),
+            'ends_at': ends_at.strftime('%Y-%m-%dT%H:%M'),
+            'appointment_type': Appointment.AppointmentType.VIDEO,
+            'status': Appointment.Status.SCHEDULED,
+            'location': '',
+            'meeting_url': '',
+            'notes': '',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'working hours')
+        self.assertEqual(Appointment.objects.count(), 0)
 
     def test_appointment_create_can_create_weekly_recurring_series(self):
         user, practice, therapist, client = self.create_practice_user()

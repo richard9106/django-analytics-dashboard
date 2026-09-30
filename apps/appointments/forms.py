@@ -34,6 +34,7 @@ class AppointmentForm(forms.ModelForm):
     def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
+        self.instance.practice = practice
         if self.instance.pk:
             self.fields.pop('repeat_weekly_count', None)
         self.fields['starts_at'].input_formats = ['%Y-%m-%dT%H:%M']
