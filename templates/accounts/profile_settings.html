@@ -121,7 +121,16 @@
                 <label><input type="radio" name="scope" value="clinical"> Client and clinical records only</label>
                 <label><input type="radio" name="scope" value="billing"> Billing and practice operations only</label>
               </fieldset>
-              <fieldset class="export-options"><legend>File format</legend><label><input type="radio" name="format" value="zip" checked> Full ZIP / JSON <small>Complete archive</small></label><label><input type="radio" name="format" value="pdf"> PDF <small>Readable report</small></label><label><input type="radio" name="format" value="xlsx"> Excel <small>Tabular data</small></label><label><input type="radio" name="format" value="svg"> SVG <small>Visual summary only</small></label></fieldset>
+               <div class="export-format">
+                 <label for="practice-export-format">File format</label>
+                 <select id="practice-export-format" name="format" aria-describedby="practice-export-format-help">
+                   <option value="zip" selected>ZIP / JSON</option>
+                   <option value="pdf">PDF</option>
+                   <option value="xlsx">Excel</option>
+                   <option value="svg">SVG</option>
+                 </select>
+                 <p class="export-format-help" id="practice-export-format-help"><strong>ZIP / JSON</strong> — Complete archive with JSON records and available document files. PDF creates a readable report, Excel provides tabular data, and SVG provides a visual summary only.</p>
+               </div>
               <button class="btn btn-primary" type="submit" aria-describedby="practice-export-status">Prepare secure download</button></form>
               <p class="export-status" id="practice-export-status"><span aria-hidden="true">i</span> The ZIP includes JSON records and available document files.</p>
             </div>

@@ -352,6 +352,12 @@ h1, h2, h3, p { margin-top: 0; }
 .export-options label { min-height: 34px; display: flex; align-items: center; gap: 8px; color: var(--slate-800); font-size: 12px; font-weight: 800; }
 .export-options input { accent-color: var(--brand-600); }
 .export-options small { margin-left: auto; color: var(--slate-400); font-size: 10px; font-weight: 700; text-align: right; }
+.export-format { margin: 0; padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 14px; background: rgba(255,255,255,.76); }
+.export-format label { display: block; margin-bottom: 7px; color: var(--slate-500); font-size: 11px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.export-format select { width: 100%; min-height: 46px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: var(--slate-800); font-weight: 800; }
+.export-format select:focus-visible { outline: 3px solid rgba(112, 82, 217, .25); outline-offset: 2px; border-color: var(--brand-600); }
+.export-format-help { margin: 9px 0 0; color: var(--slate-600); font-size: 11px; line-height: 1.5; }
+.export-format-help strong { color: var(--slate-800); }
 .practice-export-controls .btn { width: fit-content; }
 .practice-export-controls .btn:disabled { opacity: .58; cursor: not-allowed; transform: none; }
 .export-status { display: flex; align-items: flex-start; gap: 7px; color: var(--slate-500); font-size: 11px; line-height: 1.45; }
