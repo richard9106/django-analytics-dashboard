@@ -130,6 +130,18 @@ This is a reasonable starting point for a private beta and tens of concurrently 
 
 Scale when sustained CPU exceeds roughly 70%, memory pressure/swap appears, database connections approach the configured limit, or p95 request latency exceeds the product target. The next production steps are a managed PostgreSQL instance, Redis/cache or queue workers where needed, centralized monitoring, and a second web replica behind a load balancer.
 
+## Error And Uptime Monitoring
+
+Create a Django project in Sentry and set these VPS variables to enable application error reporting:
+
+```env
+SENTRY_DSN=https://...
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.05
+```
+
+Sentry is disabled when `SENTRY_DSN` is empty and is configured with `send_default_pii=false`. Use UptimeRobot, Better Uptime, or Uptime Kuma separately for an external HTTP check of `https://nuviamy.com/health/` or the public homepage. The staff-only in-app view is available at `/staff/monitoring/`.
+
 ## PostgreSQL Backups
 
 The repository includes:

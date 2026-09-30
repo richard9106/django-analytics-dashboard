@@ -176,6 +176,12 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'Platform monitoring')
         self.assertContains(response, 'Service health')
 
+    def test_public_health_check_returns_ok(self):
+        response = self.client.get(reverse('health'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'ok'})
+
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend', SUPPORT_EMAIL='support@example.com')
     def test_support_contact_sends_email(self):
         response = self.client.post(reverse('support_contact'), {

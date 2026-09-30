@@ -166,6 +166,16 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Cookie Policy at `/cookie-policy/`.
 - Current cookies are limited to session, CSRF, and guided-tour local storage; no advertising analytics are installed.
 
+### Data Export And Monitoring
+
+- Owner/admin-only practice data export at Profile Settings.
+- Exports are ZIP archives containing tenant-scoped JSON records and available document files.
+- Export requests are recorded in the audit log.
+- Staff-only operational monitoring page: `/staff/monitoring/`.
+- Monitoring checks database, email, Stripe, Google OAuth, R2, aggregate metrics, and failed notifications.
+- Sentry integration is conditional on `SENTRY_DSN` and does not send default PII.
+- PostgreSQL backups run daily, are retained locally, encrypted with GPG, copied to R2, and periodically restore-verified.
+
 ### Stripe Subscriptions
 
 - Public pricing page supports Solo, Group, and Clinic plans.
@@ -236,12 +246,11 @@ Any ZIP
 ## Remaining Product Roadmap
 
 - Add secure two-way client/practice messaging.
-- Add data export and account/data retention workflows.
 - Add recurring appointment series editing and cancellation controls.
 - Add Google sync issue dashboard and reconnect state.
 - Add Dropbox OAuth/export support.
 - Define no-show/cancellation rules for package usage.
-- Complete production security, legal, HIPAA/BAA, backup, monitoring, and incident-response review before clinical use.
+- Complete production security, legal, HIPAA/BAA, retention, and incident-response review before clinical use.
 
 ## Security And Compliance Direction
 

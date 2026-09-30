@@ -7,6 +7,7 @@ from django.core.mail import EmailMessage
 from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.contrib.auth import get_user_model
+from django.http import JsonResponse
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
@@ -224,6 +225,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'performance_months': performance_months,
         })
         return context
+
+
+class HealthCheckView(TemplateView):
+    def get(self, request, *args, **kwargs):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT 1')
+                cursor.fetchone()
+        except Exception:
+            return JsonResponse({'status': 'unhealthy'}, status=503)
+        return JsonResponse({'status': 'ok'})
 
 
 class StaffMonitoringView(LoginRequiredMixin, TemplateView):
