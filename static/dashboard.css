@@ -338,6 +338,26 @@ h1, h2, h3, p { margin-top: 0; }
 .session-empty-mark { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; background: var(--brand-50); color: var(--brand-700); font-size: 22px; font-weight: 700; }
 .session-empty strong { display: block; margin-bottom: 3px; color: var(--slate-900); }
 .session-empty p { font-size: 13px; line-height: 1.45; }
+.client-workspace-surface { overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-1); }
+.client-workspace-header { min-width: 0; padding: 20px 24px; display: flex; align-items: center; gap: 16px; background: linear-gradient(100deg, var(--brand-50), rgba(204,251,245,.42)); border-bottom: 1px solid rgba(112,82,217,.12); }
+.client-identity { min-width: 190px; }
+.client-identity h1 { margin: 0; color: var(--slate-900); font-size: clamp(26px, 3vw, 38px); line-height: 1.05; letter-spacing: -.05em; }
+.client-identity p:not(.eyebrow) { margin: 5px 0 0; color: var(--slate-600); font-size: 13px; white-space: nowrap; }
+.client-workspace-header > .badge { flex: 0 0 auto; }
+.client-header-session { min-width: 0; margin-left: auto; padding-left: 20px; display: flex; align-items: center; gap: 10px; border-left: 1px solid rgba(112,82,217,.18); color: var(--slate-600); font-size: 13px; white-space: nowrap; }
+.client-header-session > strong { color: var(--brand-700); font-size: 12px; letter-spacing: .03em; }
+.client-header-session .session-therapist { color: var(--slate-800); font-weight: 800; }
+.client-workspace-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .95fr); align-items: start; }
+.client-workspace-surface .panel { border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 24px; }
+.client-information-panel { min-height: 100%; border-right: 1px solid var(--slate-100) !important; }
+.client-workspace-side { display: grid; align-content: start; }
+.client-workspace-side .panel + .panel, .client-workspace-lower { border-top: 1px solid var(--slate-100); }
+.client-workspace-side .panel { padding-block: 20px; }
+.client-workspace-surface .panel-head { margin-bottom: 14px; }
+.client-workspace-surface .note-card, .client-workspace-surface .package-card, .client-workspace-surface .document-card { padding: 14px 0; border: 0; border-bottom: 1px solid var(--slate-100); border-radius: 0; background: transparent; box-shadow: none; }
+.client-workspace-surface .note-card:last-child, .client-workspace-surface .package-card:last-child, .client-workspace-surface .document-card:last-child { border-bottom: 0; }
+.client-workspace-lower { margin: 0; }
+.client-workspace-lower .panel + .panel { border-left: 1px solid var(--slate-100); }
 .team-permissions { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid var(--slate-200); }
 .team-permissions summary { margin-bottom: 10px; color: var(--brand-700); font-size: 12px; font-weight: 900; cursor: pointer; }
 .permission-matrix { display: grid; gap: 5px; margin-bottom: 12px; }
@@ -772,4 +792,16 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+@media (max-width: 720px) {
+  .client-workspace-header { align-items: flex-start; flex-wrap: wrap; padding: 18px; }
+  .client-identity { flex: 1 1 calc(100% - 84px); }
+  .client-identity p:not(.eyebrow) { white-space: normal; }
+  .client-workspace-header > .badge { margin-left: 84px; margin-top: -12px; }
+  .client-header-session { flex: 1 1 100%; min-width: 0; margin-left: 0; padding: 14px 0 0; border-top: 1px solid rgba(112,82,217,.18); border-left: 0; white-space: normal; flex-wrap: wrap; }
+  .client-workspace-columns { grid-template-columns: 1fr; }
+  .client-information-panel { min-height: 0; border-right: 0 !important; border-bottom: 1px solid var(--slate-100) !important; }
+  .client-workspace-lower .panel + .panel { border-left: 0; border-top: 1px solid var(--slate-100); }
+  .client-workspace-surface .panel { padding: 20px 18px; }
 }
