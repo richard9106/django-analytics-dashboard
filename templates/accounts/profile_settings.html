@@ -46,7 +46,13 @@
         </section>
       {% endif %}
 
-      <section class="profile-grid settings-overview settings-section">
+       {% if not practice_setup_complete %}
+         <section class="setup-checklist-panel settings-section settings-setup-section">
+           <div><p class="eyebrow">Before adding clients</p><h2>Set up your practice in about 10 minutes.</h2><p>Connect Gmail for secure invitations and reminders, then connect Stripe so client invoice payments go to your practice.</p></div>
+           <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
+         </section>
+       {% endif %}
+       <section class="profile-grid settings-overview settings-section">
         <article class="panel settings-section-card">
           <div class="panel-head compact"><div><h2>Your profile</h2><p>Signed-in user details.</p></div><button class="btn btn-secondary" type="button" data-modal-target="profile-edit-modal">Edit profile</button></div>
           <dl class="profile-detail-list">
@@ -90,12 +96,6 @@
           {% endif %}
         </article>
        </section>
-       {% if not practice_setup_complete %}
-         <section class="setup-checklist-panel settings-section settings-setup-section">
-           <div><p class="eyebrow">Before adding clients</p><h2>Set up your practice in about 10 minutes.</h2><p>Connect Gmail for secure invitations and reminders, then connect Stripe so client invoice payments go to your practice.</p></div>
-           <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
-         </section>
-       {% endif %}
        <dialog class="modal-dialog" id="profile-edit-modal"{% if profile_form.errors %} data-profile-errors{% endif %}><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Account</p><h2>Edit profile</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div><form class="appointment-form" method="post" action="{% url 'profile_settings' %}">{% csrf_token %}{% if profile_form.errors %}<div class="form-error">Please correct the profile details below.</div>{% endif %}<div class="field-grid two"><div class="field"><label for="id_first_name">First name</label>{{ profile_form.first_name }}{{ profile_form.first_name.errors }}</div><div class="field"><label for="id_last_name">Last name</label>{{ profile_form.last_name }}{{ profile_form.last_name.errors }}</div><div class="field full"><label for="id_email">Login email</label>{{ profile_form.email }}{{ profile_form.email.errors }}</div><div class="field full"><label for="id_phone">Phone</label>{{ profile_form.phone }}{{ profile_form.phone.errors }}</div></div><p class="empty-state">Changing this login email does not disconnect Gmail OAuth or change your Stripe subscription/Connect account.</p><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save profile</button></div></form></div></dialog>
        {% if can_manage_client_payments %}
         <div class="settings-sections-grid" aria-label="Practice settings">
