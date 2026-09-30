@@ -52,3 +52,6 @@ jobs:
             docker compose exec -T web python manage.py migrate --noinput
             docker compose exec -T web python manage.py collectstatic --noinput
             docker compose restart web
+            curl --fail --silent --show-error --retry 5 --retry-connrefused \
+              -H 'X-Forwarded-Proto: https' \
+              http://127.0.0.1:8000/health/
