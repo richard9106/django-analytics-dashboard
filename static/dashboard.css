@@ -339,6 +339,10 @@ h1, h2, h3, p { margin-top: 0; }
 .setup-reminder p { margin: 5px 0 8px; color: var(--slate-600); font-size: 12px; line-height: 1.45; }
 .setup-reminder a { color: var(--coral-500); font-size: 12px; font-weight: 900; }
 .support-nav-link { margin: 12px 14px 0; padding: 10px 12px; display: block; border: 1px solid rgba(243, 111, 86, .24); border-radius: 12px; color: var(--coral-500); font-size: 13px; font-weight: 900; text-decoration: none; }
+.breadcrumbs { min-height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: var(--slate-500); font-size: 12px; font-weight: 800; }
+.breadcrumbs a { color: var(--brand-700); text-decoration: none; }
+.breadcrumbs a:hover { text-decoration: underline; }
+.breadcrumbs span[aria-current="page"] { color: var(--slate-700); }
 .setup-checklist-panel { padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; border: 1px solid rgba(243, 111, 86, .28); border-radius: 22px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
 .setup-checklist-panel h2 { margin: 0; color: var(--slate-900); font-size: 24px; }
 .setup-checklist-panel p:not(.eyebrow) { margin: 6px 0 0; color: var(--slate-600); line-height: 1.55; }

@@ -317,7 +317,22 @@ class PortalAccessListView(PracticePermissionMixin, PracticeContextMixin, ListVi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        practice = self.get_practice()
+        breadcrumb_client = None
+        client_id = self.request.GET.get('client')
+        if client_id and client_id.isdigit() and practice:
+            breadcrumb_client = practice.clients.filter(pk=client_id).first()
         context['reset_credentials'] = self.request.session.pop('portal_reset_credentials', None)
+        context['breadcrumbs'] = (
+            [
+                {'label': 'Clients', 'url': reverse('clients:list')},
+                {'label': str(breadcrumb_client), 'url': reverse('clients:detail', args=[breadcrumb_client.pk])},
+                {'label': 'Portal access'},
+            ] if breadcrumb_client else [
+                {'label': 'Settings'},
+                {'label': 'Client Portal Access'},
+            ]
+        )
         return context
 
 

@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -70,6 +70,10 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
         client = self.object
         now = timezone.now()
         context.update({
+            'breadcrumbs': [
+                {'label': 'Clients', 'url': reverse('clients:list')},
+                {'label': str(client)},
+            ],
             'client_therapists': client.practice.therapists.select_related('user'),
             'upcoming_appointments': Appointment.objects.filter(client=client, starts_at__gte=now).select_related('therapist__user')[:8],
             'recent_appointments': Appointment.objects.filter(client=client, starts_at__lt=now).select_related('therapist__user').order_by('-starts_at')[:8],
