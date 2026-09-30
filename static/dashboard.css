@@ -849,8 +849,15 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .client-card { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: 1fr; }
   .document-grid { grid-template-columns: 1fr; }
-  .profile-grid { grid-template-columns: 1fr; }
-  .practice-export-layout { grid-template-columns: 1fr; }
+   .profile-grid { grid-template-columns: 1fr; }
+   .settings-overview { padding: 20px; }
+   .settings-section-card + .settings-section-card { border-top: 1px solid var(--slate-200); border-left: 0; padding: 20px 0 0; margin-top: 20px; }
+   .account-settings-surface .client-payments-panel,
+   .account-settings-surface .practice-export-panel,
+   .account-settings-surface .subscription-invoices-panel { padding: 20px; }
+   .settings-setup-section { padding: 18px 20px; }
+   .account-settings-surface .message-list { padding: 14px 20px 0; }
+   .practice-export-layout { grid-template-columns: 1fr; }
   .practice-export-controls .btn { width: 100%; }
   .export-options small { margin-left: 0; }
   .team-member-card { grid-template-columns: 1fr; }
