@@ -196,6 +196,8 @@ h1, h2, h3, p { margin-top: 0; }
 .gcal-day-column.today .gcal-day-head span { background: var(--brand-600); color: #fff; }
 .gcal-time-grid { position: absolute; top: 54px; right: 0; left: 0; height: var(--calendar-grid-height); display: grid; grid-auto-rows: 72px; pointer-events: none; }
 .gcal-time-grid span { border-bottom: 1px solid var(--slate-100); }
+.availability-block { position: absolute; right: 0; left: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(135deg, rgba(148, 163, 184, .14), rgba(148, 163, 184, .14) 7px, rgba(148, 163, 184, .06) 7px, rgba(148, 163, 184, .06) 14px); border-top: 1px solid rgba(100, 116, 139, .16); border-bottom: 1px solid rgba(100, 116, 139, .16); }
+.availability-block span { position: absolute; right: 8px; top: 5px; color: var(--slate-400); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .gcal-now-line { position: absolute; left: 0; right: 0; z-index: 4; height: 2px; background: var(--coral-500); pointer-events: none; }
 .gcal-now-line::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 999px; background: var(--coral-500); }
 .gcal-now-line span { position: absolute; right: 8px; top: -11px; padding: 2px 7px; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 10px; font-weight: 900; text-transform: uppercase; }
@@ -753,7 +755,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .calendar-head p { font-size: 13px; }
   .calendar-actions { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
   .calendar-actions .btn { width: 100%; min-height: 40px; padding-inline: 8px; }
-  .calendar-view-tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .calendar-view-tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
   .calendar-view-tabs a { min-height: 40px; padding: 0 8px; }
   .calendar-grid { min-width: 640px; gap: 0; overflow: hidden; }
   .calendar-weekday { display: block; padding: 9px 4px; font-size: 10px; }

@@ -34,7 +34,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
     model = Appointment
     template_name = 'appointments/list.html'
     context_object_name = 'appointments'
-    calendar_views = {'day', 'week', 'month', 'year'}
+    calendar_views = {'day', 'week', 'month'}
     calendar_start_hour = 7
     calendar_end_hour = 20
     calendar_hour_height = 72
@@ -108,6 +108,31 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         month_start = self.get_calendar_month() if selected_view == 'month' else anchor.replace(day=1)
         month_dates = calendar.Calendar(firstweekday=0).monthdatescalendar(month_start.year, month_start.month)
         today = timezone.localdate()
+        configured_hours = list(self.get_practice().working_hours.filter(active=True)) if self.get_practice() else []
+        hours_by_weekday = {}
+        for working_hour in configured_hours:
+            hours_by_weekday.setdefault(working_hour.weekday, []).append(working_hour)
+
+        def availability_for_day(current_day):
+            if not configured_hours:
+                return {'configured': False, 'blocks': []}
+            day_hours = hours_by_weekday.get(current_day.weekday(), [])
+            cursor = self.calendar_start_hour * 60
+            end_of_grid = self.calendar_end_hour * 60
+            blocks = []
+            for working_hour in sorted(day_hours, key=lambda hour: hour.starts_at):
+                start_minutes = max(cursor, working_hour.starts_at.hour * 60 + working_hour.starts_at.minute)
+                end_minutes = min(end_of_grid, working_hour.ends_at.hour * 60 + working_hour.ends_at.minute)
+                if start_minutes > cursor:
+                    blocks.append({
+                        'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(start_minutes - cursor) * (self.calendar_hour_height / 60)}px;',
+                    })
+                cursor = max(cursor, end_minutes)
+            if cursor < end_of_grid:
+                blocks.append({
+                    'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(end_of_grid - cursor) * (self.calendar_hour_height / 60)}px;',
+                })
+            return {'configured': True, 'blocks': blocks}
 
         appointments_by_date = {}
         for appointment in appointments:
@@ -122,6 +147,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                     'in_month': day.month == month_start.month,
                     'is_today': day == today,
                     'appointments': appointments_by_date.get(day, []),
+                    'outside_availability': availability_for_day(day)['configured'] and not hours_by_weekday.get(day.weekday()),
                 }
                 for day in week
             ])
@@ -135,9 +161,11 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                 'is_today': current_day == today,
                 'appointments': appointments_by_date.get(current_day, []),
                 'timed_events': [self.get_timed_event(appointment) for appointment in appointments_by_date.get(current_day, [])],
+                'availability_blocks': availability_for_day(current_day)['blocks'],
             })
 
         day_timed_events = [self.get_timed_event(appointment) for appointment in appointments_by_date.get(anchor, [])]
+        day_availability = availability_for_day(anchor)
 
         year_months = []
         for month_number in range(1, 13):
@@ -171,6 +199,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'calendar_week_days': week_days,
             'calendar_day_appointments': appointments_by_date.get(anchor, []),
             'calendar_day_timed_events': day_timed_events,
+            'calendar_day_availability_blocks': day_availability['blocks'],
+            'calendar_availability_configured': bool(configured_hours),
             'calendar_year_months': year_months,
             'calendar_hours': [time(hour=hour) for hour in range(self.calendar_start_hour, self.calendar_end_hour + 1)],
             'calendar_grid_height': (self.calendar_end_hour - self.calendar_start_hour + 1) * self.calendar_hour_height,

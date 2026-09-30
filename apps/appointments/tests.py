@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -275,7 +275,7 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'Day')
         self.assertContains(response, 'Week')
         self.assertContains(response, 'Month')
-        self.assertContains(response, 'Year')
+        self.assertNotContains(response, '>Year<')
         self.assertContains(response, '<div class="calendar-weekday">Mon</div>', html=True)
         self.assertContains(response, 'calendar-day-name')
         self.assertContains(response, 'id="client-create-modal"')
@@ -295,7 +295,7 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
         self.assertContains(response, f'?view=week&amp;date={timezone.localdate().isoformat()}')
 
-    def test_appointment_calendar_supports_day_week_and_year_views(self):
+    def test_appointment_calendar_supports_day_week_and_month_views(self):
         user, practice, therapist, client = self.create_practice_user()
         starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0)
         Appointment.objects.create(
@@ -309,7 +309,7 @@ class AppointmentViewTests(TestCase):
         self.client.force_login(user)
         day_response = self.client.get(reverse('appointments:list'), {'view': 'day', 'date': starts_at.date().isoformat()})
         week_response = self.client.get(reverse('appointments:list'), {'view': 'week', 'date': starts_at.date().isoformat()})
-        year_response = self.client.get(reverse('appointments:list'), {'view': 'year', 'date': starts_at.date().isoformat()})
+        month_response = self.client.get(reverse('appointments:list'), {'view': 'month', 'month': starts_at.strftime('%Y-%m')})
 
         self.assertContains(day_response, 'Day appointment schedule')
         self.assertContains(day_response, 'calendar-grid-config')
@@ -318,8 +318,24 @@ class AppointmentViewTests(TestCase):
         self.assertContains(week_response, 'Week appointment schedule')
         self.assertContains(week_response, 'gcal-week-columns')
         self.assertContains(week_response, 'Maya Johnson')
-        self.assertContains(year_response, 'Year appointment overview')
-        self.assertContains(year_response, 'appointment')
+        self.assertContains(month_response, 'calendar-day')
+        self.assertNotContains(month_response, 'Year appointment overview')
+
+    def test_day_calendar_shows_unavailable_time_blocks(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        monday = timezone.localdate() - timedelta(days=timezone.localdate().weekday())
+        PracticeWorkingHour.objects.create(
+            practice=practice,
+            weekday=PracticeWorkingHour.Weekday.MONDAY,
+            starts_at=time(9, 0),
+            ends_at=time(17, 0),
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:list'), {'view': 'day', 'date': monday.isoformat()})
+
+        self.assertContains(response, 'availability-block')
+        self.assertContains(response, 'Unavailable')
 
     def test_appointment_reschedule_updates_start_and_end(self):
         user, _practice, therapist, client = self.create_practice_user()

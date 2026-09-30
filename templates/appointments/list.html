@@ -53,7 +53,7 @@
           <div class="panel-head calendar-head">
             <div>
               <h2>{{ calendar_period_label }}</h2>
-              <p>Switch between day, week, month, and year views. Use + to add an appointment, or click a session to edit it.</p>
+              <p>Switch between day, week, and month views. Shaded time is outside configured availability.</p>
             </div>
             <div class="calendar-actions">
               <a class="btn btn-secondary" href="{{ previous_period_url }}">Previous</a>
@@ -66,7 +66,6 @@
             <a class="{% if calendar_view == 'day' %}active{% endif %}" href="{{ day_view_url }}">Day</a>
             <a class="{% if calendar_view == 'week' %}active{% endif %}" href="{{ week_view_url }}">Week</a>
             <a class="{% if calendar_view == 'month' %}active{% endif %}" href="{{ month_view_url }}">Month</a>
-            <a class="{% if calendar_view == 'year' %}active{% endif %}" href="{{ year_view_url }}">Year</a>
           </nav>
 
           {% if calendar_view == 'day' %}
@@ -76,7 +75,7 @@
               </aside>
               <section class="gcal-day-column" style="--calendar-grid-height: {{ calendar_grid_height }}px;" data-drop-date="{{ calendar_anchor_date|date:'Y-m-d' }}">
                 <div class="gcal-day-head"><strong>{{ calendar_anchor_date|date:"D" }}</strong><span>{{ calendar_anchor_date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a></div>
-                <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>
+                 <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>{% for block in calendar_day_availability_blocks %}<div class="availability-block" style="{{ block.style }}"><span>Unavailable</span></div>{% endfor %}
                 {% if calendar_show_current_time and calendar_anchor_date == calendar_today %}<div class="gcal-now-line" style="top: {{ calendar_current_time_top }}px;"><span>Now</span></div>{% endif %}
                 {% for event in calendar_day_timed_events %}
                   {% with appointment=event.appointment %}
@@ -98,7 +97,7 @@
                 {% for day in calendar_week_days %}
                   <section class="gcal-day-column{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
                     <div class="gcal-day-head"><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a></div>
-                    <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>
+                     <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>{% for block in day.availability_blocks %}<div class="availability-block" style="{{ block.style }}"><span>Unavailable</span></div>{% endfor %}
                     {% if calendar_show_current_time and day.date == calendar_today %}<div class="gcal-now-line" style="top: {{ calendar_current_time_top }}px;"><span>Now</span></div>{% endif %}
                     {% for event in day.timed_events %}
                       {% with appointment=event.appointment %}
@@ -110,15 +109,6 @@
                   </section>
                 {% endfor %}
               </div>
-            </div>
-          {% elif calendar_view == 'year' %}
-            <div class="year-grid" aria-label="Year appointment overview">
-              {% for month in calendar_year_months %}
-                <a class="year-month-card" href="{{ month.href }}">
-                  <strong>{{ month.label }}</strong>
-                  <span>{{ month.count }} appointment{{ month.count|pluralize }}</span>
-                </a>
-              {% endfor %}
             </div>
           {% else %}
             <div class="calendar-grid" aria-label="Appointment calendar">
