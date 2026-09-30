@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -44,11 +45,45 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         if not practice:
             return Appointment.objects.none()
 
-        return (
+        appointments = (
             Appointment.objects.filter(practice=practice)
             .select_related('client', 'therapist__user')
             .order_by('starts_at')
         )
+        filters = self.get_calendar_filters()
+        if filters['q']:
+            appointments = appointments.filter(
+                Q(client__first_name__icontains=filters['q'])
+                | Q(client__last_name__icontains=filters['q'])
+                | Q(client__email__icontains=filters['q'])
+            )
+        if filters['therapist'].isdigit():
+            appointments = appointments.filter(therapist_id=filters['therapist'])
+        if filters['status'] in dict(Appointment.Status.choices):
+            appointments = appointments.filter(status=filters['status'])
+        if filters['appointment_type'] in dict(Appointment.AppointmentType.choices):
+            appointments = appointments.filter(appointment_type=filters['appointment_type'])
+        if filters['sync_status'] in dict(Appointment.SyncStatus.choices):
+            appointments = appointments.filter(sync_status=filters['sync_status'])
+        return appointments
+
+    def get_calendar_filters(self):
+        return {
+            'q': self.request.GET.get('q', '').strip(),
+            'therapist': self.request.GET.get('therapist', ''),
+            'status': self.request.GET.get('status', ''),
+            'appointment_type': self.request.GET.get('appointment_type', ''),
+            'sync_status': self.request.GET.get('sync_status', ''),
+        }
+
+    def calendar_url(self, **updates):
+        params = self.request.GET.copy()
+        for key, value in updates.items():
+            if value is None:
+                params.pop(key, None)
+            else:
+                params[key] = value
+        return '?' + params.urlencode()
 
     def get_calendar_month(self):
         month_value = self.request.GET.get('month')
@@ -60,8 +95,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         return timezone.localdate().replace(day=1)
 
     def get_calendar_view(self):
-        view = self.request.GET.get('view', 'month')
-        return view if view in self.calendar_views else 'month'
+        view = self.request.GET.get('view', 'week')
+        return view if view in self.calendar_views else 'week'
 
     def get_anchor_date(self):
         date_value = self.request.GET.get('date')
@@ -70,22 +105,20 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                 return date.fromisoformat(date_value)
             except ValueError:
                 pass
-        return self.get_calendar_month()
+        return timezone.localdate()
 
     def get_period_navigation(self, view, anchor):
         if view == 'day':
             previous_value = (anchor - timedelta(days=1)).isoformat()
             next_value = (anchor + timedelta(days=1)).isoformat()
-            return f'?view=day&date={previous_value}', f'?view=day&date={next_value}'
+            return self.calendar_url(view='day', date=previous_value), self.calendar_url(view='day', date=next_value)
         if view == 'week':
             week_start = anchor - timedelta(days=anchor.weekday())
-            return f'?view=week&date={(week_start - timedelta(days=7)).isoformat()}', f'?view=week&date={(week_start + timedelta(days=7)).isoformat()}'
-        if view == 'year':
-            return f'?view=year&date={date(anchor.year - 1, 1, 1).isoformat()}', f'?view=year&date={date(anchor.year + 1, 1, 1).isoformat()}'
+            return self.calendar_url(view='week', date=(week_start - timedelta(days=7)).isoformat()), self.calendar_url(view='week', date=(week_start + timedelta(days=7)).isoformat())
         month_start = anchor.replace(day=1)
         previous_month = (month_start - timedelta(days=1)).replace(day=1)
         next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
-        return f'?view=month&month={previous_month:%Y-%m}', f'?view=month&month={next_month:%Y-%m}'
+        return self.calendar_url(view='month', month=f'{previous_month:%Y-%m}', date=None), self.calendar_url(view='month', month=f'{next_month:%Y-%m}', date=None)
 
     def get_timed_event(self, appointment):
         local_start = timezone.localtime(appointment.starts_at)
@@ -215,11 +248,14 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'calendar_today': today,
             'previous_period_url': previous_period,
             'next_period_url': next_period,
-            'today_period_url': '?view=day&date=' + today.isoformat(),
-            'month_view_url': f'?view=month&month={month_start:%Y-%m}',
-            'week_view_url': f'?view=week&date={view_switch_date.isoformat()}',
-            'day_view_url': f'?view=day&date={view_switch_date.isoformat()}',
-            'year_view_url': f'?view=year&date={date(view_switch_date.year, 1, 1).isoformat()}',
+            'today_period_url': self.calendar_url(view='day', date=today.isoformat()),
+            'month_view_url': self.calendar_url(view='month', month=f'{month_start:%Y-%m}', date=None),
+            'week_view_url': self.calendar_url(view='week', date=view_switch_date.isoformat(), month=None),
+            'day_view_url': self.calendar_url(view='day', date=view_switch_date.isoformat(), month=None),
+            'calendar_filters': self.get_calendar_filters(),
+            'appointment_status_choices': Appointment.Status.choices,
+            'appointment_type_choices': Appointment.AppointmentType.choices,
+            'sync_status_choices': Appointment.SyncStatus.choices,
             'weekday_labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         }
 

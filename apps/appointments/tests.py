@@ -276,8 +276,8 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'Week')
         self.assertContains(response, 'Month')
         self.assertNotContains(response, '>Year<')
-        self.assertContains(response, '<div class="calendar-weekday">Mon</div>', html=True)
-        self.assertContains(response, 'calendar-day-name')
+        self.assertContains(response, 'Week appointment schedule')
+        self.assertContains(response, 'gcal-week-columns')
         self.assertContains(response, 'id="client-create-modal"')
         self.assertContains(response, 'id="appointment-create-modal"')
         self.assertContains(response, reverse('appointments:create'))
@@ -294,6 +294,22 @@ class AppointmentViewTests(TestCase):
         self.assertNotContains(response, 'Upcoming appointments')
         self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
         self.assertContains(response, f'?view=week&amp;date={timezone.localdate().isoformat()}')
+
+    def test_calendar_can_search_by_client_and_filter_status(self):
+        user, practice, therapist, client = self.create_practice_user()
+        hidden_client = Client.objects.create(practice=practice, first_name='Hidden', last_name='Client')
+        starts_at = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0)
+        visible_appointment = Appointment.objects.create(practice=practice, client=client, therapist=therapist, starts_at=starts_at, ends_at=starts_at + timedelta(minutes=50), status=Appointment.Status.SCHEDULED)
+        hidden_appointment = Appointment.objects.create(practice=practice, client=hidden_client, therapist=therapist, starts_at=starts_at + timedelta(hours=1), ends_at=starts_at + timedelta(hours=1, minutes=50), status=Appointment.Status.CANCELLED)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:list'), {'q': 'Maya', 'status': Appointment.Status.SCHEDULED})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(visible_appointment, response.context['appointments'])
+        self.assertNotIn(hidden_appointment, response.context['appointments'])
+        self.assertContains(response, 'More filters')
+        self.assertContains(response, 'value="scheduled" selected')
 
     def test_appointment_calendar_supports_day_week_and_month_views(self):
         user, practice, therapist, client = self.create_practice_user()
@@ -412,7 +428,7 @@ class AppointmentViewTests(TestCase):
         response = self.client.get(reverse('appointments:list'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'calendar-day today')
+        self.assertContains(response, 'gcal-day-column today')
 
     def test_appointment_create_saves_to_user_practice(self):
         user, practice, therapist, client = self.create_practice_user()

@@ -68,6 +68,15 @@
             <a class="{% if calendar_view == 'month' %}active{% endif %}" href="{{ month_view_url }}">Month</a>
           </nav>
 
+          <form class="calendar-filter-bar" method="get" aria-label="Filter appointments">
+            <input type="hidden" name="view" value="{{ calendar_view }}">
+            {% if request.GET.date %}<input type="hidden" name="date" value="{{ request.GET.date }}">{% endif %}
+            {% if request.GET.month %}<input type="hidden" name="month" value="{{ request.GET.month }}">{% endif %}
+            <label class="calendar-search"><span class="sr-only">Search client</span><input name="q" type="search" value="{{ calendar_filters.q }}" placeholder="Search client name or email"></label>
+            <details class="calendar-more-filters"><summary>More filters</summary><div class="calendar-filter-fields"><div class="field"><label for="calendar-filter-therapist">Therapist</label><select id="calendar-filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in appointment_therapists %}<option value="{{ therapist.pk }}" {% if calendar_filters.therapist == therapist.pk|stringformat:'s' %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-status">Status</label><select id="calendar-filter-status" name="status"><option value="">All statuses</option>{% for value,label in appointment_status_choices %}<option value="{{ value }}" {% if calendar_filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-type">Type</label><select id="calendar-filter-type" name="appointment_type"><option value="">All types</option>{% for value,label in appointment_type_choices %}<option value="{{ value }}" {% if calendar_filters.appointment_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-sync">Google sync</label><select id="calendar-filter-sync" name="sync_status"><option value="">Any sync status</option>{% for value,label in sync_status_choices %}<option value="{{ value }}" {% if calendar_filters.sync_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div></details>
+            <button class="btn btn-primary" type="submit">Apply</button><a class="btn btn-secondary" href="{% url 'appointments:list' %}?view=week">Clear</a>
+          </form>
+
           {% if calendar_view == 'day' %}
             <div class="gcal-day" aria-label="Day appointment schedule">
               <aside class="gcal-time-labels" aria-hidden="true">
