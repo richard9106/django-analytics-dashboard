@@ -10,6 +10,21 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-only-secret-key')
 DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() == 'true'
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',') if host.strip()]
 
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+SENTRY_ENVIRONMENT = os.getenv('SENTRY_ENVIRONMENT', 'development' if DEBUG else 'production')
+SENTRY_TRACES_SAMPLE_RATE = float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.05'))
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[DjangoIntegration()],
+        send_default_pii=False,
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+    )
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

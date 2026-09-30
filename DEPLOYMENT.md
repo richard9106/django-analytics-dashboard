@@ -13,6 +13,9 @@ DJANGO_SECRET_KEY=change-me-to-a-long-random-secret
 DJANGO_DEBUG=false
 DJANGO_ALLOWED_HOSTS=nuviamy.com,www.nuviamy.com,YOUR_SERVER_IP
 DJANGO_CSRF_TRUSTED_ORIGINS=https://nuviamy.com,https://www.nuviamy.com,http://YOUR_SERVER_IP
+SENTRY_DSN=
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.05
 
 POSTGRES_DB=dashboard
 POSTGRES_USER=dashboard_user
