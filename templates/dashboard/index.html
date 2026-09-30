@@ -18,6 +18,7 @@
         <div class="quick-actions">
           <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
           <a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>
+          <a class="btn btn-soft" href="{% url 'tasks_list' %}">+ New task</a>
           <a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>
         </div>
         <details class="profile-menu">
@@ -132,18 +133,25 @@
           </div>
           <div class="task-list">
             {% for task in tasks %}
-              <div class="task-card {{ task.tone }}">
-                <span></span>
+             <div class="task-card {{ task.tone }}">
+                <span aria-hidden="true"></span>
                 <div>
                   <strong>{{ task.label }}</strong>
                   <p>{{ task.detail }}</p>
+                  {% if task.manual %}
+                    <div class="task-meta"><span class="badge {{ task.manual.priority }}">{{ task.manual.get_priority_display }} priority</span>{% if task.manual.due_date %}<span>Due {{ task.manual.due_date|date:"M j" }}</span>{% endif %}</div>
+                    <form method="post" action="{% url 'tasks_status' task.manual.pk %}" class="task-status-form">
+                      {% csrf_token %}<input type="hidden" name="status" value="done"><input type="hidden" name="next" value="dashboard"><button class="inline-link" type="submit">Mark complete</button>
+                    </form>
+                  {% endif %}
                 </div>
               </div>
             {% empty %}
-              <p class="empty-state">No urgent tasks right now.</p>
-            {% endfor %}
-          </div>
-        </article>
+               <p class="empty-state">No open tasks right now. Automatic alerts will appear here when something needs attention.</p>
+             {% endfor %}
+           </div>
+           <a class="inline-link" href="{% url 'tasks_list' %}">View all tasks →</a>
+         </article>
       </section>
 
       <section class="panel">

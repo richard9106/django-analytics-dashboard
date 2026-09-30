@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasks · NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page"><div class="app-shell">
+  {% include 'partials/sidebar.html' with card_title='Team follow-through' card_text='Keep small practice commitments visible without mixing them into clinical notes.' %}
+  <main class="app-main">
+    <section class="topbar"><div><p class="eyebrow">Practice workspace</p><h1>Tasks</h1></div><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back to dashboard</a></section>
+    {% if messages %}{% for message in messages %}<p class="form-message" role="status">{{ message }}</p>{% endfor %}{% endif %}
+    <section class="tasks-layout">
+      <article class="panel"><div class="panel-head"><div><h2>Create a team task</h2><p>Assign a clear next step to someone on your internal team.</p></div></div>
+        <form class="appointment-form" method="post" action="{% url 'tasks_create' %}">{% csrf_token %}
+          {% if form.errors %}<div class="form-errors" role="alert">Please review the highlighted fields.</div>{% endif %}
+          <div class="field-grid two">
+            <div class="field full"><label for="{{ form.title.id_for_label }}">Title</label>{{ form.title }}{{ form.title.errors }}</div>
+            <div class="field full"><label for="{{ form.description.id_for_label }}">Description <span class="field-hint">Optional</span></label>{{ form.description }}{{ form.description.errors }}</div>
+            <div class="field"><label for="{{ form.assignee.id_for_label }}">Assign to</label>{{ form.assignee }}{{ form.assignee.errors }}</div>
+            <div class="field"><label for="{{ form.due_date.id_for_label }}">Due date <span class="field-hint">Optional</span></label>{{ form.due_date }}{{ form.due_date.errors }}</div>
+            <div class="field"><label for="{{ form.priority.id_for_label }}">Priority</label>{{ form.priority }}</div>
+            <div class="field"><label for="{{ form.status.id_for_label }}">Status</label>{{ form.status }}</div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Create task</button></div>
+        </form>
+      </article>
+      <article class="panel"><div class="panel-head"><div><h2>Team tasks</h2><p>Open and completed follow-ups for {{ task_practice.name }}.</p></div></div>
+        <div class="task-list">{% for task in tasks %}<div class="task-card manual {% if task.status == 'done' %}task-complete{% endif %}"><span aria-hidden="true"></span><div><div class="task-title-row"><strong>{{ task.title }}</strong><span class="badge {{ task.priority }}">{{ task.get_priority_display }}</span></div>{% if task.description %}<p>{{ task.description }}</p>{% endif %}<div class="task-meta"><span>Assigned to {{ task.assignee.get_full_name|default:task.assignee.username }}</span>{% if task.due_date %}<span>Due {{ task.due_date|date:"M j, Y" }}</span>{% endif %}<span class="badge status-{{ task.status }}">{{ task.get_status_display }}</span></div>{% if task.status != 'done' %}<form method="post" action="{% url 'tasks_status' task.pk %}" class="task-status-form">{% csrf_token %}<input type="hidden" name="status" value="done"><button class="inline-link" type="submit">Mark complete</button></form>{% endif %}</div></div>{% empty %}<p class="empty-state">No team tasks yet. Create the first one when a follow-up should stay visible.</p>{% endfor %}</div>
+      </article>
+    </section>
+  </main>
+</div></body></html>

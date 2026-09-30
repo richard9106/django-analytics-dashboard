@@ -12,6 +12,7 @@ from apps.clinical.models import TreatmentPlan
 from apps.clients.models import Client
 from apps.portal.models import ClientPortalAccess
 from apps.practices.models import Practice, TherapistProfile
+from apps.dashboard.models import Task
 
 
 class DashboardTests(TestCase):
@@ -349,6 +350,29 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Treatment plan reviews')
         self.assertContains(response, '1 treatment plan due for review')
+
+    def test_team_member_can_create_and_complete_assigned_task(self):
+        user, practice, _therapist = self.create_practice_user()
+        self.client.force_login(user)
+
+        response = self.client.post(reverse('tasks_create'), {
+            'title': 'Review intake packet',
+            'description': 'Confirm the packet is ready before the first session.',
+            'assignee': user.pk,
+            'due_date': timezone.localdate().isoformat(),
+            'priority': Task.Priority.HIGH,
+            'status': Task.Status.OPEN,
+        })
+
+        task = Task.objects.get(practice=practice)
+        self.assertRedirects(response, reverse('tasks_list'))
+        self.assertEqual(task.assignee, user)
+        self.assertContains(self.client.get(reverse('dashboard')), 'Review intake packet')
+
+        response = self.client.post(reverse('tasks_status', args=[task.pk]), {'status': Task.Status.DONE})
+        self.assertRedirects(response, reverse('tasks_list'))
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.DONE)
 
     def test_dashboard_scopes_treatment_plan_reviews_to_user_practice(self):
         user, _practice, _therapist = self.create_practice_user()

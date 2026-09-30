@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.mail import EmailMessage
 from django.db.models import Sum
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import FormView, TemplateView
 
@@ -16,7 +16,8 @@ from apps.clients.models import Client
 from apps.clinical.models import SessionNote, TreatmentPlan
 from apps.notifications.models import Notification
 from apps.portal.models import ClientPortalRequest
-from .forms import SupportContactForm
+from .forms import SupportContactForm, TaskForm
+from .models import Task
 from .support import FAQS
 
 
@@ -109,6 +110,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'tone': 'warning',
             })
 
+        manual_tasks = Task.objects.filter(
+            practice=practice,
+            assignee=self.request.user,
+        ).exclude(status=Task.Status.DONE).select_related('assignee')[:8]
+        for task in manual_tasks:
+            tasks.append({
+                'manual': task,
+                'label': task.title,
+                'detail': task.description or 'Assigned follow-up',
+                'tone': 'manual',
+            })
         return tasks
 
     def get_performance_months(self, practice, today):
@@ -208,6 +220,72 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'performance_months': performance_months,
         })
         return context
+
+
+class TaskListView(LoginRequiredMixin, TemplateView):
+    template_name = 'dashboard/tasks.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if is_client_user(request.user):
+            return redirect('portal:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = get_practice_for_user(self.request.user)
+        context['task_practice'] = practice
+        context['task_form'] = TaskForm(practice=practice)
+        context['form'] = context['task_form']
+        context['tasks'] = Task.objects.filter(practice=practice).select_related('assignee', 'created_by') if practice else Task.objects.none()
+        return context
+
+
+class TaskCreateView(LoginRequiredMixin, FormView):
+    template_name = 'dashboard/tasks.html'
+    form_class = TaskForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if is_client_user(request.user):
+            return redirect('portal:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = get_practice_for_user(self.request.user)
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = get_practice_for_user(self.request.user)
+        context['task_practice'] = practice
+        context['tasks'] = Task.objects.filter(practice=practice).select_related('assignee', 'created_by') if practice else Task.objects.none()
+        return context
+
+    def form_valid(self, form):
+        task = form.save(commit=False)
+        task.practice = get_practice_for_user(self.request.user)
+        task.created_by = self.request.user
+        task.save()
+        messages.success(self.request, 'Task assigned to your team.')
+        return redirect('tasks_list')
+
+    def form_invalid(self, form):
+        return self.render_to_response(self.get_context_data(form=form, task_form=form))
+
+
+class TaskStatusUpdateView(LoginRequiredMixin, TemplateView):
+    def post(self, request, pk):
+        practice = get_practice_for_user(request.user)
+        task = get_object_or_404(Task, pk=pk, practice=practice)
+        if task.assignee_id != request.user.id and task.created_by_id != request.user.id:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        status = request.POST.get('status')
+        if status in dict(Task.Status.choices):
+            task.status = status
+            task.save(update_fields=['status', 'updated_at'])
+            messages.success(request, 'Task status updated.')
+        return redirect(request.POST.get('next') or 'tasks_list')
 
 
 class HelpCenterView(TemplateView):
