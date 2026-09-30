@@ -374,6 +374,18 @@ class DashboardTests(TestCase):
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.DONE)
 
+    def test_therapist_without_task_view_permission_is_forbidden(self):
+        user, _practice, _therapist = self.create_practice_user()
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'tasks': {'view': False, 'create': False, 'edit': False, 'delete': False}}
+        profile.save(update_fields=['role', 'permissions', 'updated_at'])
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('tasks_list'))
+
+        self.assertEqual(response.status_code, 403)
+
     def test_dashboard_scopes_treatment_plan_reviews_to_user_practice(self):
         user, _practice, _therapist = self.create_practice_user()
         _other_user, other_practice, other_therapist = self.create_practice_user(

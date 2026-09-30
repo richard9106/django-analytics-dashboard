@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import FormView, TemplateView
 
-from apps.accounts.access import get_practice_for_user, is_client_user
+from apps.accounts.access import PracticePermissionMixin, get_practice_for_user, is_client_user
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice
 from apps.clients.models import Client
@@ -222,7 +222,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class TaskListView(LoginRequiredMixin, TemplateView):
+class TaskListView(LoginRequiredMixin, PracticePermissionMixin, TemplateView):
+    permission_resource = 'tasks'
     template_name = 'dashboard/tasks.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -240,7 +241,9 @@ class TaskListView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class TaskCreateView(LoginRequiredMixin, FormView):
+class TaskCreateView(LoginRequiredMixin, PracticePermissionMixin, FormView):
+    permission_resource = 'tasks'
+    permission_action = 'create'
     template_name = 'dashboard/tasks.html'
     form_class = TaskForm
 
@@ -273,7 +276,9 @@ class TaskCreateView(LoginRequiredMixin, FormView):
         return self.render_to_response(self.get_context_data(form=form, task_form=form))
 
 
-class TaskStatusUpdateView(LoginRequiredMixin, TemplateView):
+class TaskStatusUpdateView(LoginRequiredMixin, PracticePermissionMixin, TemplateView):
+    permission_resource = 'tasks'
+    permission_action = 'edit'
     def post(self, request, pk):
         practice = get_practice_for_user(request.user)
         task = get_object_or_404(Task, pk=pk, practice=practice)

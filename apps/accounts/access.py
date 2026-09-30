@@ -10,6 +10,7 @@ PERMISSION_RESOURCES = (
     ('documents', 'Documents'),
     ('intake', 'Intake'),
     ('requests', 'Requests'),
+    ('tasks', 'Tasks'),
 )
 PERMISSION_ACTIONS = (
     ('view', 'Read'),
@@ -26,6 +27,7 @@ DEFAULT_THERAPIST_PERMISSIONS = {
     'documents': {'view': True, 'create': True, 'edit': True, 'delete': False},
     'intake': {'view': True, 'create': True, 'edit': True, 'delete': False},
     'requests': {'view': True, 'create': False, 'edit': True, 'delete': False},
+    'tasks': {'view': True, 'create': True, 'edit': True, 'delete': False},
 }
 
 
