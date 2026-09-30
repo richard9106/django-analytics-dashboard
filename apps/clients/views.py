@@ -70,6 +70,7 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
         client = self.object
         now = timezone.now()
         context.update({
+            'client_therapists': client.practice.therapists.select_related('user'),
             'upcoming_appointments': Appointment.objects.filter(client=client, starts_at__gte=now).select_related('therapist__user')[:8],
             'recent_appointments': Appointment.objects.filter(client=client, starts_at__lt=now).select_related('therapist__user').order_by('-starts_at')[:8],
             'invoices': Invoice.objects.filter(client=client).order_by('-created_at')[:8],

@@ -204,6 +204,8 @@ class ClientViewTests(TestCase):
         self.assertContains(response, 'Treatment plans')
         self.assertContains(response, 'Clinical notes')
         self.assertContains(response, reverse('clients:list'))
+        self.assertContains(response, 'id="client-edit-modal"')
+        self.assertContains(response, 'data-modal-target="client-edit-modal"')
         self.assertEqual(self.client.get(reverse('clients:detail', args=[other_client.pk])).status_code, 404)
 
     def test_therapist_without_client_read_permission_is_forbidden(self):
