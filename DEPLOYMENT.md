@@ -49,6 +49,8 @@ EMAIL_USE_TLS=true
 EMAIL_USE_SSL=false
 DEFAULT_FROM_EMAIL=NuviaMy <noreply@nuviamy.com>
 SUPPORT_EMAIL=support@nuviamy.com
+BACKUP_ENCRYPTION_PASSPHRASE=
+BACKUP_R2_PREFIX=backups/postgres
 
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
@@ -130,7 +132,9 @@ Scale when sustained CPU exceeds roughly 70%, memory pressure/swap appears, data
 The repository includes:
 
 - `ops/backup_postgres.sh`: creates a restricted PostgreSQL custom-format dump and keeps the last 14 days by default.
+- The same script encrypts the dump with GPG AES-256 and uploads it to the configured private R2 bucket under `BACKUP_R2_PREFIX`.
 - `ops/verify_postgres_backup.sh`: restores a dump into a temporary database, checks migrations, and removes the temporary database.
+- `ops/restore_r2_backup_check.sh`: downloads, decrypts, and verifies an encrypted R2 backup without modifying production data.
 - `ops/systemd/nuviamy-postgres-backup.service` and `.timer`: daily backup at 03:30 UTC with persistence after reboot.
 
 Install the timer on the VPS after the repository is deployed:
@@ -151,7 +155,7 @@ LATEST_BACKUP=$(ls -t /home/deploy/backups/nuviamy/postgres/nuviamy-*.dump | hea
 /home/deploy/apps/django-analytics-dashboard/ops/verify_postgres_backup.sh "$LATEST_BACKUP"
 ```
 
-These backups are local to the VPS. Production still needs an encrypted offsite copy and a tested restore procedure before being considered disaster-recovery complete.
+The local dump is retained for fast recovery and the encrypted R2 object is the offsite copy. Keep `BACKUP_ENCRYPTION_PASSPHRASE` outside Git and back it up separately; without it, encrypted R2 backups cannot be restored.
 
 ## Brevo SMTP
 
