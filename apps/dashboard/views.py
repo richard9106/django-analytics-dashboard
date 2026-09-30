@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import FormView, TemplateView
 
-from apps.accounts.access import PracticePermissionMixin, get_practice_for_user, is_client_user
+from apps.accounts.access import PracticePermissionMixin, get_practice_for_user, is_client_user, permission_redirect
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice
 from apps.clients.models import Client
@@ -283,8 +283,7 @@ class TaskStatusUpdateView(LoginRequiredMixin, PracticePermissionMixin, Template
         practice = get_practice_for_user(request.user)
         task = get_object_or_404(Task, pk=pk, practice=practice)
         if task.assignee_id != request.user.id and task.created_by_id != request.user.id:
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
+            return permission_redirect(request, 'Only the assigned therapist or task creator can update this task.')
         status = request.POST.get('status')
         if status in dict(Task.Status.choices):
             task.status = status

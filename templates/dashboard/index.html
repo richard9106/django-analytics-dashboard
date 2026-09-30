@@ -16,10 +16,10 @@
     <main class="app-main" data-tour-target="workspace">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
-          <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
-          <a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>
-          <a class="btn btn-soft" href="{% url 'tasks_list' %}">+ New task</a>
-          <a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>
+          {% if workspace_permissions.clients.create %}<a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>{% endif %}
+          {% if workspace_permissions.appointments.create %}<a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>{% endif %}
+          {% if workspace_permissions.tasks.create %}<a class="btn btn-soft" href="{% url 'tasks_list' %}">+ New task</a>{% endif %}
+          {% if workspace_permissions.clients.view %}<a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>{% endif %}
         </div>
         <details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>

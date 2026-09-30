@@ -220,7 +220,7 @@ class ClientViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse('clients:list'))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, reverse('dashboard'))
 
     def test_client_page_can_assign_package_to_client(self):
         user, practice, _therapist = self.create_practice_user()

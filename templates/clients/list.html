@@ -16,9 +16,9 @@
     <main class="app-main">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
-          <a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>
-          <a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>
-          <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
+           {% if workspace_permissions.clients.create %}<a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>{% endif %}
+           {% if workspace_permissions.appointments.create %}<a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>{% endif %}
+           {% if workspace_permissions.appointments.view %}<a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>{% endif %}
         </div>
         <details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
@@ -62,7 +62,7 @@
                   <td>{{ client.phone|default:"Not provided" }}</td>
                   <td>{{ client.insurance_provider|default:"Not provided" }}</td>
                   <td><span class="badge success">{{ client.get_status_display }}</span></td>
-                  <td><div class="tree-actions"><a class="inline-link" href="{% url 'clients:detail' client.pk %}">Open</a><a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit</a></div></td>
+                 <td><div class="tree-actions"><a class="inline-link" href="{% url 'clients:detail' client.pk %}">Open</a>{% if workspace_permissions.clients.edit %}<a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit</a>{% endif %}</div></td>
                 </tr>
               {% empty %}
                 <tr><td colspan="6" class="empty-state">No clients have been created yet.</td></tr>

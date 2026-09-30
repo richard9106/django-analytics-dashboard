@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 
-from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, get_practice_for_user, permission_redirect
 from apps.accounts.models import UserProfile
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
@@ -35,7 +35,7 @@ def _finance_practice_for_user(request):
     practice = get_practice_for_user(request.user)
     profile = getattr(request.user, 'nuvia_profile', None)
     if not practice or not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
-        raise PermissionDenied('Only practice owners and admins can configure client payments.')
+        return permission_redirect(request, 'Client payment settings are available to practice owners and admins.')
     return practice
 
 
@@ -59,6 +59,8 @@ class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
 class StripeConnectOnboardingView(PracticeContextMixin, View):
     def get(self, request):
         practice = _finance_practice_for_user(request)
+        if hasattr(practice, 'status_code'):
+            return practice
         if not settings.STRIPE_SECRET_KEY:
             messages.error(request, 'Stripe client payments are not configured yet.')
             return redirect('profile_settings')
@@ -91,6 +93,8 @@ class StripeConnectOnboardingView(PracticeContextMixin, View):
 class StripeConnectReturnView(PracticeContextMixin, View):
     def get(self, request):
         practice = _finance_practice_for_user(request)
+        if hasattr(practice, 'status_code'):
+            return practice
         if settings.STRIPE_SECRET_KEY and practice.stripe_connect_account_id:
             stripe.api_key = settings.STRIPE_SECRET_KEY
             try:

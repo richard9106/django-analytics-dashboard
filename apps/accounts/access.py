@@ -1,4 +1,6 @@
+from django.contrib import messages
 from django.shortcuts import redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import UserProfile
 
@@ -77,6 +79,37 @@ def has_practice_permission(user, resource, action):
     return bool(permissions.get(resource, {}).get(action, False))
 
 
+def permission_redirect(request, message='That area is not available with your current workspace permissions.'):
+    """Return a safe, friendly response without weakening the server-side check."""
+    messages.warning(request, message)
+    referer = request.META.get('HTTP_REFERER', '')
+    current = request.build_absolute_uri()
+    if referer and referer != current and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return redirect(referer)
+    return redirect('dashboard')
+
+
+def permission_context(request):
+    """Expose the same permission model to navigation and server-rendered actions."""
+    user = getattr(request, 'user', None)
+    return {
+        'workspace_permissions': {
+            resource: {
+                action: has_practice_permission(user, resource, action)
+                for action, _label in PERMISSION_ACTIONS
+            }
+            for resource, _label in PERMISSION_RESOURCES
+        },
+        'can_manage_team': bool(
+            user and user.is_authenticated and not is_client_user(user)
+            and getattr(getattr(user, 'nuvia_profile', None), 'role', None)
+            in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}
+        ),
+    }
+
+
 class PracticePermissionMixin:
     permission_resource = None
     permission_action = 'view'
@@ -85,7 +118,8 @@ class PracticePermissionMixin:
         if request.user.is_authenticated and not is_client_user(request.user) and not has_practice_permission(
             request.user, self.permission_resource, self.permission_action
         ):
-            from django.core.exceptions import PermissionDenied
-
-            raise PermissionDenied('You do not have permission for this workspace.')
+            return permission_redirect(
+                request,
+                'You do not have access to that workspace area. We brought you back to a safe page.',
+            )
         return super().dispatch(request, *args, **kwargs)

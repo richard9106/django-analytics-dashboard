@@ -444,9 +444,35 @@ class TeamManagementViewTests(TestCase):
         user, _practice = self.create_practice_user(role=UserProfile.Role.THERAPIST)
 
         self.client.force_login(user)
-        response = self.client.get(reverse("team_management"))
+        response = self.client.get(reverse("team_management"), follow=True)
 
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertContains(response, "Team management is reserved")
+
+    def test_therapist_direct_permission_url_returns_to_safe_page(self):
+        user, _practice = self.create_practice_user(role=UserProfile.Role.THERAPIST)
+        user.nuvia_profile.permissions = {'billing': {'view': False}}
+        user.nuvia_profile.save(update_fields=['permissions'])
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('billing:list'), follow=True)
+
+        self.assertRedirects(response, reverse('dashboard'))
+        self.assertContains(response, 'safe page')
+
+    def test_navigation_hides_resources_without_view_permission(self):
+        user, _practice = self.create_practice_user(role=UserProfile.Role.THERAPIST)
+        user.nuvia_profile.permissions = {
+            'clients': {'view': True},
+            'billing': {'view': False},
+        }
+        user.nuvia_profile.save(update_fields=['permissions'])
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertContains(response, 'Clients')
+        self.assertNotContains(response, 'href="/billing/"')
 
     def test_client_user_is_redirected_away_from_team_management(self):
         _owner, practice = self.create_practice_user()

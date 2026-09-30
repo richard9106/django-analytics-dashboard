@@ -1,12 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
 
-from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user, must_change_password
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user, must_change_password, permission_redirect
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .forms import ClientDocumentForm
@@ -116,7 +115,7 @@ class DocumentDownloadView(LoginRequiredMixin, PracticePermissionMixin, Practice
         elif practice:
             document = get_object_or_404(ClientDocument, pk=pk, practice=practice)
         else:
-            raise PermissionDenied('You do not have access to this document.')
+            return permission_redirect(request, 'That document is not available to your workspace.')
         log_audit_event(
             request,
             AuditLog.Action.EXPORT,

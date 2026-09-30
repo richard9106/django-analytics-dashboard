@@ -384,7 +384,7 @@ class DashboardTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse('tasks_list'))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(response, reverse('dashboard'))
 
     def test_dashboard_scopes_treatment_plan_reviews_to_user_practice(self):
         user, _practice, _therapist = self.create_practice_user()

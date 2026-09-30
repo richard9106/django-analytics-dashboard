@@ -6,7 +6,6 @@ from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
-from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
@@ -16,7 +15,7 @@ from django.views.generic import FormView, TemplateView
 from django.views import View
 from django.views.generic.edit import FormView
 
-from .access import get_practice_for_user, is_client_user, must_change_password
+from .access import get_practice_for_user, is_client_user, must_change_password, permission_redirect
 from .access import DEFAULT_THERAPIST_PERMISSIONS, PERMISSION_ACTIONS, PERMISSION_RESOURCES
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
@@ -189,7 +188,7 @@ class TeamManagementView(LoginRequiredMixin, FormView):
         practice = get_practice_for_user(request.user)
         profile = getattr(request.user, "nuvia_profile", None)
         if not practice or not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
-            raise PermissionDenied("Only practice owners and admins can manage team members.")
+            return permission_redirect(request, "Team management is reserved for practice owners and admins.")
         return super().dispatch(request, *args, **kwargs)
 
     def get_practice(self):
@@ -260,7 +259,7 @@ class TeamMemberActionView(LoginRequiredMixin, View):
             return super().dispatch(request, *args, **kwargs)
         profile = getattr(request.user, "nuvia_profile", None)
         if is_client_user(request.user) or not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
-            raise PermissionDenied("Only practice owners and admins can manage team members.")
+            return permission_redirect(request, "Team management is reserved for practice owners and admins.")
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):

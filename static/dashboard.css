@@ -87,6 +87,12 @@ h1, h2, h3, p { margin-top: 0; }
 .sidebar-card { margin-top: auto; padding: 16px; background: linear-gradient(180deg, #fff, var(--brand-50)); border: 1px solid rgba(112, 82, 217, .16); border-radius: 16px; box-shadow: var(--shadow-1); }
 .sidebar-card strong { display: block; margin-bottom: 6px; }
 .sidebar-card p { color: var(--slate-500); font-size: 13px; margin: 0; }
+.permission-toast-stack { display: grid; gap: 8px; }
+.permission-toast { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border: 1px solid rgba(112, 82, 217, .2); border-radius: 12px; background: var(--brand-50); color: var(--slate-800); font-size: 12px; line-height: 1.45; }
+.permission-toast span { display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 auto; border-radius: 50%; background: var(--brand-600); color: #fff; font-weight: 900; }
+.permission-toast p { margin: 1px 0 0; color: inherit; }
+.permission-toast-warning { border-color: rgba(200, 117, 19, .25); background: var(--warning-bg); }
+.permission-toast-warning span { background: var(--warning); }
 
 .app-main { min-width: 0; padding: 24px; display: grid; grid-auto-rows: max-content; align-content: start; gap: 18px; }
 .topbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 18px 22px; box-shadow: var(--shadow-1); }
