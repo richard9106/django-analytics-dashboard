@@ -338,6 +338,24 @@ h1, h2, h3, p { margin-top: 0; }
 .billing-period-options label { min-height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--slate-200); border-radius: 999px; background: #fff; color: var(--slate-800); font-weight: 900; cursor: pointer; }
 .billing-period-options input { accent-color: var(--brand-600); }
 .subscription-invoices-panel { margin-top: 18px; }
+.practice-export-panel { background: radial-gradient(circle at top right, rgba(255, 227, 216, .52), transparent 34%), linear-gradient(145deg, #fff, var(--brand-50)); border-color: rgba(243, 111, 86, .22); }
+.practice-export-panel .panel-head { align-items: center; }
+.practice-export-panel .panel-head p:not(.eyebrow) { max-width: 620px; }
+.practice-export-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr); gap: 16px; align-items: start; }
+.sensitive-download-note { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 11px; padding: 14px; border: 1px solid rgba(243, 111, 86, .28); border-radius: 14px; background: rgba(255, 246, 242, .84); }
+.sensitive-download-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: var(--coral-500); color: #fff; font-weight: 900; }
+.sensitive-download-note strong { color: var(--slate-900); font-size: 13px; }
+.sensitive-download-note p { margin-top: 5px; color: var(--slate-600); font-size: 12px; line-height: 1.5; }
+.practice-export-controls { display: grid; gap: 10px; }
+.export-options { display: grid; gap: 7px; margin: 0; padding: 12px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 14px; background: rgba(255,255,255,.76); }
+.export-options legend { padding: 0 4px; color: var(--slate-500); font-size: 11px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.export-options label { min-height: 34px; display: flex; align-items: center; gap: 8px; color: var(--slate-800); font-size: 12px; font-weight: 800; }
+.export-options input { accent-color: var(--brand-600); }
+.export-options small { margin-left: auto; color: var(--slate-400); font-size: 10px; font-weight: 700; text-align: right; }
+.practice-export-controls .btn { width: fit-content; }
+.practice-export-controls .btn:disabled { opacity: .58; cursor: not-allowed; transform: none; }
+.export-status { display: flex; align-items: flex-start; gap: 7px; color: var(--slate-500); font-size: 11px; line-height: 1.45; }
+.export-status span { width: 17px; height: 17px; display: inline-grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: var(--brand-50); color: var(--brand-700); font-size: 10px; font-weight: 900; }
 .invoice-table-wrap { max-width: 100%; overflow-x: auto; }
 .plan-preview-box { padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255,255,255,.78); }
 .plan-preview-box p { margin: 0; color: var(--slate-600); line-height: 1.55; }
@@ -826,6 +844,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .client-grid { grid-template-columns: 1fr; }
   .document-grid { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
+  .practice-export-layout { grid-template-columns: 1fr; }
+  .practice-export-controls .btn { width: 100%; }
+  .export-options small { margin-left: 0; }
   .team-member-card { grid-template-columns: 1fr; }
   .profile-detail-list div { grid-template-columns: 1fr; gap: 4px; }
   .client-meta div { grid-template-columns: 1fr; gap: 2px; }

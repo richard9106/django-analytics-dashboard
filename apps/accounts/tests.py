@@ -1,4 +1,6 @@
 from unittest.mock import patch
+from io import BytesIO
+from zipfile import ZipFile
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -228,6 +230,18 @@ class ProfileSettingsViewTests(TestCase):
         self.assertNotContains(response, "sub_test")
         self.assertContains(response, reverse("billing:customer_portal"))
         self.assertContains(response, "Manage billing in Stripe")
+
+    def test_owner_can_export_practice_data(self):
+        user, practice = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('practice_data_export'), {'scope': 'all'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/zip')
+        with ZipFile(BytesIO(response.content)) as archive:
+            self.assertIn('practice-data.json', archive.namelist())
+        self.assertTrue(practice.audit_logs.filter(action='export').exists())
 
     def test_dashboard_profile_menu_links_to_profile_settings(self):
         user, _practice = self.create_practice_user()

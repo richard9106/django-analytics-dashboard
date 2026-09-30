@@ -103,6 +103,30 @@
           <a class="btn btn-primary" href="{% url 'practice_settings:stripe_connect' %}">{% if practice.stripe_connect_account_id %}Continue Stripe payout setup{% else %}Set up client payments{% endif %}</a>
         </section>
       {% endif %}
+      {% if can_manage_client_payments %}
+        <section class="panel practice-export-panel" id="practice-data-export" aria-labelledby="practice-export-title">
+          <div class="panel-head compact">
+            <div><p class="eyebrow">Owner &amp; admin only</p><h2 id="practice-export-title">Practice data export</h2><p>Prepare a copy of your practice records for secure storage or transfer.</p></div>
+            <span class="badge warning">Sensitive download</span>
+          </div>
+          <div class="practice-export-layout">
+            <div class="sensitive-download-note" role="note">
+              <span class="sensitive-download-icon" aria-hidden="true">!</span>
+              <div><strong>Contains confidential practice data</strong><p>The export may include client details, clinical notes, appointments, documents, invoices, and team records. Download only to an encrypted device and share it through an approved secure channel.</p></div>
+            </div>
+            <div class="practice-export-controls">
+              <form method="post" action="{% url 'practice_data_export' %}" class="practice-export-form"><fieldset class="export-options">
+                <legend>What would you like to export?</legend>
+                {% csrf_token %}<label><input type="radio" name="scope" value="all" checked> All practice data <small>Recommended for a complete archive</small></label>
+                <label><input type="radio" name="scope" value="clinical"> Client and clinical records only</label>
+                <label><input type="radio" name="scope" value="billing"> Billing and practice operations only</label>
+              </fieldset>
+              <button class="btn btn-primary" type="submit" aria-describedby="practice-export-status">Prepare secure download</button></form>
+              <p class="export-status" id="practice-export-status"><span aria-hidden="true">i</span> The ZIP includes JSON records and available document files.</p>
+            </div>
+          </div>
+        </section>
+      {% endif %}
       <section class="panel subscription-invoices-panel">
         <div class="panel-head compact"><div><h2>My NuviaMy invoices</h2><p>Stripe invoices for this practice subscription. These are separate from invoices you send to clients.</p></div></div>
         {% if subscription_invoice_error %}

@@ -7,6 +7,7 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.core.mail import send_mail
+from django.http import HttpResponseBadRequest
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -24,6 +25,7 @@ from apps.practices.google_oauth import send_gmail_message
 from apps.appointments.reminders import get_gmail_integration
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, ProfileDetailsForm, TeamMemberCreateForm
 from .models import UserProfile
+from .export import build_practice_export
 
 
 def send_team_invitation(request, user, temporary_password):
@@ -171,6 +173,29 @@ class ProfileSettingsView(LoginRequiredMixin, FormView):
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
         return context
+
+
+class PracticeDataExportView(LoginRequiredMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        profile = getattr(request.user, 'nuvia_profile', None)
+        if not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
+            raise PermissionDenied('Only practice owners and admins can export practice data.')
+        scope = request.POST.get('scope', 'all')
+        if scope not in {'all', 'clinical', 'billing'}:
+            return HttpResponseBadRequest('Unknown export scope.')
+        practice = get_practice_for_user(request.user)
+        response = build_practice_export(practice, scope)
+        log_audit_event(
+            request,
+            AuditLog.Action.EXPORT,
+            'practices.Practice',
+            practice.pk,
+            practice=practice,
+            metadata={'export_scope': scope, 'format': 'zip'},
+        )
+        return response
 
 
 class TeamManagementView(LoginRequiredMixin, FormView):
