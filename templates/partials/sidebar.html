@@ -40,7 +40,7 @@
       <span class="mobile-account-name">{{ request.user.first_name|default:request.user.username }}</span>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'profile_settings' %} active{% endif %}" href="{% url 'profile_settings' %}">Profile settings</a>
       {% if can_manage_team %}<a class="nav-item subitem{% if request.resolver_match.url_name == 'team_management' %} active{% endif %}" href="{% url 'team_management' %}">Team management</a>{% endif %}
-      {% if request.user.is_staff %}<a class="nav-item subitem" href="/admin/">Admin</a>{% endif %}
+      {% if request.user.is_staff %}<a class="nav-item subitem" href="/admin/">Admin</a><a class="nav-item subitem{% if request.resolver_match.url_name == 'staff_monitoring' %} active{% endif %}" href="{% url 'staff_monitoring' %}">Monitoring</a>{% endif %}
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button class="nav-item subitem" type="submit">Sign out</button>

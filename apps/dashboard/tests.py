@@ -163,6 +163,19 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'How do I connect Gmail?')
         self.assertContains(response, reverse('support_contact'))
 
+    def test_monitoring_is_staff_only(self):
+        regular_user = get_user_model().objects.create_user(username='regular', password='StrongPass123!')
+        self.client.force_login(regular_user)
+        self.assertEqual(self.client.get(reverse('staff_monitoring')).status_code, 403)
+
+        self.client.logout()
+        staff_user = get_user_model().objects.create_user(username='staff', password='StrongPass123!', is_staff=True)
+        self.client.force_login(staff_user)
+        response = self.client.get(reverse('staff_monitoring'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Platform monitoring')
+        self.assertContains(response, 'Service health')
+
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend', SUPPORT_EMAIL='support@example.com')
     def test_support_contact_sends_email(self):
         response = self.client.post(reverse('support_contact'), {

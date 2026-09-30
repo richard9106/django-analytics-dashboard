@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Monitoring | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="app-page">
+  <div class="app-shell">
+    {% include 'partials/sidebar.html' with card_title='Staff operations' card_text='Operational health checks and aggregate platform metrics.' %}
+    <main class="app-main">
+      <section class="action-bar"><div class="quick-actions"><a class="btn btn-soft" href="{% url 'dashboard' %}">Back to dashboard</a></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a><a href="/admin/">Admin</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
+      <header class="topbar compact-topbar"><div><h1>Platform monitoring</h1><p>Staff-only operational overview. Secrets and sensitive payloads are never displayed.</p></div></header>
+      <section class="monitoring-health-grid"><article class="panel"><div class="panel-head compact"><div><h2>Service health</h2><p>Configuration and database checks.</p></div></div><div class="health-list">{% for check in health_checks %}<div class="health-row"><span class="health-dot {% if check.ok %}healthy{% else %}unhealthy{% endif %}"></span><div><strong>{{ check.label }}</strong><p>{{ check.detail }}</p></div><span class="badge {% if check.ok %}success{% else %}danger{% endif %}">{% if check.ok %}Healthy{% else %}Action needed{% endif %}</span></div>{% endfor %}</div></article><article class="panel"><div class="panel-head compact"><div><h2>Platform metrics</h2><p>Aggregate counts for operations.</p></div></div><div class="monitoring-metrics">{% for label,value in monitoring_metrics %}<div><span>{{ label }}</span><strong>{{ value }}</strong></div>{% endfor %}</div></article></section>
+      <section class="panel monitoring-note"><p class="eyebrow">Monitoring stack</p><h2>External checks</h2><p>Use Sentry for application errors, UptimeRobot or Better Uptime for public availability, and the systemd backup timer for database backup execution. This page is intentionally limited to staff accounts.</p></section>
+    </main>
+  </div>
+</body>
+</html>

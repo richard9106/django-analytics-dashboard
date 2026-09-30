@@ -4,6 +4,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
 from django.contrib import messages
 from django.core.mail import EmailMessage
+from django.core.exceptions import PermissionDenied
+from django.db import connection
+from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
@@ -16,6 +19,7 @@ from apps.clients.models import Client
 from apps.clinical.models import SessionNote, TreatmentPlan
 from apps.notifications.models import Notification
 from apps.portal.models import ClientPortalRequest
+from apps.practices.models import Practice
 from .forms import SupportContactForm, TaskForm
 from .models import Task
 from .support import FAQS
@@ -219,6 +223,43 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'practice_therapists': practice_therapists,
             'performance_months': performance_months,
         })
+        return context
+
+
+class StaffMonitoringView(LoginRequiredMixin, TemplateView):
+    template_name = 'dashboard/monitoring.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        health_checks = []
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT 1')
+                cursor.fetchone()
+            health_checks.append({'label': 'Database', 'ok': True, 'detail': 'PostgreSQL query succeeded.'})
+        except Exception as error:
+            health_checks.append({'label': 'Database', 'ok': False, 'detail': error.__class__.__name__})
+
+        health_checks.extend([
+            {'label': 'Email delivery', 'ok': bool(settings.EMAIL_HOST and settings.DEFAULT_FROM_EMAIL), 'detail': 'SMTP configuration present.' if settings.EMAIL_HOST else 'SMTP host is missing.'},
+            {'label': 'Stripe', 'ok': bool(settings.STRIPE_SECRET_KEY and settings.STRIPE_WEBHOOK_SECRET), 'detail': 'Secret and webhook configuration present.' if settings.STRIPE_SECRET_KEY and settings.STRIPE_WEBHOOK_SECRET else 'Stripe configuration is incomplete.'},
+            {'label': 'Google OAuth', 'ok': bool(settings.GOOGLE_OAUTH_CLIENT_ID and settings.GOOGLE_OAUTH_CLIENT_SECRET), 'detail': 'OAuth credentials present.' if settings.GOOGLE_OAUTH_CLIENT_ID and settings.GOOGLE_OAUTH_CLIENT_SECRET else 'OAuth credentials are missing.'},
+            {'label': 'Cloudflare R2', 'ok': settings.DJANGO_STORAGE_BACKEND == 'r2' and bool(getattr(settings, 'AWS_ACCESS_KEY_ID', '')), 'detail': 'R2 storage is configured.' if settings.DJANGO_STORAGE_BACKEND == 'r2' and getattr(settings, 'AWS_ACCESS_KEY_ID', '') else 'Local media storage is active.'},
+        ])
+        context['health_checks'] = health_checks
+        context['monitoring_metrics'] = [
+            ('Practices', Practice.objects.count()),
+            ('Users', get_user_model().objects.count()),
+            ('Clients', Client.objects.count()),
+            ('Open invoices', Invoice.objects.filter(status__in=[Invoice.Status.DRAFT, Invoice.Status.SENT, Invoice.Status.OVERDUE]).count()),
+            ('Open tasks', Task.objects.exclude(status=Task.Status.DONE).count()),
+            ('Failed notifications', Notification.objects.filter(status=Notification.Status.FAILED).count()),
+        ]
         return context
 
 

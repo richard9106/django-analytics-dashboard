@@ -407,6 +407,20 @@ h1, h2, h3, p { margin-top: 0; }
 .setup-reminder p { margin: 5px 0 8px; color: var(--slate-600); font-size: 12px; line-height: 1.45; }
 .setup-reminder a { color: var(--coral-500); font-size: 12px; font-weight: 900; }
 .support-nav-link { margin: 12px 14px 0; padding: 10px 12px; display: block; border: 1px solid rgba(243, 111, 86, .24); border-radius: 12px; color: var(--coral-500); font-size: 13px; font-weight: 900; text-decoration: none; }
+.monitoring-health-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; }
+.health-list { display: grid; gap: 10px; }
+.health-row { min-height: 52px; padding: 10px 12px; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--slate-100); border-radius: 12px; }
+.health-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); }
+.health-dot.healthy { background: var(--success); }
+.health-row p { margin: 2px 0 0; color: var(--slate-500); font-size: 12px; }
+.monitoring-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.monitoring-metrics div { padding: 14px; border-radius: 14px; background: var(--slate-50); }
+.monitoring-metrics span, .monitoring-metrics strong { display: block; }
+.monitoring-metrics span { color: var(--slate-500); font-size: 12px; font-weight: 800; }
+.monitoring-metrics strong { margin-top: 5px; color: var(--slate-900); font-size: 24px; }
+.monitoring-note { margin-top: 18px; }
+.monitoring-note h2 { margin: 0; color: var(--slate-900); }
+.monitoring-note p:not(.eyebrow) { color: var(--slate-600); line-height: 1.6; }
 .breadcrumbs { min-height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: var(--slate-500); font-size: 12px; font-weight: 800; }
 .breadcrumbs a { color: var(--brand-700); text-decoration: none; }
 .breadcrumbs a:hover { text-decoration: underline; }
@@ -715,6 +729,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 }
 
 @media (max-width: 720px) {
+  .monitoring-health-grid { grid-template-columns: 1fr; }
   .calendar-controls { width: 100%; }
   .calendar-control-row { align-items: stretch; flex-direction: column; }
   .calendar-filter-bar { width: 100%; align-items: stretch; padding: 6px; }
