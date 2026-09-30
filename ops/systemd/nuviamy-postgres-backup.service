@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup NuviaMy PostgreSQL database
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/home/deploy/apps/django-analytics-dashboard
+ExecStart=/home/deploy/apps/django-analytics-dashboard/ops/backup_postgres.sh

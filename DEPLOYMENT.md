@@ -125,6 +125,34 @@ This is a reasonable starting point for a private beta and tens of concurrently 
 
 Scale when sustained CPU exceeds roughly 70%, memory pressure/swap appears, database connections approach the configured limit, or p95 request latency exceeds the product target. The next production steps are a managed PostgreSQL instance, Redis/cache or queue workers where needed, centralized monitoring, and a second web replica behind a load balancer.
 
+## PostgreSQL Backups
+
+The repository includes:
+
+- `ops/backup_postgres.sh`: creates a restricted PostgreSQL custom-format dump and keeps the last 14 days by default.
+- `ops/verify_postgres_backup.sh`: restores a dump into a temporary database, checks migrations, and removes the temporary database.
+- `ops/systemd/nuviamy-postgres-backup.service` and `.timer`: daily backup at 03:30 UTC with persistence after reboot.
+
+Install the timer on the VPS after the repository is deployed:
+
+```bash
+sudo cp ops/systemd/nuviamy-postgres-backup.service /etc/systemd/system/
+sudo cp ops/systemd/nuviamy-postgres-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now nuviamy-postgres-backup.timer
+sudo systemctl start nuviamy-postgres-backup.service
+systemctl status nuviamy-postgres-backup.timer --no-pager
+```
+
+Verify the newest backup without modifying the production database:
+
+```bash
+LATEST_BACKUP=$(ls -t /home/deploy/backups/nuviamy/postgres/nuviamy-*.dump | head -1)
+/home/deploy/apps/django-analytics-dashboard/ops/verify_postgres_backup.sh "$LATEST_BACKUP"
+```
+
+These backups are local to the VPS. Production still needs an encrypted offsite copy and a tested restore procedure before being considered disaster-recovery complete.
+
 ## Brevo SMTP
 
 In Brevo, create an SMTP key under **Settings > SMTP & API > SMTP**. Use the SMTP key, not the Brevo API key or account password. Also verify the sender/domain used by `DEFAULT_FROM_EMAIL`.
