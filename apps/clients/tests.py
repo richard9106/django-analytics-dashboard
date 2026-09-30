@@ -3,6 +3,9 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from decimal import Decimal
+from io import BytesIO
+from PIL import Image
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 from apps.accounts.models import UserProfile
@@ -91,6 +94,10 @@ class ClientModelTests(TestCase):
 
 
 class ClientViewTests(TestCase):
+    def profile_photo(self):
+        buffer = BytesIO()
+        Image.new('RGB', (10, 10), 'blue').save(buffer, format='PNG')
+        return SimpleUploadedFile('client.png', buffer.getvalue(), content_type='image/png')
     def create_practice_user(self, username="drsmith", practice_name="Nuvia Wellness"):
         user = get_user_model().objects.create_user(
             username=username,
@@ -259,6 +266,7 @@ class ClientViewTests(TestCase):
         response = self.client.post(reverse("clients:create"), {
             "first_name": "Maya",
             "last_name": "Johnson",
+            "profile_photo": self.profile_photo(),
             "email": "maya@example.com",
             "phone": "555-0101",
             "date_of_birth": "1991-04-12",
@@ -277,6 +285,7 @@ class ClientViewTests(TestCase):
         self.assertEqual(client.practice, practice)
         self.assertEqual(client.primary_therapist, therapist)
         self.assertEqual(client.email, "maya@example.com")
+        self.assertTrue(client.profile_photo.name.startswith('client-photos/'))
 
     def test_client_create_rejects_therapist_from_another_practice(self):
         user, _practice, _therapist = self.create_practice_user()

@@ -57,7 +57,14 @@
             <tbody>
               {% for client in clients %}
                 <tr>
-                  <td><a class="client-name-link" href="{% url 'clients:detail' client.pk %}"><strong>{{ client }}</strong></a><small>{{ client.email|default:"No email on file" }}</small></td>
+                  <td>
+                    <div class="directory-identity">
+                      <span class="avatar avatar-sm" aria-hidden="true">
+                        {% if client.profile_photo %}<img src="{{ client.profile_photo.url }}" alt="">{% else %}{{ client.first_name|first }}{{ client.last_name|first }}{% endif %}
+                      </span>
+                      <span class="directory-identity-copy"><a class="client-name-link" href="{% url 'clients:detail' client.pk %}"><strong>{{ client }}</strong></a><small>{{ client.email|default:"No email on file" }}</small></span>
+                    </div>
+                  </td>
                   <td>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}<span class="muted-cell">Unassigned</span>{% endif %}</td>
                   <td>{{ client.phone|default:"Not provided" }}</td>
                   <td>{{ client.insurance_provider|default:"Not provided" }}</td>
@@ -82,7 +89,7 @@
             <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
           </div>
 
-          <form class="appointment-form" method="post" action="{% url 'clients:create' %}">
+          <form class="appointment-form" method="post" enctype="multipart/form-data" action="{% url 'clients:create' %}">
             {% csrf_token %}
             <div class="field-grid two">
               <div class="field">
@@ -93,6 +100,7 @@
                 <label for="client-create-last-name">Last name</label>
                 <input id="client-create-last-name" name="last_name" required>
               </div>
+              <div class="field"><label for="client-create-photo">Profile photo</label><input id="client-create-photo" name="profile_photo" type="file" accept="image/*"></div>
               <div class="field">
                 <label for="client-create-email">Email</label>
                 <input id="client-create-email" name="email" type="email">
@@ -338,7 +346,7 @@
               <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
             </div>
 
-            <form class="appointment-form" method="post" action="{% url 'clients:edit' client.pk %}">
+            <form class="appointment-form" method="post" enctype="multipart/form-data" action="{% url 'clients:edit' client.pk %}">
               {% csrf_token %}
               <div class="field-grid two">
                 <div class="field">

@@ -23,6 +23,7 @@ class PracticeSignupForm(forms.Form):
     license_number = forms.CharField(max_length=60)
     license_state = forms.CharField(max_length=60)
     specialty = forms.CharField(max_length=140, required=False)
+    profile_photo = forms.ImageField(required=False)
 
     def clean_email(self):
         email = self.cleaned_data["email"]
@@ -222,6 +223,7 @@ class TeamMemberCreateForm(forms.Form):
             practice=self.practice,
             role=self.cleaned_data["role"],
             phone=self.cleaned_data.get("phone", ""),
+            profile_photo=self.cleaned_data.get('profile_photo'),
             must_change_password=self.cleaned_data.get('password_mode') != 'custom',
         )
         if profile.role == UserProfile.Role.THERAPIST:

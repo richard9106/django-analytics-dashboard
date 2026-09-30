@@ -33,7 +33,7 @@
           <div class="team-list">
             {% for member in team_members %}
               <article class="team-member-card">
-                <div><h3>{{ member.user.get_full_name|default:member.user.email|default:member.user.username }}</h3><p>{{ member.user.email|default:'No email set' }}</p></div>
+                <div class="team-member-identity"><span class="avatar avatar-md" aria-hidden="true">{% if member.profile_photo %}<img src="{{ member.profile_photo.url }}" alt="">{% else %}{{ member.user.first_name|first }}{{ member.user.last_name|first }}{% endif %}</span><div><h3>{{ member.user.get_full_name|default:member.user.email|default:member.user.username }}</h3><p>{{ member.user.email|default:'No email set' }}</p></div></div>
                 <span class="badge {% if not member.user.is_active %}danger{% elif member.role == 'owner' %}success{% elif member.role == 'admin' %}brand{% else %}warning{% endif %}">{% if not member.user.is_active %}Inactive{% else %}{{ member.get_role_display }}{% endif %}</span>
                 {% if member.user.therapist_profile %}<p class="sync-meta">License: {{ member.user.therapist_profile.license_number }} · {{ member.user.therapist_profile.license_state }}</p>{% endif %}
                 {% if member.must_change_password %}<p class="sync-meta">Temporary password change pending.</p>{% endif %}
@@ -69,7 +69,7 @@
         <dialog class="modal-dialog" id="team-member-modal">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Team</p><h2>Add team member</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
-            <form class="appointment-form" method="post" action="{% url 'team_management' %}">
+            <form class="appointment-form" method="post" enctype="multipart/form-data" action="{% url 'team_management' %}">
               {% csrf_token %}
               {% if form.errors %}<div class="form-error" data-team-form-errors>Please fix the team member details below.</div>{% endif %}
               <div class="field-grid two">
@@ -77,6 +77,7 @@
                 <div class="field"><label for="team-email">Email</label><input id="team-email" name="email" type="email" value="{{ form.email.value|default:'' }}" required>{{ form.email.errors }}</div>
                 <div class="field"><label for="team-first-name">First name</label><input id="team-first-name" name="first_name" value="{{ form.first_name.value|default:'' }}" required>{{ form.first_name.errors }}</div>
                 <div class="field"><label for="team-last-name">Last name</label><input id="team-last-name" name="last_name" value="{{ form.last_name.value|default:'' }}" required>{{ form.last_name.errors }}</div>
+                <div class="field"><label for="team-photo">Profile photo</label>{{ form.profile_photo }}{{ form.profile_photo.errors }}</div>
                 <div class="field"><label for="team-phone">Phone</label><input id="team-phone" name="phone" value="{{ form.phone.value|default:'' }}">{{ form.phone.errors }}</div>
                 <div class="field"><label for="team-specialty">Specialty</label><input id="team-specialty" name="specialty" value="{{ form.specialty.value|default:'' }}">{{ form.specialty.errors }}</div>
                 <div class="field"><label for="team-license-number">License number</label><input id="team-license-number" name="license_number" value="{{ form.license_number.value|default:'' }}">{{ form.license_number.errors }}</div>

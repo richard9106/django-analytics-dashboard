@@ -160,11 +160,12 @@
             </div>
             <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
           </div>
-          <form class="appointment-form" method="post" action="{% url 'clients:create' %}">
+                <form class="appointment-form" method="post" enctype="multipart/form-data" action="{% url 'clients:create' %}">
             {% csrf_token %}
             <div class="field-grid two">
               <div class="field"><label for="appointment-client-create-first-name">First name</label><input id="appointment-client-create-first-name" name="first_name" required></div>
               <div class="field"><label for="appointment-client-create-last-name">Last name</label><input id="appointment-client-create-last-name" name="last_name" required></div>
+              <div class="field"><label for="appointment-client-create-photo">Profile photo</label><input id="appointment-client-create-photo" name="profile_photo" type="file" accept="image/*"></div>
               <div class="field"><label for="appointment-client-create-email">Email</label><input id="appointment-client-create-email" name="email" type="email"></div>
               <div class="field"><label for="appointment-client-create-phone">Phone</label><input id="appointment-client-create-phone" name="phone"></div>
               <div class="field"><label for="appointment-client-create-dob">Date of birth</label><input id="appointment-client-create-dob" name="date_of_birth" type="date"></div>

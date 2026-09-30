@@ -9,6 +9,7 @@ class ClientForm(forms.ModelForm):
         fields = [
             'first_name',
             'last_name',
+            'profile_photo',
             'email',
             'phone',
             'date_of_birth',

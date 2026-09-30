@@ -29,6 +29,7 @@ class Client(models.Model):
     )
     first_name = models.CharField(max_length=80)
     last_name = models.CharField(max_length=80)
+    profile_photo = models.ImageField(upload_to='client-photos/', blank=True, null=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     date_of_birth = models.DateField(blank=True, null=True)
