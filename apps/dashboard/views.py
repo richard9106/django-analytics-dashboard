@@ -21,6 +21,7 @@ from apps.clinical.models import SessionNote, TreatmentPlan
 from apps.notifications.models import Notification
 from apps.portal.models import ClientPortalRequest
 from apps.practices.models import Practice
+from apps.rate_limit import PostRateLimitMixin
 from .forms import SupportContactForm, TaskForm
 from .models import Task
 from .support import FAQS
@@ -359,10 +360,13 @@ class HelpCenterView(TemplateView):
         return context
 
 
-class SupportContactView(FormView):
+class SupportContactView(PostRateLimitMixin, FormView):
     template_name = 'support/contact.html'
     form_class = SupportContactForm
     success_url = '/help/contact/?sent=1'
+    rate_limit_scope = 'support-contact'
+    rate_limit_count = 5
+    rate_limit_seconds = 3600
 
     def get_initial(self):
         initial = super().get_initial()

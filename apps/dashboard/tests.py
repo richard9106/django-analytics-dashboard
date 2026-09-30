@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -16,6 +17,9 @@ from apps.dashboard.models import Task
 
 
 class DashboardTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def create_practice_user(self, username='laura', practice_name='Nuvia Therapy'):
         user = get_user_model().objects.create_user(
             username=username,
@@ -196,6 +200,15 @@ class DashboardTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['support@example.com'])
         self.assertIn('connecting Gmail', mail.outbox[0].body)
+
+    def test_support_contact_is_rate_limited(self):
+        for _ in range(5):
+            response = self.client.post(reverse('support_contact'), {})
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(reverse('support_contact'), {})
+
+        self.assertEqual(response.status_code, 429)
 
     def test_authenticated_user_can_view_dashboard(self):
         user, _practice, _therapist = self.create_practice_user()

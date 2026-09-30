@@ -23,6 +23,7 @@ from apps.billing.models import Invoice, ServicePackage
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
 from apps.practices.models import Practice
+from apps.rate_limit import PostRateLimitMixin
 from .forms import (
     ClientIntakeAssignmentForm,
     ClientIntakeResponseForm,
@@ -279,8 +280,11 @@ class AppointmentChangeRequestCreateView(ClientPortalAccessMixin, View):
         return redirect('portal:dashboard')
 
 
-class PublicBookingRequestCreateView(View):
+class PublicBookingRequestCreateView(PostRateLimitMixin, View):
     template_name = 'booking/public_booking.html'
+    rate_limit_scope = 'public-booking'
+    rate_limit_count = 5
+    rate_limit_seconds = 3600
 
     def get_practice(self):
         return get_object_or_404(Practice, public_booking_slug=self.kwargs['slug'])

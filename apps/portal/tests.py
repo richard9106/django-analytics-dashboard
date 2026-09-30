@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -40,6 +41,9 @@ class ClientPortalAccessModelTests(TestCase):
 
 
 class ClientPortalViewTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def create_portal_user(self, username="clientuser", practice_name="NuviaMy Wellness"):
         practice = Practice.objects.create(name=practice_name)
         therapist_user = get_user_model().objects.create_user(username=f"{username}-therapist")
@@ -499,6 +503,16 @@ class ClientPortalViewTests(TestCase):
         booking_request = PublicBookingRequest.objects.get(practice=practice, email="jordan@example.com")
         self.assertEqual(booking_request.status, PublicBookingRequest.Status.PENDING)
         self.assertEqual(timezone.localtime(booking_request.requested_starts_at).strftime("%H:%M"), "14:00")
+
+    def test_public_booking_is_rate_limited(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user()
+        for _ in range(5):
+            response = self.client.post(reverse("public_booking", args=[practice.public_booking_slug]), {})
+            self.assertEqual(response.status_code, 400)
+
+        response = self.client.post(reverse("public_booking", args=[practice.public_booking_slug]), {})
+
+        self.assertEqual(response.status_code, 429)
 
     def test_practice_can_approve_public_booking_request(self):
         _user, practice, therapist, _client, _access = self.create_portal_user()

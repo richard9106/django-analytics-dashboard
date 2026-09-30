@@ -3,6 +3,7 @@ from io import BytesIO
 from zipfile import ZipFile
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -610,6 +611,7 @@ class TeamManagementViewTests(TestCase):
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class PasswordResetTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = get_user_model().objects.create_user(
             username="drsmith",
             email="drsmith@example.com",
@@ -654,3 +656,28 @@ class PasswordResetTests(TestCase):
         self.assertRedirects(response, reverse("password_reset_complete"))
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("NewStrongPass123!"))
+
+    def test_password_reset_is_rate_limited(self):
+        cache.clear()
+        for _ in range(5):
+            response = self.client.post(reverse("password_reset"), {"email": "unknown@example.com"})
+            self.assertEqual(response.status_code, 302)
+
+        response = self.client.post(reverse("password_reset"), {"email": "unknown@example.com"})
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class LoginRateLimitTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_login_is_rate_limited(self):
+        for _ in range(10):
+            response = self.client.post(reverse("login"), {"username": "unknown@example.com", "password": "wrong"})
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(reverse("login"), {"username": "unknown@example.com", "password": "wrong"})
+
+        self.assertEqual(response.status_code, 429)

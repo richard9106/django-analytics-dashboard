@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetView
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest
 from django.db.models.deletion import ProtectedError
@@ -23,6 +23,7 @@ from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
 from apps.practices.google_oauth import send_gmail_message
 from apps.appointments.reminders import get_gmail_integration
+from apps.rate_limit import PostRateLimitMixin
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, ProfileDetailsForm, TeamMemberCreateForm
 from .models import UserProfile
 from .export import build_practice_export
@@ -48,9 +49,12 @@ def send_team_invitation(request, user, temporary_password):
     return ""
 
 
-class RoleAwareLoginView(LoginView):
+class RoleAwareLoginView(PostRateLimitMixin, LoginView):
     template_name = "dashboard/login.html"
     authentication_form = EmailAuthenticationForm
+    rate_limit_scope = "login"
+    rate_limit_count = 10
+    rate_limit_seconds = 900
 
     def get_success_url(self):
         if must_change_password(self.request.user):
@@ -58,6 +62,12 @@ class RoleAwareLoginView(LoginView):
         if is_client_user(self.request.user):
             return reverse_lazy("portal:dashboard")
         return super().get_success_url()
+
+
+class RateLimitedPasswordResetView(PostRateLimitMixin, PasswordResetView):
+    rate_limit_scope = "password-reset"
+    rate_limit_count = 5
+    rate_limit_seconds = 3600
 
 
 class ForcePasswordChangeView(FormView):
