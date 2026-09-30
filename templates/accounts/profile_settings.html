@@ -40,14 +40,7 @@
       </header>
 
       <section class="account-settings-surface" aria-labelledby="account-settings-title">
-      {% if not practice_setup_complete %}
-        <section class="setup-checklist-panel settings-section settings-setup-section">
-          <div><p class="eyebrow">Before adding clients</p><h2>Set up your practice in about 10 minutes.</h2><p>Connect Gmail for secure invitations and reminders, then connect Stripe so client invoice payments go to your practice.</p></div>
-          <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
-        </section>
-      {% endif %}
-
-      {% if messages %}
+       {% if messages %}
         <section class="message-list" aria-label="Profile messages">
           {% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}
         </section>
@@ -96,17 +89,22 @@
             <a class="btn btn-primary" href="{% url 'pricing' %}">Choose a plan</a>
           {% endif %}
         </article>
-      </section>
+       </section>
       <dialog class="modal-dialog" id="profile-edit-modal"{% if profile_form.errors %} data-profile-errors{% endif %}><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Account</p><h2>Edit profile</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div><form class="appointment-form" method="post" action="{% url 'profile_settings' %}">{% csrf_token %}{% if profile_form.errors %}<div class="form-error">Please correct the profile details below.</div>{% endif %}<div class="field-grid two"><div class="field"><label for="id_first_name">First name</label>{{ profile_form.first_name }}{{ profile_form.first_name.errors }}</div><div class="field"><label for="id_last_name">Last name</label>{{ profile_form.last_name }}{{ profile_form.last_name.errors }}</div><div class="field full"><label for="id_email">Login email</label>{{ profile_form.email }}{{ profile_form.email.errors }}</div><div class="field full"><label for="id_phone">Phone</label>{{ profile_form.phone }}{{ profile_form.phone.errors }}</div></div><p class="empty-state">Changing this login email does not disconnect Gmail OAuth or change your Stripe subscription/Connect account.</p><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save profile</button></div></form></div></dialog>
-      {% if can_manage_client_payments %}
-         <section class="panel client-payments-panel settings-section" id="client-payments">
+      {% if not practice_setup_complete %}
+        <section class="setup-checklist-panel settings-section settings-setup-section">
+          <div><p class="eyebrow">Before adding clients</p><h2>Set up your practice in about 10 minutes.</h2><p>Connect Gmail for secure invitations and reminders, then connect Stripe so client invoice payments go to your practice.</p></div>
+          <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
+        </section>
+      {% endif %}
+       {% if can_manage_client_payments %}
+        <div class="settings-sections-grid" aria-label="Practice settings">
+          <section class="panel client-payments-panel settings-section" id="client-payments">
           <div class="panel-head compact"><div><h2>Client payments</h2><p>Connect the practice's Stripe payout account so client invoice payments go to the practice, not NuviaMy.</p></div><span class="badge {% if practice.can_receive_client_payments %}success{% else %}warning{% endif %}">{% if practice.can_receive_client_payments %}Ready to collect{% else %}Setup needed{% endif %}</span></div>
           {% if practice.can_receive_client_payments %}<p class="empty-state">Stripe Connect is active. Client payments are routed to {{ practice.name }}.</p>{% else %}<p class="empty-state">Stripe will collect the practice's legal and bank details securely during onboarding.</p>{% endif %}
           <a class="btn btn-primary" href="{% url 'practice_settings:stripe_connect' %}">{% if practice.stripe_connect_account_id %}Continue Stripe payout setup{% else %}Set up client payments{% endif %}</a>
         </section>
-      {% endif %}
-      {% if can_manage_client_payments %}
-         <section class="panel practice-export-panel settings-section" id="practice-data-export" aria-labelledby="practice-export-title">
+          <section class="panel practice-export-panel settings-section" id="practice-data-export" aria-labelledby="practice-export-title">
           <div class="panel-head compact">
             <div><p class="eyebrow">Owner &amp; admin only</p><h2 id="practice-export-title">Practice data export</h2><p>Prepare a copy of your practice records for secure storage or transfer.</p></div>
             <span class="badge warning">Sensitive download</span>
@@ -138,7 +136,8 @@
             </div>
           </div>
         </section>
-      {% endif %}
+        </div>
+       {% endif %}
       <section class="panel subscription-invoices-panel settings-section">
         <div class="panel-head compact"><div><h2>My NuviaMy invoices</h2><p>Stripe invoices for this practice subscription. These are separate from invoices you send to clients.</p></div></div>
         {% if subscription_invoice_error %}
