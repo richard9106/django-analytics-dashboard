@@ -17,10 +17,10 @@ This project is educational and portfolio-focused. It is designed with HIPAA-awa
 
 The current version includes these working modules:
 
-- `accounts`: signup, email-based login/logout, password recovery, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary-password invitations, Gmail/SMTP delivery, and plan seat enforcement.
+- `accounts`: signup, email-based login/logout, password recovery, editable profiles with optional photos, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary/custom-password invitations, Gmail/SMTP delivery, granular therapist permissions, and plan seat enforcement.
 - `practices`: practice and therapist profile models, tenant scoping, integration settings, encrypted Google OAuth tokens, and Stripe Connect payout onboarding.
-- `clients`: patient directory, create/edit/delete popups, practice-scoped client records, add note from client, assign package from client, create appointment popup from client workspace.
-- `appointments`: calendar view, Monday-start calendar, create/edit/delete popups, today highlighting, tenant-scoped appointment scheduling, availability validation, weekly recurrence, Google Calendar sync, Gmail reminder command.
+- `clients`: Odoo-style tree directory, optional client photos, tenant-scoped client records, full Client Workspace, breadcrumbs, create/edit/delete popups, add note from client, assign package from client, and create appointment popup from client workspace.
+- `appointments`: Monday-start Day/Week/Month calendar, client search, therapist/status/type/sync filters, create/edit/delete popups, today highlighting, tenant-scoped scheduling, weekly recurrence, visible availability blocks, Google Calendar sync, and Gmail reminder command.
 - `clinical`: clinical notes, diagnosis records, treatment plans, linked treatment progress, lock note behavior, review-due workflow.
 - `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, Stripe subscription checkout, plan changes with proration previews, SaaS invoice history, Stripe Customer Portal, Stripe Connect client payouts, 15-day trial, webhooks, and practice subscription persistence.
 - `documents`: client document upload/list/download/delete, file metadata, tenant-scoped downloads, Google Drive export, local storage with Cloudflare R2 production support.
@@ -29,7 +29,7 @@ The current version includes these working modules:
 - `requests`: practice-side inbox for client portal requests and appointment change requests.
 - `notifications`: appointment reminder model and Gmail-based reminder delivery command.
 - `audit`: audit logging for sensitive workflows such as auth, documents, clinical notes, billing, portal, intake, and integrations.
-- `dashboard`: operational practice dashboard with today appointments, tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a Gmail + Stripe setup gate, and a contextual guided onboarding tour.
+- `dashboard`: operational practice dashboard with today appointments, automatic alerts, assignable team tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a Gmail + Stripe setup gate, and a contextual guided onboarding tour.
 - `settings`: session package templates, insurance settings, availability, portal access, Google integrations, Google workspace.
 - `telehealth`: telehealth room model reserved for future provider integration.
 - `admin`: Django admin registration for core domain models, including subscriptions.
@@ -48,11 +48,15 @@ The current version includes these working modules:
 - Six-month revenue trend and appointment volume charts.
 - Contextual guided tour moves through Overview, Appointments, Clients, Notes, Billing, Documents, Intake, Requests, Settings, and setup.
 - Tour completion is stored in browser local storage and hides the launch button.
+- Permission-denied navigation is hidden when possible and direct unauthorized access returns a friendly warning/redirect instead of a raw 403 page.
 
 ### Clients
 
-- `My patients` grid with four desktop columns, two tablet columns, one mobile column.
+- `My patients` tree view with client, therapist, phone, insurance, status, and actions columns.
 - Create/edit/delete client using popups.
+- Client Workspace combines profile data, latest session, portal access, invoices, clinical notes, treatment plans, documents, and breadcrumbs back to the directory.
+- Optional client photos appear in the directory and workspace.
+- Client Directory uses a compact tree/table view with therapist, phone, insurance, status, and actions.
 - Add clinical note directly from a client card.
 - Assign a prepaid session package directly from a client card.
 - Create appointments from the clients workspace with a popup.
@@ -66,6 +70,9 @@ The current version includes these working modules:
 - Existing appointment opens edit popup.
 - Delete appointment from edit popup.
 - Availability rules can be configured under Settings.
+- Availability is configured as one or more weekly day/range intervals and is visibly shaded in Day/Week calendar views.
+- Week is the default calendar view; Year view was removed to keep calendar navigation focused.
+- Search and compact filters preserve state while navigating the calendar.
 - Weekly recurring appointments can be generated at creation time.
 - Google Calendar sync metadata is tracked and can be repaired/synced.
 - Gmail-based appointment reminders can be sent through the management command.
@@ -97,6 +104,7 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Package usage tracks sessions used and remaining.
 - Expired, completed, or refunded packages cannot be used for sessions.
 - Printable invoices and superbills are available.
+- Staff can record partial or full manual payments using cash, check, ACH, insurance, card, or other methods, with balance tracking.
 - Insurance settings support common payer templates and practice-specific reimbursement rates.
 - Practice owners/admins can configure Stripe Connect from Profile Settings so client payments go to the practice.
 - Clients can pay eligible sent/overdue invoices from the portal through Stripe Checkout.
@@ -137,6 +145,26 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Google Calendar sync mirrors appointment records to Google.
 - Google Drive export uploads authorized client documents.
 - NuviaMy remains the source of truth; Google is treated as an external mirror/export target.
+
+### Permissions And Team
+
+- Owners/admins can configure therapist Read/Create/Edit/Delete access for each major workspace area, including Tasks.
+- Unauthorized navigation is hidden where possible; direct unauthorized URLs redirect with a friendly warning instead of showing a raw 403 page.
+- Optional photos are supported for clients and internal team members and use the configured media/R2 storage backend.
+
+### Team And Permissions
+
+- Team members can be therapists or practice admins.
+- Owners/admins can set therapist Read/Create/Edit/Delete permissions for Clients, Appointments, Clinical, Billing, Documents, Intake, Requests, and Tasks.
+- Team members can be activated, deactivated, invited again, assigned a custom password, or permanently deleted when safe.
+- Optional team photos appear in Team Management.
+
+### Help And Legal
+
+- Low-cost Help Center with server-rendered FAQs and search at `/help/`.
+- Support contact form delivered through configured email.
+- Cookie Policy at `/cookie-policy/`.
+- Current cookies are limited to session, CSRF, and guided-tour local storage; no advertising analytics are installed.
 
 ### Stripe Subscriptions
 
@@ -207,8 +235,6 @@ Any ZIP
 
 ## Remaining Product Roadmap
 
-- Add manual payment-entry UI for cash, check, ACH, Zelle/Venmo, and externally processed cards.
-- Add role editing and richer team-member profile management.
 - Add secure two-way client/practice messaging.
 - Add data export and account/data retention workflows.
 - Add recurring appointment series editing and cancellation controls.
