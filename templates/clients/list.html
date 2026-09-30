@@ -51,33 +51,24 @@
           <span class="badge brand">{{ clients|length }} clients</span>
         </div>
 
-        <div class="client-grid">
-          {% for client in clients %}
-            <article class="client-card">
-              <div class="client-avatar" aria-hidden="true">{{ client.first_name|first }}{{ client.last_name|first }}</div>
-              <div class="client-card-body">
-                <div class="client-card-head">
-                  <div>
-                    <h3><a class="client-name-link" href="{% url 'clients:detail' client.pk %}">{{ client }}</a></h3>
-                    <p>{{ client.email|default:"No email on file" }}</p>
-                  </div>
-                  <span class="badge success">{{ client.get_status_display }}</span>
-                </div>
-                <dl class="client-meta">
-                  <div><dt>Phone</dt><dd>{{ client.phone|default:"Not provided" }}</dd></div>
-                  <div><dt>Therapist</dt><dd>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}Unassigned{% endif %}</dd></div>
-                  <div><dt>Insurance</dt><dd>{{ client.insurance_provider|default:"Not provided" }}</dd></div>
-                </dl>
-                <div class="inline-actions">
-                  <a class="inline-link" href="{% url 'clinical:create' %}" data-modal-target="client-note-modal-{{ client.pk }}">Add note</a>
-                  <a class="inline-link" href="{% url 'billing:package_create' %}" data-modal-target="client-package-modal-{{ client.pk }}">Assign package</a>
-                  <a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit client</a>
-                </div>
-              </div>
-            </article>
-          {% empty %}
-            <p class="empty-state">No clients have been created yet.</p>
-          {% endfor %}
+        <div class="client-tree-wrap">
+          <table class="client-tree">
+            <thead><tr><th>Client</th><th>Therapist</th><th>Phone</th><th>Insurance</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {% for client in clients %}
+                <tr>
+                  <td><a class="client-name-link" href="{% url 'clients:detail' client.pk %}"><strong>{{ client }}</strong></a><small>{{ client.email|default:"No email on file" }}</small></td>
+                  <td>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}<span class="muted-cell">Unassigned</span>{% endif %}</td>
+                  <td>{{ client.phone|default:"Not provided" }}</td>
+                  <td>{{ client.insurance_provider|default:"Not provided" }}</td>
+                  <td><span class="badge success">{{ client.get_status_display }}</span></td>
+                  <td><div class="tree-actions"><a class="inline-link" href="{% url 'clients:detail' client.pk %}">Open</a><a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit</a></div></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="6" class="empty-state">No clients have been created yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </section>
 
