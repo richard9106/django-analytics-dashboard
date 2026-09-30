@@ -121,6 +121,7 @@
                 <label><input type="radio" name="scope" value="clinical"> Client and clinical records only</label>
                 <label><input type="radio" name="scope" value="billing"> Billing and practice operations only</label>
               </fieldset>
+              <fieldset class="export-options"><legend>File format</legend><label><input type="radio" name="format" value="zip" checked> Full ZIP / JSON <small>Complete archive</small></label><label><input type="radio" name="format" value="pdf"> PDF <small>Readable report</small></label><label><input type="radio" name="format" value="xlsx"> Excel <small>Tabular data</small></label><label><input type="radio" name="format" value="svg"> SVG <small>Visual summary only</small></label></fieldset>
               <button class="btn btn-primary" type="submit" aria-describedby="practice-export-status">Prepare secure download</button></form>
               <p class="export-status" id="practice-export-status"><span aria-hidden="true">i</span> The ZIP includes JSON records and available document files.</p>
             </div>

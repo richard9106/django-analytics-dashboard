@@ -183,17 +183,20 @@ class PracticeDataExportView(LoginRequiredMixin, View):
         if not profile or profile.role not in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}:
             raise PermissionDenied('Only practice owners and admins can export practice data.')
         scope = request.POST.get('scope', 'all')
+        export_format = request.POST.get('format', 'zip')
         if scope not in {'all', 'clinical', 'billing'}:
             return HttpResponseBadRequest('Unknown export scope.')
+        if export_format not in {'zip', 'xlsx', 'pdf', 'svg'}:
+            return HttpResponseBadRequest('Unknown export format.')
         practice = get_practice_for_user(request.user)
-        response = build_practice_export(practice, scope)
+        response = build_practice_export(practice, scope, export_format)
         log_audit_event(
             request,
             AuditLog.Action.EXPORT,
             'practices.Practice',
             practice.pk,
             practice=practice,
-            metadata={'export_scope': scope, 'format': 'zip'},
+            metadata={'export_scope': scope, 'format': export_format},
         )
         return response
 

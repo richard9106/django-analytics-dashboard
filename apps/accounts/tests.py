@@ -243,6 +243,16 @@ class ProfileSettingsViewTests(TestCase):
             self.assertIn('practice-data.json', archive.namelist())
         self.assertTrue(practice.audit_logs.filter(action='export').exists())
 
+    def test_owner_can_choose_pdf_excel_and_svg_export_formats(self):
+        _user, _practice = self.create_practice_user()
+        self.client.force_login(_user)
+
+        for export_format, content_type in [('pdf', 'application/pdf'), ('xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'), ('svg', 'image/svg+xml')]:
+            with self.subTest(export_format=export_format):
+                response = self.client.post(reverse('practice_data_export'), {'scope': 'all', 'format': export_format})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response['Content-Type'], content_type)
+
     def test_dashboard_profile_menu_links_to_profile_settings(self):
         user, _practice = self.create_practice_user()
 
