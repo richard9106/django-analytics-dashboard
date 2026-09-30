@@ -324,6 +324,20 @@ h1, h2, h3, p { margin-top: 0; }
 .client-workspace-hero > .badge { margin-left: auto; }
 .client-avatar.large { width: 68px; height: 68px; border-radius: 22px; display: grid; place-items: center; flex: 0 0 auto; background: linear-gradient(145deg, var(--brand-600), var(--aqua-500)); color: #fff; font-size: 21px; font-weight: 900; }
 .client-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.latest-session-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .62), transparent 38%), linear-gradient(145deg, #fff, var(--brand-50)); border-color: rgba(112, 82, 217, .16); }
+.section-kicker { margin: 0 0 5px !important; color: var(--brand-700) !important; font-size: 11px !important; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.session-summary { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 16px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255, 255, 255, .82); }
+.session-summary-date { width: 64px; height: 64px; display: grid; place-content: center; gap: 2px; border-radius: 16px; background: var(--brand-600); color: #fff; text-align: center; }
+.session-summary-date strong { font-size: 17px; line-height: 1; }
+.session-summary-date span { color: rgba(255, 255, 255, .78); font-size: 11px; font-weight: 800; }
+.session-summary-body { min-width: 0; }
+.session-summary-body h3 { margin: 0 0 5px; color: var(--slate-900); font-size: 17px; letter-spacing: -.02em; }
+.session-summary-body p { font-size: 13px; }
+.session-summary-body .session-therapist { margin-top: 5px; color: var(--slate-800); font-weight: 800; }
+.session-empty { min-height: 96px; display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px dashed rgba(112, 82, 217, .28); border-radius: 16px; background: rgba(255, 255, 255, .62); }
+.session-empty-mark { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; background: var(--brand-50); color: var(--brand-700); font-size: 22px; font-weight: 700; }
+.session-empty strong { display: block; margin-bottom: 3px; color: var(--slate-900); }
+.session-empty p { font-size: 13px; line-height: 1.45; }
 .team-permissions { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid var(--slate-200); }
 .team-permissions summary { margin-bottom: 10px; color: var(--brand-700); font-size: 12px; font-weight: 900; cursor: pointer; }
 .permission-matrix { display: grid; gap: 5px; margin-bottom: 12px; }
@@ -639,6 +653,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .client-detail-grid { grid-template-columns: 1fr; }
   .client-workspace-hero { align-items: flex-start; flex-wrap: wrap; }
   .client-workspace-hero > .badge { margin-left: 0; }
+  .session-summary { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; }
+  .session-summary-date { width: 56px; height: 56px; }
+  .session-summary > .badge { grid-column: 2; justify-self: start; }
   .availability-week { grid-template-columns: 1fr; }
   .integration-capabilities { grid-template-columns: 1fr; }
   .app-shell { display: block; }
