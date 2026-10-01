@@ -240,6 +240,13 @@ class BillingViewTests(TestCase):
         self.assertContains(response, "INV-100")
         self.assertContains(response, "4 session package")
         self.assertContains(response, "1 of 4 used")
+        self.assertContains(response, 'role="region" aria-labelledby="billing-packages-heading"')
+        self.assertContains(response, '<th scope="col">Package</th>', html=True)
+        self.assertContains(response, '<th scope="col"><span class="sr-only">Actions</span></th>', html=True)
+        self.assertContains(response, 'data-package-actions-trigger')
+        self.assertContains(response, 'aria-controls="package-actions-')
+        self.assertContains(response, 'data-package-actions-menu')
+        self.assertContains(response, "Edit package")
         self.assertContains(response, 'id="invoice-create-modal"')
         self.assertContains(response, 'id="package-create-modal"')
         self.assertNotContains(response, "INV-HIDDEN")
@@ -281,6 +288,7 @@ class BillingViewTests(TestCase):
         self.assertContains(response, "event.key === 'Escape'")
         self.assertContains(response, "is-mobile-sheet")
         self.assertContains(response, "trigger.focus()")
+        self.assertContains(response, "[data-package-actions-trigger]")
 
     def test_workspace_sidebar_script_restores_modal_focus(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()

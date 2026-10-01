@@ -44,13 +44,19 @@
         </article>
 
         <article class="panel billing-panel">
-          <div class="panel-head"><div><h2>Session packages</h2><p>Track prepaid blocks like 3 or 4 sessions.</p></div><span class="badge success">{{ packages|length }} packages</span></div>
-          <div class="package-list">
-            {% for package in packages %}
-              <div class="package-card"><div><strong>{{ package.name }}</strong><p>{{ package.client }} · {{ package.sessions_used }} of {{ package.sessions_purchased }} used · {{ package.sessions_remaining }} remaining</p></div><span class="badge brand">{{ package.get_status_display }}</span>{% if workspace_permissions.billing.edit %}<a class="inline-link" href="{% url 'billing:package_edit' package.pk %}" data-modal-target="package-modal-{{ package.pk }}">Edit package</a>{% endif %}</div>
-            {% empty %}
-              <p class="empty-state">No session packages yet.</p>
-            {% endfor %}
+          <div class="panel-head"><div><h2 id="billing-packages-heading">Session packages</h2><p>Track prepaid blocks like 3 or 4 sessions.</p></div><span class="badge success">{{ packages|length }} packages</span></div>
+          <div class="table-wrap" role="region" aria-labelledby="billing-packages-heading" aria-describedby="billing-packages-scroll-help" tabindex="0">
+            <p class="sr-only" id="billing-packages-scroll-help">Scroll horizontally to view all session package columns.</p>
+            <table>
+              <thead><tr><th scope="col">Package</th><th scope="col">Client</th><th scope="col">Used</th><th scope="col">Remaining</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+              <tbody>
+                {% for package in packages %}
+                  <tr><td><strong>{{ package.name }}</strong><small class="table-subtext">{{ package.sessions_purchased }} purchased</small></td><td>{{ package.client }}</td><td>{{ package.sessions_used }} of {{ package.sessions_purchased }} used</td><td>{{ package.sessions_remaining }} remaining</td><td><span class="badge brand">{{ package.get_status_display }}</span></td><td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ package.name }}" aria-expanded="false" aria-controls="package-actions-{{ package.pk }}" data-package-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="package-actions-{{ package.pk }}" role="menu" hidden data-package-actions-menu><a role="menuitem" class="inline-link" href="{% url 'billing:package_edit' package.pk %}" data-modal-target="package-modal-{{ package.pk }}">Edit package</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td></tr>
+                {% empty %}
+                  <tr><td colspan="6" class="empty-state">No session packages yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
         </article>
       </section>
@@ -111,10 +117,10 @@
         trigger.focus();
       };
       document.addEventListener('click', (event) => {
-        const trigger = event.target.closest('[data-invoice-actions-trigger]');
+        const trigger = event.target.closest('[data-invoice-actions-trigger], [data-package-actions-trigger]');
         if (trigger) { event.preventDefault(); openActions(trigger); return; }
-        if (event.target.closest('[data-invoice-actions-menu] a, [data-invoice-actions-menu] button')) { closeActions(false); return; }
-        if (!event.target.closest('[data-invoice-actions-menu]')) closeActions(false);
+        if (event.target.closest('[data-invoice-actions-menu] a, [data-invoice-actions-menu] button, [data-package-actions-menu] a, [data-package-actions-menu] button')) { closeActions(false); return; }
+        if (!event.target.closest('[data-invoice-actions-menu], [data-package-actions-menu]')) closeActions(false);
       });
       document.addEventListener('keydown', (event) => {
         if (!openMenu) return;
@@ -124,7 +130,7 @@
       window.addEventListener('resize', positionMenu);
       window.addEventListener('scroll', positionMenu, true);
     })();
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); document.querySelector('[data-invoice-actions-trigger][aria-expanded="true"]')?.click(); dialog.showModal(); });
+    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); document.querySelector('[data-invoice-actions-trigger][aria-expanded="true"], [data-package-actions-trigger][aria-expanded="true"]')?.click(); dialog.showModal(); });
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
     document.addEventListener('change', (event) => {
       const select = event.target.closest('[data-package-template-select]');
