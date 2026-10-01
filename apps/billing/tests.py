@@ -282,6 +282,78 @@ class BillingViewTests(TestCase):
         self.assertNotContains(response, "Publish")
         self.assertNotContains(response, "Delete draft")
 
+    def test_therapist_without_billing_view_cannot_open_billing_documents(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        profile = UserProfile.objects.get(user=user)
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {"billing": {"view": False, "create": False, "edit": False, "delete": False}}
+        profile.save(update_fields=["role", "permissions"])
+        invoice = Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-THERAPIST", amount=Decimal("150.00")
+        )
+
+        self.client.force_login(user)
+        for url in (
+            reverse("billing:list"),
+            reverse("billing:invoice_print", args=[invoice.pk]),
+            reverse("billing:invoice_superbill", args=[invoice.pk]),
+            reverse("settings:package_templates"),
+            reverse("settings:insurance"),
+        ):
+            self.assertEqual(self.client.get(url).status_code, 302, url)
+
+    def test_therapist_billing_view_permission_hides_mutation_controls_and_blocks_mutations(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        profile = UserProfile.objects.get(user=user)
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {"billing": {"view": True, "create": False, "edit": False, "delete": False}}
+        profile.save(update_fields=["role", "permissions"])
+        invoice = Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-VIEW-ONLY", amount=Decimal("150.00")
+        )
+        package_template = SessionPackageTemplate.objects.create(
+            practice=practice, name="View-only template", sessions_included=4, price=Decimal("520.00")
+        )
+        payer = InsurancePayer.objects.create(practice=practice, name="View-only payer")
+        rate = InsuranceRate.objects.create(
+            practice=practice, payer=payer, state="CA",
+            service_code=InsuranceRate.ServiceCode.PSYCHOTHERAPY_60,
+            reimbursement_amount=Decimal("150.00"),
+        )
+
+        self.client.force_login(user)
+        billing_response = self.client.get(reverse("billing:list"))
+        self.assertContains(billing_response, "Print invoice")
+        self.assertNotContains(billing_response, "+ New invoice")
+        self.assertNotContains(billing_response, "+ Session package")
+
+        templates_response = self.client.get(reverse("settings:package_templates"))
+        self.assertContains(templates_response, package_template.name)
+        self.assertNotContains(templates_response, "+ Package template")
+        self.assertNotContains(templates_response, "Edit template")
+
+        insurance_response = self.client.get(reverse("settings:insurance"))
+        self.assertContains(insurance_response, payer.name)
+        self.assertNotContains(insurance_response, "+ Rate")
+        self.assertNotContains(insurance_response, "+ Custom payer")
+        self.assertNotContains(insurance_response, "Edit payer")
+
+        mutation_urls = (
+            reverse("billing:invoice_create"),
+            reverse("billing:package_create"),
+            reverse("settings:package_template_create"),
+            reverse("settings:package_template_edit", args=[package_template.pk]),
+            reverse("settings:package_template_delete", args=[package_template.pk]),
+            reverse("settings:insurance_payer_create"),
+            reverse("settings:insurance_payer_edit", args=[payer.pk]),
+            reverse("settings:insurance_payer_delete", args=[payer.pk]),
+            reverse("settings:insurance_rate_create"),
+            reverse("settings:insurance_rate_edit", args=[rate.pk]),
+            reverse("settings:insurance_rate_delete", args=[rate.pk]),
+        )
+        for url in mutation_urls:
+            self.assertEqual(self.client.post(url).status_code, 302, url)
+
     def test_manual_payment_records_partial_balance_for_invoice(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
         invoice = Invoice.objects.create(

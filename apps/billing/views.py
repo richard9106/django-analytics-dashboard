@@ -250,7 +250,9 @@ class InvoicePublishView(LoginRequiredMixin, PracticePermissionMixin, PracticeCo
         return redirect('billing:list')
 
 
-class InvoicePrintableView(LoginRequiredMixin, PracticeContextMixin, TemplateView):
+class InvoicePrintableView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, TemplateView):
+    permission_resource = 'billing'
+    permission_action = 'view'
     template_name = 'billing/printable_invoice.html'
     document_type = 'invoice'
 
@@ -380,7 +382,9 @@ class PackageUsageDeleteView(LoginRequiredMixin, PracticePermissionMixin, Practi
         return response
 
 
-class SessionPackageTemplateListView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class SessionPackageTemplateListView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'billing'
+    permission_action = 'view'
     model = SessionPackageTemplate
     template_name = 'settings/package_templates.html'
     context_object_name = 'templates'
@@ -392,7 +396,9 @@ class SessionPackageTemplateListView(LoginRequiredMixin, PracticeContextMixin, L
         return SessionPackageTemplate.objects.filter(practice=practice)
 
 
-class SessionPackageTemplateCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class SessionPackageTemplateCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'billing'
+    permission_action = 'create'
     model = SessionPackageTemplate
     form_class = SessionPackageTemplateForm
     template_name = 'settings/package_template_form.html'
@@ -418,6 +424,7 @@ class SessionPackageTemplateCreateView(LoginRequiredMixin, PracticeContextMixin,
 
 
 class SessionPackageTemplateUpdateView(SessionPackageTemplateCreateView, UpdateView):
+    permission_action = 'edit'
     def get_queryset(self):
         practice = self.get_practice()
         if not practice:
@@ -425,7 +432,9 @@ class SessionPackageTemplateUpdateView(SessionPackageTemplateCreateView, UpdateV
         return SessionPackageTemplate.objects.filter(practice=practice)
 
 
-class SessionPackageTemplateDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class SessionPackageTemplateDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'billing'
+    permission_action = 'delete'
     model = SessionPackageTemplate
     success_url = reverse_lazy('settings:package_templates')
 
@@ -444,7 +453,9 @@ class SessionPackageTemplateDeleteView(LoginRequiredMixin, PracticeContextMixin,
         return response
 
 
-class InsuranceSettingsView(LoginRequiredMixin, PracticeContextMixin, ListView):
+class InsuranceSettingsView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'billing'
+    permission_action = 'view'
     model = InsuranceRate
     template_name = 'settings/insurance.html'
     context_object_name = 'insurance_rates'
@@ -465,7 +476,9 @@ class InsuranceSettingsView(LoginRequiredMixin, PracticeContextMixin, ListView):
         return context
 
 
-class InsurancePayerCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class InsurancePayerCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'billing'
+    permission_action = 'create'
     model = InsurancePayer
     form_class = InsurancePayerForm
     template_name = 'settings/insurance_payer_form.html'
@@ -484,12 +497,15 @@ class InsurancePayerCreateView(LoginRequiredMixin, PracticeContextMixin, CreateV
 
 
 class InsurancePayerUpdateView(InsurancePayerCreateView, UpdateView):
+    permission_action = 'edit'
     def get_queryset(self):
         practice = self.get_practice()
         return InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
 
 
-class InsurancePayerDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class InsurancePayerDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'billing'
+    permission_action = 'delete'
     model = InsurancePayer
     success_url = reverse_lazy('settings:insurance')
 
@@ -498,7 +514,9 @@ class InsurancePayerDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteV
         return InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
 
 
-class InsuranceRateCreateView(LoginRequiredMixin, PracticeContextMixin, CreateView):
+class InsuranceRateCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+    permission_resource = 'billing'
+    permission_action = 'create'
     model = InsuranceRate
     form_class = InsuranceRateForm
     template_name = 'settings/insurance_rate_form.html'
@@ -517,12 +535,15 @@ class InsuranceRateCreateView(LoginRequiredMixin, PracticeContextMixin, CreateVi
 
 
 class InsuranceRateUpdateView(InsuranceRateCreateView, UpdateView):
+    permission_action = 'edit'
     def get_queryset(self):
         practice = self.get_practice()
         return InsuranceRate.objects.filter(practice=practice) if practice else InsuranceRate.objects.none()
 
 
-class InsuranceRateDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteView):
+class InsuranceRateDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+    permission_resource = 'billing'
+    permission_action = 'delete'
     model = InsuranceRate
     success_url = reverse_lazy('settings:insurance')
 
@@ -531,7 +552,9 @@ class InsuranceRateDeleteView(LoginRequiredMixin, PracticeContextMixin, DeleteVi
         return InsuranceRate.objects.filter(practice=practice) if practice else InsuranceRate.objects.none()
 
 
-class StripeSubscribeView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, View):
+    permission_resource = 'billing'
+    permission_action = 'create'
     http_method_names = ['get', 'post']
 
     def dispatch(self, request, *args, **kwargs):
@@ -592,15 +615,21 @@ class StripeSubscribeView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
         return redirect(session.url)
 
 
-class StripeSubscribeSuccessView(LoginRequiredMixin, ClientPortalRedirectMixin, TemplateView):
+class StripeSubscribeSuccessView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, TemplateView):
+    permission_resource = 'billing'
+    permission_action = 'view'
     template_name = 'billing/subscribe_success.html'
 
 
-class StripeSubscribeCancelView(LoginRequiredMixin, ClientPortalRedirectMixin, TemplateView):
+class StripeSubscribeCancelView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, TemplateView):
+    permission_resource = 'billing'
+    permission_action = 'view'
     template_name = 'billing/subscribe_cancel.html'
 
 
-class StripeCustomerPortalView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+class StripeCustomerPortalView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, View):
+    permission_resource = 'billing'
+    permission_action = 'edit'
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
@@ -622,7 +651,9 @@ class StripeCustomerPortalView(LoginRequiredMixin, ClientPortalRedirectMixin, Vi
         return redirect(session.url)
 
 
-class StripeChangePlanView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+class StripeChangePlanView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, View):
+    permission_resource = 'billing'
+    permission_action = 'edit'
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
@@ -680,7 +711,9 @@ class StripeChangePlanView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
         return redirect('profile_settings')
 
 
-class StripePlanPreviewView(LoginRequiredMixin, ClientPortalRedirectMixin, View):
+class StripePlanPreviewView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, View):
+    permission_resource = 'billing'
+    permission_action = 'view'
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
