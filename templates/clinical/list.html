@@ -55,7 +55,11 @@
                 {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
                 <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
                 {% if note.treatment_progress %}<p class="note-preview"><strong>Plan progress:</strong> {{ note.treatment_progress|truncatechars:160 }}</p>{% endif %}
-                <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
+                 {% if note.is_locked %}
+                   <p class="sync-meta" aria-label="Locked note status">Read-only clinical record. Locked {{ note.locked_at|date:"M j, Y g:i A" }}.</p>
+                 {% else %}
+                   <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
+                 {% endif %}
               </article>
             {% empty %}
               <p class="empty-state">No clinical notes have been created yet.</p>
@@ -84,7 +88,7 @@
         </div>
       </dialog>
 
-      {% for note in notes %}
+      {% for note in notes %}{% if not note.is_locked %}
         <dialog class="modal-dialog" id="note-modal-{{ note.pk }}">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Edit Clinical Note</p><h2>{{ note.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
@@ -104,7 +108,7 @@
             </form>
           </div>
         </dialog>
-      {% endfor %}
+      {% endif %}{% endfor %}
     </main>
   </div>
   <script>

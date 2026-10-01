@@ -188,6 +188,24 @@ class SessionNoteModelTests(TestCase):
         with self.assertRaisesMessage(ValidationError, "cannot have locked_at set unless it is locked"):
             note.full_clean()
 
+    def test_locked_note_cannot_be_saved_or_deleted(self):
+        note = self.build_note()
+        note.lock()
+        note.save()
+
+        note.content = "Attempted amendment."
+        with self.assertRaisesMessage(ValidationError, "cannot be edited or unlocked"):
+            note.save()
+        with self.assertRaisesMessage(ValidationError, "cannot be deleted"):
+            note.delete()
+
+    def test_locked_note_gets_lock_timestamp_when_saved(self):
+        note = self.build_note(is_locked=True)
+
+        note.save()
+
+        self.assertIsNotNone(note.locked_at)
+
 
 class TreatmentPlanModelTests(TestCase):
     def setUp(self):
@@ -647,6 +665,52 @@ class SessionNoteViewTests(TestCase):
         response = self.client.get(reverse("clinical:edit", args=[note.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_locked_note_is_read_only_and_has_no_edit_or_delete_controls(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            appointment=appointment,
+            content="Finalized note.",
+            is_locked=True,
+        )
+
+        self.client.force_login(user)
+        list_response = self.client.get(reverse("clinical:list"))
+
+        self.assertContains(list_response, "Finalized note.")
+        self.assertContains(list_response, "Read-only clinical record")
+        self.assertNotContains(list_response, reverse("clinical:edit", args=[note.pk]))
+        self.assertNotContains(list_response, reverse("clinical:delete", args=[note.pk]))
+
+        edit_response = self.client.get(reverse("clinical:edit", args=[note.pk]))
+        self.assertEqual(edit_response.status_code, 404)
+
+    def test_locked_note_post_update_and_delete_are_rejected(self):
+        user, practice, therapist, client, appointment = self.create_practice_user()
+        note = SessionNote.objects.create(
+            practice=practice,
+            therapist=therapist,
+            client=client,
+            appointment=appointment,
+            content="Finalized note.",
+            is_locked=True,
+        )
+
+        self.client.force_login(user)
+        update_response = self.client.post(
+            reverse("clinical:edit", args=[note.pk]),
+            self.note_payload(therapist, client, appointment, content="Tampered note."),
+        )
+        delete_response = self.client.post(reverse("clinical:delete", args=[note.pk]))
+
+        self.assertEqual(update_response.status_code, 404)
+        self.assertEqual(delete_response.status_code, 404)
+        note.refresh_from_db()
+        self.assertEqual(note.content, "Finalized note.")
+        self.assertTrue(note.is_locked)
 
     def test_note_delete_removes_note(self):
         user, practice, therapist, client, _appointment = self.create_practice_user()

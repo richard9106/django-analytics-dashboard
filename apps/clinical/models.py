@@ -92,6 +92,8 @@ class SessionNote(models.Model):
 
         if self.locked_at and not self.is_locked:
             errors["locked_at"] = "A note cannot have locked_at set unless it is locked."
+        if self.is_locked and not self.locked_at:
+            errors["locked_at"] = "A locked note must have locked_at set."
 
         if errors:
             raise ValidationError(errors)
@@ -99,6 +101,21 @@ class SessionNote(models.Model):
     def lock(self):
         self.is_locked = True
         self.locked_at = timezone.now()
+
+    def save(self, *args, **kwargs):
+        """Keep finalized notes immutable through all normal model saves."""
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).values("is_locked").first()
+            if previous and previous["is_locked"]:
+                raise ValidationError("Locked clinical notes cannot be edited or unlocked.")
+        if self.is_locked and not self.locked_at:
+            self.locked_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.is_locked:
+            raise ValidationError("Locked clinical notes cannot be deleted.")
+        return super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"{self.get_note_type_display()} for {self.client}"

@@ -171,7 +171,9 @@ class SessionNoteUpdateView(LoginRequiredMixin, PracticePermissionMixin, Practic
         if not practice:
             return SessionNote.objects.none()
 
-        return SessionNote.objects.filter(practice=practice)
+        # Locked notes are finalized records. Excluding them here prevents direct
+        # URL access and protects both GET and POST update attempts.
+        return SessionNote.objects.filter(practice=practice, is_locked=False)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -215,7 +217,7 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticePermissionMixin, Practic
         if not practice:
             return SessionNote.objects.none()
 
-        return SessionNote.objects.filter(practice=practice)
+        return SessionNote.objects.filter(practice=practice, is_locked=False)
 
     def form_valid(self, form):
         note_id = self.object.pk
