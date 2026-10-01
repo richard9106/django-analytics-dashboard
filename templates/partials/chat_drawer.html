@@ -52,8 +52,7 @@
               <form class="chat-reply-form" method="post" action="{% if chat_is_client %}{% url 'portal:conversation_detail' conversation.public_id %}{% else %}{% url 'portal_requests:conversation_detail' conversation.public_id %}{% endif %}">
                 {% csrf_token %}
                 <input type="hidden" name="drawer" value="1">
-                <label class="sr-only" for="chat-reply-{{ conversation.public_id }}">Reply to {{ conversation.subject }}</label>
-                <textarea id="chat-reply-{{ conversation.public_id }}" name="body" rows="2" required placeholder="Write a reply..."></textarea>
+                <textarea id="chat-reply-{{ conversation.public_id }}" name="body" rows="2" required aria-label="Reply to {{ conversation.subject }}" placeholder="Write a reply..."></textarea>
                 <button class="btn btn-primary" type="submit">Send</button>
               </form>
             {% else %}
