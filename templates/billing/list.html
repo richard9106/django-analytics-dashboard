@@ -30,10 +30,10 @@
           <div class="panel-head"><div><h2>Invoices</h2><p>Bill individual sessions or prepaid packages.</p></div><div class="inline-actions"><span class="badge brand">{{ invoices|length }} invoices</span>{% if workspace_permissions.billing.create %}<button class="btn btn-secondary" type="button" data-modal-target="payment-create-modal">Record payment</button>{% endif %}</div></div>
           <div class="table-wrap">
             <table>
-               <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>Paid</th><th>Balance</th><th>For</th><th>Actions</th></tr></thead>
+               <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>Paid</th><th>Balance</th><th>For</th><th><span class="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {% for invoice in invoices %}
-                   <tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.payment_total }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td><td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ invoice.invoice_number }}" aria-expanded="false" aria-controls="invoice-actions-{{ invoice.pk }}" data-invoice-actions-trigger><span aria-hidden="true">⋮</span><span class="sr-only">Actions</span></button><div class="invoice-actions-menu" id="invoice-actions-{{ invoice.pk }}" role="menu" hidden data-invoice-actions-menu><div class="invoice-actions-menu-title">{{ invoice.invoice_number }} actions</div>{% if workspace_permissions.billing.view %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.edit %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">Edit invoice</a><form method="post" action="{% url 'billing:invoice_publish' invoice.pk %}">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Publish</button></form>{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.delete %}<form method="post" action="{% url 'billing:invoice_delete' invoice.pk %}">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Delete draft</button></form>{% endif %}</div></td></tr>
+                   <tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.payment_total }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td><td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ invoice.invoice_number }}" aria-expanded="false" aria-controls="invoice-actions-{{ invoice.pk }}" data-invoice-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="invoice-actions-{{ invoice.pk }}" role="menu" hidden data-invoice-actions-menu>{% if workspace_permissions.billing.view %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.edit %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">Edit invoice</a><form method="post" action="{% url 'billing:invoice_publish' invoice.pk %}">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Publish</button></form>{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.delete %}<form method="post" action="{% url 'billing:invoice_delete' invoice.pk %}">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Delete draft</button></form>{% endif %}</div></td></tr>
                 {% empty %}
                    <tr><td colspan="8">No invoices yet.</td></tr>
                 {% endfor %}
@@ -88,7 +88,7 @@
         if (isMobile()) { openMenu.classList.add('is-mobile-sheet'); return; }
         openMenu.classList.remove('is-mobile-sheet');
         const rect = openTrigger.getBoundingClientRect();
-        const width = Math.min(248, window.innerWidth - 24);
+        const width = Math.min(192, window.innerWidth - 24);
         const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
         const below = rect.bottom + 8;
         const top = below + openMenu.offsetHeight <= window.innerHeight - 12 ? below : Math.max(12, rect.top - openMenu.offsetHeight - 8);
@@ -107,11 +107,12 @@
         openMenu = menu;
         trigger.setAttribute('aria-expanded', 'true');
         positionMenu();
-        focusable(menu)[0]?.focus();
+        trigger.focus();
       };
       document.addEventListener('click', (event) => {
         const trigger = event.target.closest('[data-invoice-actions-trigger]');
-        if (trigger) { openActions(trigger); return; }
+        if (trigger) { event.preventDefault(); openActions(trigger); return; }
+        if (event.target.closest('[data-invoice-actions-menu] a, [data-invoice-actions-menu] button')) { closeActions(false); return; }
         if (!event.target.closest('[data-invoice-actions-menu]')) closeActions(false);
       });
       document.addEventListener('keydown', (event) => {

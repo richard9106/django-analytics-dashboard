@@ -254,11 +254,12 @@ class BillingViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse("billing:list"))
 
-        self.assertContains(response, '<th>Actions</th>', html=True)
+        self.assertContains(response, '<th><span class="sr-only">Actions</span></th>', html=True)
         self.assertContains(response, 'class="invoice-actions-trigger"')
         self.assertContains(response, 'aria-controls="invoice-actions-')
         self.assertContains(response, 'role="menu"')
         self.assertNotContains(response, '<details class="invoice-actions">')
+        self.assertNotContains(response, 'invoice-actions-menu-title')
         self.assertContains(response, "Print invoice")
         self.assertContains(response, "Publish")
         self.assertContains(response, "Delete draft")
@@ -274,6 +275,7 @@ class BillingViewTests(TestCase):
         self.assertContains(response, "document.body.appendChild(menu)")
         self.assertContains(response, "event.key === 'Escape'")
         self.assertContains(response, "is-mobile-sheet")
+        self.assertContains(response, "trigger.focus()")
 
     def test_invoice_action_menu_honors_billing_permissions(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
