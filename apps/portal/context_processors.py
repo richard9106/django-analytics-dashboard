@@ -1,4 +1,4 @@
-from apps.accounts.access import get_practice_for_user, is_client_user
+from apps.accounts.access import get_practice_for_user, has_practice_permission, is_client_user
 from apps.practices.models import ExternalIntegration
 from .models import ClientPortalRequest, PortalConversation, PortalMessage, PublicBookingRequest
 
@@ -7,13 +7,14 @@ def portal_request_badge(request):
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated or is_client_user(user):
         access = getattr(user, 'client_portal_access', None) if user and user.is_authenticated else None
-        conversations = PortalConversation.objects.filter(practice=access.practice, client=access.client).select_related('client').prefetch_related('messages__author')[:8] if access and access.is_active else []
+        conversations = PortalConversation.objects.filter(practice=access.practice, client=access.client).select_related('client')[:8] if access and access.is_active else []
         unread = PortalMessage.objects.filter(practice=access.practice, conversation__client=access.client, author_kind=PortalMessage.AuthorKind.STAFF, read_at__isnull=True).count() if access and access.is_active else 0
         return {
             'open_portal_request_count': 0,
             'unread_message_count': unread,
             'chat_conversations': conversations,
             'chat_is_client': True,
+            'chat_enabled': bool(access and access.is_active),
             'chat_open_id': request.GET.get('chat', ''),
             'google_workspace_connected': False,
             'practice_setup_complete': True,
@@ -28,6 +29,7 @@ def portal_request_badge(request):
             'unread_message_count': 0,
             'chat_conversations': [],
             'chat_is_client': False,
+            'chat_enabled': False,
             'chat_open_id': '',
             'google_workspace_connected': False,
             'practice_setup_complete': False,
@@ -51,17 +53,19 @@ def portal_request_badge(request):
         practice=practice,
         status=PublicBookingRequest.Status.PENDING,
     ).count()
+    can_view_messages = has_practice_permission(user, 'requests', 'view')
     unread_message_count = PortalMessage.objects.filter(
         practice=practice,
         author_kind=PortalMessage.AuthorKind.CLIENT,
         read_at__isnull=True,
-    ).count()
-    conversations = PortalConversation.objects.filter(practice=practice).select_related('client').prefetch_related('messages__author')[:8]
+    ).count() if can_view_messages else 0
+    conversations = PortalConversation.objects.filter(practice=practice).select_related('client')[:8] if can_view_messages else []
     return {
         'open_portal_request_count': portal_request_count + booking_request_count,
         'unread_message_count': unread_message_count,
         'chat_conversations': conversations,
         'chat_is_client': False,
+        'chat_enabled': can_view_messages,
         'chat_open_id': request.GET.get('chat', ''),
         'google_workspace_connected': gmail_connected,
         'practice_setup_complete': gmail_connected and stripe_ready,

@@ -125,7 +125,7 @@
         </div>
       </dialog>
     {% endfor %}
-  {% include 'partials/chat_drawer.html' %}</main>
+  {% if chat_enabled %}{% include 'partials/chat_drawer.html' %}{% endif %}</main>
   <script>
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-modal-target]');

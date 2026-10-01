@@ -65,4 +65,4 @@
     <p>{{ card_text }}</p>
   </div>
 </aside>
-{% include 'partials/chat_drawer.html' %}
+{% if chat_enabled %}{% include 'partials/chat_drawer.html' %}{% endif %}
