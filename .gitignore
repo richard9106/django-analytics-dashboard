@@ -8,3 +8,5 @@ htmlcov/
 staticfiles/
 media/
 graphify-out/
+opencode.json
+.opencode/skills/
