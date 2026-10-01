@@ -1,6 +1,6 @@
 from apps.accounts.access import get_practice_for_user, is_client_user
 from apps.practices.models import ExternalIntegration
-from .models import ClientPortalRequest, PublicBookingRequest
+from .models import ClientPortalRequest, PortalMessage, PublicBookingRequest
 
 
 def portal_request_badge(request):
@@ -8,6 +8,7 @@ def portal_request_badge(request):
     if not user or not user.is_authenticated or is_client_user(user):
         return {
             'open_portal_request_count': 0,
+            'unread_message_count': 0,
             'google_workspace_connected': False,
             'practice_setup_complete': True,
             'practice_setup_gmail': False,
@@ -18,6 +19,7 @@ def portal_request_badge(request):
     if not practice:
         return {
             'open_portal_request_count': 0,
+            'unread_message_count': 0,
             'google_workspace_connected': False,
             'practice_setup_complete': False,
             'practice_setup_gmail': False,
@@ -40,8 +42,14 @@ def portal_request_badge(request):
         practice=practice,
         status=PublicBookingRequest.Status.PENDING,
     ).count()
+    unread_message_count = PortalMessage.objects.filter(
+        practice=practice,
+        author_kind=PortalMessage.AuthorKind.CLIENT,
+        read_at__isnull=True,
+    ).count()
     return {
         'open_portal_request_count': portal_request_count + booking_request_count,
+        'unread_message_count': unread_message_count,
         'google_workspace_connected': gmail_connected,
         'practice_setup_complete': gmail_connected and stripe_ready,
         'practice_setup_gmail': gmail_connected,

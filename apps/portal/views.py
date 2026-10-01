@@ -111,6 +111,12 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             client=access.client,
             status=ClientIntakeAssignment.Status.ASSIGNED,
         ).select_related('template')
+        unread_message_count = PortalMessage.objects.filter(
+            practice=access.practice,
+            conversation__client=access.client,
+            author_kind=PortalMessage.AuthorKind.STAFF,
+            read_at__isnull=True,
+        ).count()
         context.update({
             'upcoming_appointments': upcoming_appointments[:6],
             'next_appointment': upcoming_appointments.first(),
@@ -125,6 +131,7 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'open_request_count': portal_requests.exclude(status=ClientPortalRequest.Status.RESOLVED).count(),
             'pending_intakes': pending_intakes,
             'pending_intake_count': pending_intakes.count(),
+            'unread_message_count': unread_message_count,
         })
         return context
 
@@ -299,6 +306,9 @@ class ClientConversationDetailView(ClientPortalAccessMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         conversation = self.get_conversation()
+        conversation.messages.filter(
+            author_kind=PortalMessage.AuthorKind.STAFF, read_at__isnull=True,
+        ).update(read_at=timezone.now())
         context.update({
             'conversation': conversation,
             'portal_practice': conversation.practice,
@@ -572,6 +582,9 @@ class PracticeConversationDetailView(PracticePermissionMixin, PracticeContextMix
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         conversation = self.get_conversation()
+        conversation.messages.filter(
+            author_kind=PortalMessage.AuthorKind.CLIENT, read_at__isnull=True,
+        ).update(read_at=timezone.now())
         context.update({
             'conversation': conversation,
             'reply_form': kwargs.get('reply_form') or PortalMessageForm(

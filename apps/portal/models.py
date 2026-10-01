@@ -104,6 +104,7 @@ class PortalMessage(models.Model):
     author_kind = models.CharField(max_length=20, choices=AuthorKind.choices)
     body = models.TextField(max_length=10000)
     created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["created_at"]

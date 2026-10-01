@@ -282,6 +282,39 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(conversation.status, PortalConversation.Status.RESOLVED)
         self.assertEqual(conversation.resolved_by, owner)
 
+    def test_client_message_bell_counts_and_marks_staff_replies_read(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        conversation = PortalConversation.objects.create(practice=practice, client=client, subject="Update")
+        message = PortalMessage.objects.create(
+            conversation=conversation, practice=practice,
+            author_kind=PortalMessage.AuthorKind.STAFF, body="Your practice replied.",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("portal:dashboard"))
+        self.assertContains(response, "Bell")
+        self.assertContains(response, ">1</strong>")
+        self.client.get(reverse("portal:conversation_detail", args=[conversation.public_id]))
+
+        message.refresh_from_db()
+        self.assertIsNotNone(message.read_at)
+
+    def test_staff_message_badge_counts_unread_client_messages(self):
+        _client_user, practice, _therapist, client, _access = self.create_portal_user()
+        owner = get_user_model().objects.create_user(username="message-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        conversation = PortalConversation.objects.create(practice=practice, client=client, subject="Question")
+        PortalMessage.objects.create(
+            conversation=conversation, practice=practice,
+            author_kind=PortalMessage.AuthorKind.CLIENT, body="I need help.",
+        )
+        self.client.force_login(owner)
+
+        response = self.client.get(reverse("portal_requests:conversations"))
+
+        self.assertContains(response, "Messages")
+        self.assertContains(response, ">1</strong>")
+
     def test_portal_client_can_request_appointment_change(self):
         user, practice, therapist, client, _access = self.create_portal_user()
         starts_at = timezone.now() + timedelta(days=2)
