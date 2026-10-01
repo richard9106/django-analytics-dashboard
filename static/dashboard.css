@@ -569,6 +569,11 @@ h1, h2, h3, p { margin-top: 0; }
 .form-message { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--success-bg); color: var(--success); font-weight: 800; }
 .empty-state { color: var(--slate-500); }
 .table-wrap { width: 100%; overflow-x: auto; }
+.invoice-actions { display: block; }
+.invoice-actions summary { cursor: pointer; list-style: none; color: var(--brand-700); font-weight: 800; }
+.invoice-actions summary::-webkit-details-marker { display: none; }
+.invoice-actions summary:focus-visible { outline: 3px solid rgba(112, 82, 217, .25); outline-offset: 2px; border-radius: 8px; }
+.invoice-actions-panel { position: static; width: min(220px, calc(100vw - 64px)); margin-top: 8px; }
 table { width: 100%; border-collapse: collapse; min-width: 620px; }
 th, td { padding: 13px 12px; border-bottom: 1px solid var(--slate-200); text-align: left; }
 th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
