@@ -102,7 +102,7 @@
             <div class="sync-panel">
               <strong>Google Calendar sync: {{ object.get_sync_status_display }}</strong>
               {% if object.external_event_url %}<a class="inline-link" href="{{ object.external_event_url }}" target="_blank" rel="noopener">Open Google event</a>{% endif %}
-              {% if object.sync_error %}<p class="form-error">{{ object.sync_error }}</p>{% endif %}
+              {% if object.sync_error %}<p class="form-error">Google Calendar could not sync this appointment. Try again or reconnect Google.</p>{% endif %}
             </div>
             <div class="sync-panel">
               <strong>Reminder: {{ object.get_reminder_status_display }}</strong>

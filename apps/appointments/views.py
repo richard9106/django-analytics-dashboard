@@ -15,6 +15,8 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
+from apps.audit.models import AuditLog
+from apps.audit.utils import log_audit_event
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
 from .models import Appointment, PracticeWorkingHour
 from .forms import AppointmentForm, PracticeWorkingHourForm
@@ -465,7 +467,42 @@ class AppointmentGoogleSyncView(LoginRequiredMixin, PracticePermissionMixin, Pra
     def post(self, request, pk):
         appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
         sync_appointment_to_google(appointment)
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'appointments.Appointment',
+            appointment.pk,
+            practice=appointment.practice,
+            metadata={'calendar_sync_retry': True},
+        )
+        if appointment.sync_status == Appointment.SyncStatus.SYNCED:
+            messages.success(request, 'Appointment synced to Google Calendar.')
+        else:
+            messages.error(request, 'Google Calendar could not sync this appointment. Try again or reconnect Google.')
+        next_url = request.POST.get('next')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+            return redirect(next_url)
         return redirect('appointments:list')
+
+
+class CalendarSyncIssuesView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'appointments'
+    model = Appointment
+    template_name = 'appointments/sync_issues.html'
+    context_object_name = 'sync_issues'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        if not practice:
+            return Appointment.objects.none()
+        return (
+            Appointment.objects.filter(
+                practice=practice,
+                sync_status=Appointment.SyncStatus.FAILED,
+            )
+            .select_related('client', 'therapist__user')
+            .order_by('-updated_at')
+        )
 
 
 class AppointmentRescheduleView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):

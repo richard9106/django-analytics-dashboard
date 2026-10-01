@@ -344,7 +344,7 @@
               <div class="sync-panel">
                 <strong>Google Calendar sync: {{ appointment.get_sync_status_display }}</strong>
                 {% if appointment.external_event_url %}<a class="inline-link" href="{{ appointment.external_event_url }}" target="_blank" rel="noopener">Open Google event</a>{% endif %}
-                {% if appointment.sync_error %}<p class="form-error">{{ appointment.sync_error }}</p>{% endif %}
+                {% if appointment.sync_error %}<p class="form-error">Google Calendar could not sync this appointment. Try again or reconnect Google.</p>{% endif %}
               </div>
               <div class="form-actions split-actions">
                 <button class="btn btn-danger" type="submit" formaction="{% url 'appointments:delete' appointment.pk %}">Delete appointment</button>

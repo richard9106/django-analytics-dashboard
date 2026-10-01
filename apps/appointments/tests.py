@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import UserProfile
+from apps.audit.models import AuditLog
 from apps.appointments.models import Appointment, PracticeWorkingHour
 from apps.appointments.reminders import due_reminder_appointments, send_appointment_reminder
 from apps.clients.models import Client
@@ -236,6 +237,39 @@ class AppointmentViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f"{reverse('login')}?next={reverse('appointments:list')}")
+
+    def test_sync_issues_are_practice_scoped_and_hide_provider_error(self):
+        user, practice, therapist, client = self.create_practice_user()
+        _other_user, other_practice, other_therapist, other_client = self.create_practice_user(
+            username='otherdoc', practice_name='Other Practice')
+        Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+                                   starts_at=timezone.now(), ends_at=timezone.now() + timedelta(minutes=50),
+                                   sync_enabled=True, sync_status=Appointment.SyncStatus.FAILED,
+                                   sync_error='provider secret details')
+        Appointment.objects.create(practice=other_practice, client=other_client, therapist=other_therapist,
+                                   starts_at=timezone.now(), ends_at=timezone.now() + timedelta(minutes=50),
+                                   sync_enabled=True, sync_status=Appointment.SyncStatus.FAILED)
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:sync_issues'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Maya Johnson')
+        self.assertNotContains(response, 'provider secret details')
+        self.assertNotContains(response, 'Other Practice')
+        self.assertContains(response, reverse('practice_settings:integrations'))
+
+    def test_sync_issue_retry_is_audited_and_redirects_back(self):
+        user, practice, therapist, client = self.create_practice_user()
+        appointment = Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+            starts_at=timezone.now(), ends_at=timezone.now() + timedelta(minutes=50),
+            sync_enabled=True, sync_status=Appointment.SyncStatus.FAILED)
+        self.client.force_login(user)
+        with patch('apps.appointments.views.sync_appointment_to_google') as sync:
+            sync.side_effect = lambda item: setattr(item, 'sync_status', Appointment.SyncStatus.SYNCED)
+            response = self.client.post(reverse('appointments:google_sync', args=[appointment.pk]),
+                                        {'next': reverse('appointments:sync_issues')})
+        self.assertRedirects(response, reverse('appointments:sync_issues'))
+        self.assertTrue(AuditLog.objects.filter(practice=practice, object_id=str(appointment.pk),
+            metadata__calendar_sync_retry=True).exists())
 
     def test_appointment_create_requires_login(self):
         response = self.client.get(reverse('appointments:create'))

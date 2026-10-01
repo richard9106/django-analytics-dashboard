@@ -16,6 +16,7 @@
   <nav class="nav-list">
     <a class="nav-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" data-tour-target="nav-overview" href="{% url 'dashboard' %}"><span>⌂</span>Overview</a>
     {% if workspace_permissions.appointments.view %}<a class="nav-item{% if request.resolver_match.namespace == 'appointments' %} active{% endif %}" data-tour-target="nav-appointments" href="{% url 'appointments:list' %}"><span>◷</span>Appointments</a>{% endif %}
+    {% if workspace_permissions.appointments.view %}<a class="nav-item subitem{% if request.resolver_match.url_name == 'sync_issues' %} active{% endif %}" href="{% url 'appointments:sync_issues' %}">Calendar sync issues</a>{% endif %}
     {% if workspace_permissions.clients.view %}<a class="nav-item{% if request.resolver_match.namespace == 'clients' %} active{% endif %}" data-tour-target="nav-clients" href="{% url 'clients:list' %}"><span>◉</span>Clients</a>{% endif %}
     {% if workspace_permissions.clinical.view %}<details class="sidebar-settings"{% if request.resolver_match.namespace == 'clinical' %} open{% endif %}>
       <summary class="nav-item{% if request.resolver_match.namespace == 'clinical' %} active{% endif %}" data-tour-target="nav-notes"><span>✎</span>Notes &amp; Treatment</summary>
