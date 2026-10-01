@@ -42,6 +42,9 @@ class SessionNoteForm(forms.ModelForm):
         cleaned_data = super().clean()
         if self.instance.pk and self.instance.is_locked:
             raise forms.ValidationError("Locked clinical notes are read-only and cannot be changed.")
+        # ModelForm validates the model before save(), so establish the lock timestamp now.
+        if cleaned_data.get('is_locked') and not self.instance.locked_at:
+            self.instance.locked_at = timezone.now()
         client = cleaned_data.get('client')
         treatment_plan = cleaned_data.get('treatment_plan')
         if client and treatment_plan and treatment_plan.client_id != client.pk:
