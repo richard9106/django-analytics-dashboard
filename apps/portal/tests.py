@@ -949,7 +949,7 @@ class ClientPortalViewTests(TestCase):
         response = self.client.get(reverse("portal_settings:portal_access"))
 
         self.assertContains(response, "Reset password")
-        self.assertContains(response, "data-confirm-message=\"Reset this client&#x27;s portal password? Their current password will stop working.\"")
+        self.assertContains(response, "data-confirm-message=\"Reset this client's portal password? Their current password will stop working.\"")
 
     def test_portal_settings_reset_password_is_scoped_to_practice(self):
         _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
