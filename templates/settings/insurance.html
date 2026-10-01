@@ -38,10 +38,11 @@
 
       <section class="billing-grid">
         <article class="panel">
-          <div class="panel-head"><div><h2>Reimbursement rates</h2><p>Practice-specific rates. These are not official payer rates.</p></div></div>
-          <div class="table-wrap">
+          <div class="panel-head"><div><h2 id="insurance-rates-heading">Reimbursement rates</h2><p>Practice-specific rates. These are not official payer rates.</p></div></div>
+          <div class="table-wrap" role="region" aria-labelledby="insurance-rates-heading" aria-describedby="insurance-rates-scroll-help" tabindex="0">
+            <p class="sr-only" id="insurance-rates-scroll-help">Scroll horizontally to view all reimbursement rate columns.</p>
             <table>
-              <thead><tr><th>Payer</th><th>State</th><th>Service</th><th>Rate</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th scope="col">Payer</th><th scope="col">State</th><th scope="col">Service</th><th scope="col">Rate</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {% for rate in insurance_rates %}
                   <tr>
@@ -49,8 +50,8 @@
                     <td>{{ rate.state }}</td>
                     <td>{{ rate.get_service_code_display }}</td>
                     <td>{% if rate.reimbursement_amount %}${{ rate.reimbursement_amount }}{% else %}Not set{% endif %}</td>
-                     <td>{% if rate.active %}Active{% else %}Inactive{% endif %}</td>
-                     <td>{% if workspace_permissions.billing.edit %}<a class="inline-link" href="{% url 'settings:insurance_rate_edit' rate.pk %}" data-modal-target="rate-modal-{{ rate.pk }}">Edit</a>{% endif %}</td>
+                     <td><span class="badge {% if rate.active %}success{% else %}brand{% endif %}">{% if rate.active %}Active{% else %}Inactive{% endif %}</span></td>
+                     <td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ rate.payer.name }} {{ rate.state }}" aria-expanded="false" aria-controls="rate-actions-{{ rate.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="rate-actions-{{ rate.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'settings:insurance_rate_edit' rate.pk %}" data-modal-target="rate-modal-{{ rate.pk }}">Edit rate</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td>
                   </tr>
                 {% empty %}
                   <tr><td colspan="6">No insurance rates configured yet.</td></tr>
@@ -61,24 +62,21 @@
         </article>
 
         <aside class="panel">
-          <div class="panel-head"><div><h2>Payers</h2><p>System templates and your custom payers.</p></div></div>
-          <div class="package-list">
-            <div>
-              <strong>Common templates</strong>
-              {% for payer in system_payers %}
-                <div class="package-card"><strong>{{ payer.name }}</strong><p>{{ payer.payer_id|default:'No payer ID' }}</p></div>
-              {% empty %}
-                <p class="empty-state">No system templates.</p>
-              {% endfor %}
-            </div>
-            <div>
-              <strong>Custom payers</strong>
-              {% for payer in custom_payers %}
-                 <div class="package-card"><strong>{{ payer.name }}</strong><p>{{ payer.payer_id|default:'No payer ID' }}</p>{% if workspace_permissions.billing.edit %}<a class="inline-link" href="{% url 'settings:insurance_payer_edit' payer.pk %}" data-modal-target="payer-modal-{{ payer.pk }}">Edit payer</a>{% endif %}</div>
-              {% empty %}
-                <p class="empty-state">No custom payers yet.</p>
-              {% endfor %}
-            </div>
+          <div class="panel-head"><div><h2 id="insurance-payers-heading">Payers</h2><p>System templates and your custom payers.</p></div></div>
+          <div class="table-wrap" role="region" aria-labelledby="insurance-payers-heading" aria-describedby="insurance-payers-scroll-help" tabindex="0">
+            <p class="sr-only" id="insurance-payers-scroll-help">Scroll horizontally to view all payer columns.</p>
+            <table>
+              <thead><tr><th scope="col">Payer</th><th scope="col">Type</th><th scope="col">Payer ID</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+              <tbody>
+                {% for payer in system_payers %}
+                  <tr><td><strong>{{ payer.name }}</strong></td><td>System</td><td>{{ payer.payer_id|default:'Not set' }}</td><td><span class="badge success">Active</span></td><td class="invoice-actions-cell"><span class="sr-only">No actions available</span></td></tr>
+                {% endfor %}
+                {% for payer in custom_payers %}
+                  <tr><td><strong>{{ payer.name }}</strong>{% if payer.notes %}<small class="table-subtext">{{ payer.notes|truncatechars:80 }}</small>{% endif %}</td><td>Custom</td><td>{{ payer.payer_id|default:'Not set' }}</td><td><span class="badge {% if payer.active %}success{% else %}brand{% endif %}">{% if payer.active %}Active{% else %}Inactive{% endif %}</span></td><td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ payer.name }}" aria-expanded="false" aria-controls="payer-actions-{{ payer.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="payer-actions-{{ payer.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'settings:insurance_payer_edit' payer.pk %}" data-modal-target="payer-modal-{{ payer.pk }}">Edit payer</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td></tr>
+                {% endfor %}
+                {% if not system_payers and not custom_payers %}<tr><td colspan="5" class="empty-state">No payers available yet.</td></tr>{% elif not custom_payers %}<tr><td colspan="5" class="empty-state">No custom payers yet.</td></tr>{% endif %}
+              </tbody>
+            </table>
           </div>
         </aside>
       </section>

@@ -811,6 +811,15 @@ class BillingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Insurance")
         self.assertContains(response, "Visible payer")
+        self.assertContains(response, 'role="region" aria-labelledby="insurance-rates-heading"')
+        self.assertContains(response, 'role="region" aria-labelledby="insurance-payers-heading"')
+        self.assertContains(response, '<th scope="col">Payer</th>', html=True)
+        self.assertContains(response, 'aria-controls="rate-actions-')
+        self.assertContains(response, 'aria-controls="payer-actions-')
+        self.assertContains(response, 'data-row-actions-trigger')
+        self.assertContains(response, "Edit rate")
+        self.assertContains(response, "Edit payer")
+        self.assertContains(response, "Custom")
         self.assertNotContains(response, "Hidden payer")
 
     def test_insurance_payer_and_rate_create_save_to_practice(self):
