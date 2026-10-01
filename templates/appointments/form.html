@@ -115,13 +115,13 @@
 
         <div class="form-actions split-actions">
           {% if show_delete_action %}
-            <form method="post" action="{% url 'appointments:delete' object.pk %}">
+            <form method="post" action="{% url 'appointments:delete' object.pk %}" data-confirm-message="Delete this appointment? Its calendar record will be removed.">
               {% csrf_token %}
               <button class="btn btn-danger" type="submit">Delete appointment</button>
             </form>
           {% endif %}
           {% if object.series_id %}
-            <form method="post" action="{% url 'appointments:series_cancel' object.pk %}">{% csrf_token %}<button class="btn btn-danger" type="submit">Cancel this and future sessions</button></form>
+            <form method="post" action="{% url 'appointments:series_cancel' object.pk %}" data-confirm-message="Cancel this appointment and all future sessions in this series?">{% csrf_token %}<button class="btn btn-danger" type="submit">Cancel this and future sessions</button></form>
           {% endif %}
           <div class="form-actions">
             <a class="btn btn-secondary" href="{% url 'appointments:list' %}">Cancel</a>

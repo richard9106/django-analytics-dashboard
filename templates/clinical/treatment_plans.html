@@ -108,7 +108,7 @@
         <dialog class="modal-dialog" id="plan-modal-{{ plan.pk }}">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Edit Treatment Plan</p><h2>{{ plan.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
-            <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_edit' plan.pk %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix=plan.pk plan=plan %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:treatment_plan_delete' plan.pk %}">Delete plan</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
+            <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_edit' plan.pk %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix=plan.pk plan=plan %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:treatment_plan_delete' plan.pk %}" data-confirm-message="Delete this treatment plan? This cannot be undone.">Delete plan</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
           </div>
         </dialog>
       {% endfor %}
@@ -124,7 +124,7 @@
         <dialog class="modal-dialog" id="diagnosis-modal-{{ diagnosis.pk }}">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Edit Diagnosis</p><h2>{{ diagnosis.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
-            <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_edit' diagnosis.pk %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix=diagnosis.pk diagnosis=diagnosis %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:diagnosis_delete' diagnosis.pk %}">Delete diagnosis</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
+            <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_edit' diagnosis.pk %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix=diagnosis.pk diagnosis=diagnosis %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:diagnosis_delete' diagnosis.pk %}" data-confirm-message="Delete this diagnosis? This cannot be undone.">Delete diagnosis</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
           </div>
         </dialog>
       {% endfor %}

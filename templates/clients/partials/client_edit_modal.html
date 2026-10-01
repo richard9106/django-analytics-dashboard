@@ -19,7 +19,7 @@
         <div class="field full"><label for="workspace-client-address-1">Address line 1</label><input id="workspace-client-address-1" name="address_line1" value="{{ client.address_line1 }}"></div>
         <div class="field full"><label for="workspace-client-address-2">Address line 2</label><input id="workspace-client-address-2" name="address_line2" value="{{ client.address_line2 }}"></div>
       </div>
-      <div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clients:delete' client.pk %}">Delete client</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
+      <div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clients:delete' client.pk %}" data-confirm-message="Delete this client and their associated workspace data? This cannot be undone.">Delete client</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
     </form>
   </div>
 </dialog>

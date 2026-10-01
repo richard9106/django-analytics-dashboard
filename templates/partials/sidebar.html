@@ -49,7 +49,7 @@
     <a class="support-nav-link" href="{% url 'help_center' %}">? Help Center</a>
   </nav>
 
-  {% if messages %}<section class="permission-toast-stack" aria-label="Workspace messages">{% for message in messages %}<div class="permission-toast permission-toast-{{ message.tags|default:'info' }}" role="status"><span aria-hidden="true">i</span><p>{{ message }}</p></div>{% endfor %}</section>{% endif %}
+  {% if messages %}<section class="permission-toast-stack" aria-label="Workspace messages">{% for message in messages %}<div class="permission-toast permission-toast-{{ message.tags|default:'info' }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}"><span aria-hidden="true">i</span><p>{{ message }}</p></div>{% endfor %}</section>{% endif %}
 
   {% if not practice_setup_complete %}
     <div class="setup-reminder" role="status">
@@ -64,4 +64,10 @@
     <p>{{ card_text }}</p>
   </div>
 </aside>
+<script>
+  document.addEventListener('submit', (event) => {
+    const message = event.submitter?.dataset.confirmMessage || event.target.dataset.confirmMessage;
+    if (message && !window.confirm(message)) event.preventDefault();
+  });
+</script>
 {% if chat_enabled %}{% include 'partials/chat_drawer.html' %}{% endif %}

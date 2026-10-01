@@ -69,7 +69,7 @@
 
         <div class="form-actions split-actions">
           {% if show_delete_action %}
-            <form method="post" action="{% url 'clients:delete' object.pk %}">
+            <form method="post" action="{% url 'clients:delete' object.pk %}" data-confirm-message="Delete this client and their associated workspace data? This cannot be undone.">
               {% csrf_token %}
               <button class="btn btn-danger" type="submit">Delete client</button>
             </form>

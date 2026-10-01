@@ -13,7 +13,7 @@
     <div class="field full"><label>Notes</label><textarea name="notes" rows="4">{{ object.notes }}</textarea></div>
   </div>
   <div class="form-actions split-actions">
-    {% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'billing:package_delete' object.pk %}">Delete package</button>{% endif %}
+    {% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'billing:package_delete' object.pk %}" data-confirm-message="Delete this session package? This cannot be undone.">Delete package</button>{% endif %}
     <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div>
   </div>
 </form>

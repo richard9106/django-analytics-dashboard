@@ -100,6 +100,7 @@ class ClientDocumentViewTests(TestCase):
         self.assertContains(response, 'id="document-create-modal"')
         self.assertContains(response, "Export to Google Drive")
         self.assertContains(response, "Google Drive: Not Synced")
+        self.assertContains(response, 'data-confirm-message="Delete this document? The file will be removed from the client record."')
         self.assertNotContains(response, "Hidden consent")
 
     def test_document_upload_saves_metadata(self):

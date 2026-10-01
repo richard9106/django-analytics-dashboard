@@ -84,7 +84,7 @@
 
       <article class="panel">
          <div class="panel-head"><div><h2>Open invoices</h2><p>Invoices that still need attention.</p></div></div>
-         <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Due</th><th>Balance</th><th>Payment</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.balance_due }}</td><td>{% if client_payments_ready %}<form method="post" action="{% url 'portal:invoice_pay' invoice.pk %}">{% csrf_token %}<button class="inline-button" type="submit">Pay invoice</button></form>{% else %}<span class="empty-state">Online payment is not available yet. Please contact {{ portal_practice.name }}.</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
+         <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Due</th><th>Balance</th><th>Payment</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.balance_due }}</td><td>{% if client_payments_ready %}<form method="post" action="{% url 'portal:invoice_pay' invoice.pk %}" data-confirm-message="Pay invoice {{ invoice.invoice_number }} for ${{ invoice.balance_due }}?">{% csrf_token %}<button class="inline-button" type="submit">Pay invoice</button></form>{% else %}<span class="empty-state">Online payment is not available yet. Please contact {{ portal_practice.name }}.</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
       </article>
 
       <article class="panel">
@@ -148,6 +148,12 @@
     {% if open_appointment_change %}
       window.addEventListener('DOMContentLoaded', () => document.getElementById('appointment-change-{{ open_appointment_change }}')?.showModal());
     {% endif %}
+  </script>
+  <script>
+    document.addEventListener('submit', (event) => {
+      const message = event.submitter?.dataset.confirmMessage || event.target.dataset.confirmMessage;
+      if (message && !window.confirm(message)) event.preventDefault();
+    });
   </script>
 </body>
 </html>

@@ -833,6 +833,7 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Delete appointment')
         self.assertContains(response, reverse('appointments:delete', args=[appointment.pk]))
+        self.assertContains(response, 'data-confirm-message="Delete this appointment? Its calendar record will be removed."')
 
     def test_appointment_delete_removes_appointment(self):
         user, practice, therapist, client = self.create_practice_user()

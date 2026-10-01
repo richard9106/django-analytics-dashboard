@@ -347,7 +347,7 @@
                 {% if appointment.sync_error %}<p class="form-error">Google Calendar could not sync this appointment. Try again or reconnect Google.</p>{% endif %}
               </div>
               <div class="form-actions split-actions">
-                <button class="btn btn-danger" type="submit" formaction="{% url 'appointments:delete' appointment.pk %}">Delete appointment</button>
+                <button class="btn btn-danger" type="submit" formaction="{% url 'appointments:delete' appointment.pk %}" data-confirm-message="Delete this appointment? Its calendar record will be removed.">Delete appointment</button>
                 <div class="form-actions">
                   <button class="btn btn-soft" type="submit" formaction="{% url 'appointments:google_sync' appointment.pk %}">Sync to Google</button>
                   <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>

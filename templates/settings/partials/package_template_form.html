@@ -7,5 +7,5 @@
     <div class="field checkbox-field"><label><input name="active" type="checkbox" {% if object.active or not object %}checked{% endif %}> Active</label></div>
     <div class="field full"><label>Description</label><textarea name="description" rows="4">{{ object.description }}</textarea></div>
   </div>
-  <div class="form-actions split-actions">{% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'settings:package_template_delete' object.pk %}">Delete template</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div></div>
+  <div class="form-actions split-actions">{% if object %}<button class="btn btn-danger" type="submit" formaction="{% url 'settings:package_template_delete' object.pk %}" data-confirm-message="Delete this package template? This cannot be undone.">Delete template</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{{ submit_label }}</button></div></div>
 </form>

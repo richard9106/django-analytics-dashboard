@@ -940,6 +940,17 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(log.metadata["client_id"], client.pk)
         self.assertTrue(log.metadata["password_reset"])
 
+    def test_portal_settings_password_reset_requires_confirmation(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=practice_user, practice=practice, role=UserProfile.Role.OWNER)
+
+        self.client.force_login(practice_user)
+        response = self.client.get(reverse("portal_settings:portal_access"))
+
+        self.assertContains(response, "Reset password")
+        self.assertContains(response, "data-confirm-message=\"Reset this client&#x27;s portal password? Their current password will stop working.\"")
+
     def test_portal_settings_reset_password_is_scoped_to_practice(self):
         _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
         _other_user, _other_practice, _other_therapist, _other_client, other_access = self.create_portal_user(

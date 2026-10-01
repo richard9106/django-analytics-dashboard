@@ -260,6 +260,8 @@ class BillingViewTests(TestCase):
         self.assertContains(response, 'role="menu"')
         self.assertNotContains(response, '<details class="invoice-actions">')
         self.assertNotContains(response, 'invoice-actions-menu-title')
+        self.assertContains(response, 'data-confirm-message="Publish this invoice to make it available for billing?"')
+        self.assertContains(response, 'data-confirm-message="Delete this draft invoice? This cannot be undone."')
         self.assertContains(response, "Print invoice")
         self.assertContains(response, "Publish")
         self.assertContains(response, "Delete draft")

@@ -36,7 +36,7 @@
           </div>
         </form>
         <div class="form-actions split-actions">
-          {% if show_delete_action %}<form method="post" action="{% url 'clinical:delete' object.pk %}">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete note</button></form>{% endif %}
+          {% if show_delete_action %}<form method="post" action="{% url 'clinical:delete' object.pk %}" data-confirm-message="Delete this clinical note? Deleted notes cannot be restored.">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete note</button></form>{% endif %}
           <div class="form-actions"><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Cancel</a><button class="btn btn-primary" type="submit" form="note-form">{{ submit_label }}</button></div>
         </div>
       </section>
