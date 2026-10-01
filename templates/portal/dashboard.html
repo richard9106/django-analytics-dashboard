@@ -83,8 +83,8 @@
       </article>
 
       <article class="panel">
-         <div class="panel-head"><div><h2>Open invoices</h2><p>Invoices that still need attention.</p></div></div>
-         <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Due</th><th>Balance</th><th>Payment</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.balance_due }}</td><td>{% if client_payments_ready %}<form method="post" action="{% url 'portal:invoice_pay' invoice.pk %}" data-confirm-message="Pay invoice {{ invoice.invoice_number }} for ${{ invoice.balance_due }}?">{% csrf_token %}<button class="inline-button" type="submit">Pay invoice</button></form>{% else %}<span class="empty-state">Online payment is not available yet. Please contact {{ portal_practice.name }}.</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
+         <div class="panel-head"><div><h2 id="portal-open-invoices-heading">Open invoices</h2><p>Invoices that still need attention.</p></div></div>
+         <div class="table-wrap" role="region" aria-labelledby="portal-open-invoices-heading" aria-describedby="portal-open-invoices-scroll-help" tabindex="0"><p class="sr-only" id="portal-open-invoices-scroll-help">Scroll horizontally to view all invoice columns.</p><table><thead><tr><th scope="col">Invoice</th><th scope="col">Status</th><th scope="col">Due</th><th scope="col">Balance</th><th scope="col">Payment</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.balance_due }}</td><td>{% if client_payments_ready %}<form method="post" action="{% url 'portal:invoice_pay' invoice.pk %}" data-confirm-message="Pay invoice {{ invoice.invoice_number }} for ${{ invoice.balance_due }}?">{% csrf_token %}<button class="inline-button" type="submit">Pay invoice</button></form>{% else %}<span class="empty-state">Online payment is not available yet. Please contact {{ portal_practice.name }}.</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
       </article>
 
       <article class="panel">
@@ -130,23 +130,59 @@
     {% endfor %}
   {% if chat_enabled %}{% include 'partials/chat_drawer.html' %}{% endif %}</main>
   <script>
+    const labelPortalDialogs = () => {
+      document.querySelectorAll('dialog.modal-dialog').forEach((dialog, index) => {
+        const heading = dialog.querySelector('h2');
+        if (!heading) return;
+        if (!heading.id) heading.id = `${dialog.id || 'portal-dialog'}-title-${index}`;
+        if (!dialog.hasAttribute('aria-labelledby')) dialog.setAttribute('aria-labelledby', heading.id);
+        dialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+          if (!button.hasAttribute('aria-label')) button.setAttribute('aria-label', `Close ${heading.textContent.trim()}`);
+        });
+      });
+    };
+    const focusPortalDialog = (dialog) => {
+      const target = dialog.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]):not([disabled])');
+      if (!target && !dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
+      (target || dialog).focus({ preventScroll: true });
+    };
+    const openPortalDialog = (dialog, trigger = null) => {
+      if (!dialog || typeof dialog.showModal !== 'function' || dialog.open) return;
+      dialog._returnFocus = trigger;
+      labelPortalDialogs();
+      dialog.showModal();
+      focusPortalDialog(dialog);
+    };
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-modal-target]');
       if (!trigger) return;
       const dialog = document.getElementById(trigger.dataset.modalTarget);
       if (!dialog || typeof dialog.showModal !== 'function') return;
       event.preventDefault();
-      dialog.showModal();
+      openPortalDialog(dialog, trigger);
     });
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-modal-close]');
-      if (trigger) trigger.closest('dialog')?.close();
+      if (trigger) {
+        trigger.closest('dialog')?.close();
+        return;
+      }
+      if (event.target instanceof HTMLDialogElement && event.target.classList.contains('modal-dialog')) event.target.close();
     });
+    document.addEventListener('close', (event) => {
+      const dialog = event.target;
+      if (!(dialog instanceof HTMLDialogElement)) return;
+      const trigger = dialog._returnFocus;
+      dialog._returnFocus = null;
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    }, true);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', labelPortalDialogs);
+    else labelPortalDialogs();
     {% if open_request_modal %}
-      window.addEventListener('DOMContentLoaded', () => document.getElementById('portal-request-modal')?.showModal());
+      window.addEventListener('DOMContentLoaded', () => openPortalDialog(document.getElementById('portal-request-modal')));
     {% endif %}
     {% if open_appointment_change %}
-      window.addEventListener('DOMContentLoaded', () => document.getElementById('appointment-change-{{ open_appointment_change }}')?.showModal());
+      window.addEventListener('DOMContentLoaded', () => openPortalDialog(document.getElementById('appointment-change-{{ open_appointment_change }}')));
     {% endif %}
   </script>
   <script>

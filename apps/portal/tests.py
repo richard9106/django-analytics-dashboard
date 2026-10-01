@@ -113,6 +113,11 @@ class ClientPortalViewTests(TestCase):
 
         self.assertContains(response, "INV-SENT")
         self.assertContains(response, "INV-OVERDUE")
+        self.assertContains(response, 'role="region" aria-labelledby="portal-open-invoices-heading"')
+        self.assertContains(response, 'id="portal-open-invoices-scroll-help"')
+        self.assertContains(response, '<th scope="col">Invoice</th>', html=True)
+        self.assertContains(response, "dialog._returnFocus")
+        self.assertContains(response, "labelPortalDialogs")
         self.assertNotContains(response, "INV-DRAFT")
 
     def test_portal_explains_when_client_payments_are_not_ready(self):

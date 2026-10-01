@@ -45,15 +45,16 @@
       <section class="panel clients-panel">
         <div class="panel-head">
           <div>
-            <h2>My patients</h2>
+            <h2 id="client-directory-heading">My patients</h2>
             <p>Manage demographics, contact details, status, and therapist assignment.</p>
           </div>
           <span class="badge brand">{{ clients|length }} clients</span>
         </div>
 
-        <div class="client-tree-wrap">
+        <div class="client-tree-wrap" role="region" aria-labelledby="client-directory-heading" aria-describedby="client-directory-scroll-help" tabindex="0">
+          <p class="sr-only" id="client-directory-scroll-help">Scroll horizontally to view all client directory columns.</p>
           <table class="client-tree">
-            <thead><tr><th>Client</th><th>Therapist</th><th>Phone</th><th>Insurance</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th scope="col">Client</th><th scope="col">Therapist</th><th scope="col">Phone</th><th scope="col">Insurance</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
             <tbody>
               {% for client in clients %}
                 <tr>

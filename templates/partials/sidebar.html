@@ -65,6 +65,69 @@
   </div>
 </aside>
 <script>
+  (() => {
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const labelDialogs = () => {
+      document.querySelectorAll('dialog.modal-dialog').forEach((dialog, index) => {
+        const heading = dialog.querySelector('h2');
+        if (heading) {
+          if (!heading.id) heading.id = `${dialog.id || 'workspace-dialog'}-title-${index}`;
+          if (!dialog.hasAttribute('aria-labelledby')) dialog.setAttribute('aria-labelledby', heading.id);
+          dialog.querySelectorAll('[data-modal-close], [data-conversation-close]').forEach((button) => {
+            if (!button.hasAttribute('aria-label')) button.setAttribute('aria-label', `Close ${heading.textContent.trim()}`);
+          });
+        }
+      });
+    };
+    const focusDialog = (dialog) => {
+      const firstControl = dialog.querySelector(`${focusableSelector}:not([disabled])`);
+      if (!firstControl && !dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
+      (firstControl || dialog).focus({ preventScroll: true });
+    };
+    const openDialog = (dialog, trigger) => {
+      if (!dialog || typeof dialog.showModal !== 'function' || dialog.open) return;
+      dialog.dataset.returnFocus = trigger ? 'true' : '';
+      dialog._returnFocus = trigger || null;
+      dialog.showModal();
+      focusDialog(dialog);
+    };
+
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-modal-target], [data-conversation-modal]');
+      if (!trigger) return;
+      const targetId = trigger.dataset.modalTarget || trigger.dataset.conversationModal;
+      const dialog = document.getElementById(targetId);
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      labelDialogs();
+      document.querySelector('[data-invoice-actions-trigger][aria-expanded="true"]')?.click();
+      openDialog(dialog, trigger);
+    });
+
+    document.addEventListener('click', (event) => {
+      const close = event.target.closest('[data-modal-close], [data-conversation-close]');
+      if (close) {
+        close.closest('dialog')?.close();
+        return;
+      }
+      if (event.target instanceof HTMLDialogElement && event.target.classList.contains('modal-dialog')) {
+        event.target.close();
+      }
+    });
+
+    document.addEventListener('close', (event) => {
+      const dialog = event.target;
+      if (!(dialog instanceof HTMLDialogElement)) return;
+      const trigger = dialog._returnFocus;
+      dialog._returnFocus = null;
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    }, true);
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', labelDialogs);
+    else labelDialogs();
+  })();
+
   document.addEventListener('submit', (event) => {
     const message = event.submitter?.dataset.confirmMessage || event.target.dataset.confirmMessage;
     if (message && !window.confirm(message)) event.preventDefault();

@@ -258,6 +258,9 @@ class BillingViewTests(TestCase):
         self.assertContains(response, 'class="invoice-actions-trigger"')
         self.assertContains(response, 'aria-controls="invoice-actions-')
         self.assertContains(response, 'role="menu"')
+        self.assertContains(response, 'role="region" aria-labelledby="billing-invoices-heading"')
+        self.assertContains(response, 'id="billing-invoices-scroll-help"')
+        self.assertContains(response, '<th scope="col">Invoice</th>', html=True)
         self.assertNotContains(response, '<details class="invoice-actions">')
         self.assertNotContains(response, 'invoice-actions-menu-title')
         self.assertContains(response, 'data-confirm-message="Publish this invoice to make it available for billing?"')
@@ -278,6 +281,17 @@ class BillingViewTests(TestCase):
         self.assertContains(response, "event.key === 'Escape'")
         self.assertContains(response, "is-mobile-sheet")
         self.assertContains(response, "trigger.focus()")
+
+    def test_workspace_sidebar_script_restores_modal_focus(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-MODAL", amount=Decimal("150.00"))
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:list"))
+
+        self.assertContains(response, "dialog._returnFocus")
+        self.assertContains(response, "event.stopImmediatePropagation()")
+        self.assertContains(response, "aria-labelledby")
 
     def test_invoice_action_menu_honors_billing_permissions(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
