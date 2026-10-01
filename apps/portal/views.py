@@ -266,6 +266,15 @@ class ClientConversationListView(ClientPortalAccessMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         access = self.get_portal_access()
+        open_conversation = self.request.GET.get('open', '')
+        if open_conversation:
+            PortalMessage.objects.filter(
+                conversation__public_id=open_conversation,
+                conversation__practice=access.practice,
+                conversation__client=access.client,
+                author_kind=PortalMessage.AuthorKind.STAFF,
+                read_at__isnull=True,
+            ).update(read_at=timezone.now())
         context.update({
             'portal_client': access.client,
             'portal_practice': access.practice,
@@ -273,6 +282,7 @@ class ClientConversationListView(ClientPortalAccessMixin, TemplateView):
                 practice=access.practice, client=access.client,
             ).prefetch_related('messages')[:30],
             'conversation_form': kwargs.get('conversation_form') or PortalConversationForm(portal_access=access),
+            'open_conversation': open_conversation,
         })
         return context
 
@@ -334,6 +344,8 @@ class ClientConversationDetailView(ClientPortalAccessMixin, TemplateView):
             request, AuditLog.Action.CREATE, 'portal.PortalMessage', message.pk,
             practice=conversation.practice, metadata={'client_id': conversation.client_id, 'author_kind': message.author_kind},
         )
+        if request.POST.get('next') == 'conversations':
+            return redirect(f"{reverse_lazy('portal:conversations')}?open={conversation.public_id}")
         return redirect('portal:conversation_detail', public_id=conversation.public_id)
 
 

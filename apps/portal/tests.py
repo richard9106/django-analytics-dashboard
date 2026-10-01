@@ -292,7 +292,7 @@ class ClientPortalViewTests(TestCase):
         self.client.force_login(user)
 
         response = self.client.get(reverse("portal:dashboard"))
-        self.assertContains(response, "Bell")
+        self.assertContains(response, "Secure messages, 1 unread")
         self.assertContains(response, ">1</strong>")
         self.client.get(reverse("portal:conversation_detail", args=[conversation.public_id]))
 
@@ -312,7 +312,7 @@ class ClientPortalViewTests(TestCase):
 
         response = self.client.get(reverse("portal_requests:conversations"))
 
-        self.assertContains(response, "Messages")
+        self.assertContains(response, "Secure messages, 1 unread")
         self.assertContains(response, ">1</strong>")
 
     def test_portal_client_can_request_appointment_change(self):
