@@ -9,6 +9,8 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import stripe
+
 from apps.appointments.models import Appointment
 from apps.accounts.models import UserProfile
 from apps.audit.models import AuditLog
@@ -112,6 +114,39 @@ class ClientPortalViewTests(TestCase):
         self.assertContains(response, "INV-SENT")
         self.assertContains(response, "INV-OVERDUE")
         self.assertNotContains(response, "INV-DRAFT")
+
+    def test_portal_explains_when_client_payments_are_not_ready(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-NOT-READY",
+            amount=Decimal("120.00"), status=Invoice.Status.SENT,
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal:dashboard"))
+
+        self.assertContains(response, "Online payment is not available yet.")
+        self.assertNotContains(response, "Pay invoice")
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.portal.views.stripe.checkout.Session.create")
+    def test_portal_shows_stripe_payment_error_after_redirect(self, mock_create):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        practice.stripe_connect_account_id = "acct_practice"
+        practice.stripe_connect_charges_enabled = True
+        practice.stripe_connect_payouts_enabled = True
+        practice.save(update_fields=["stripe_connect_account_id", "stripe_connect_charges_enabled", "stripe_connect_payouts_enabled"])
+        invoice = Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-STRIPE-ERROR",
+            amount=Decimal("120.00"), status=Invoice.Status.SENT,
+        )
+        mock_create.side_effect = stripe.error.StripeError("checkout unavailable")
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("portal:invoice_pay", args=[invoice.pk]), follow=True)
+
+        self.assertContains(response, "Stripe could not open payment checkout.")
+        self.assertContains(response, "role=\"alert\"")
 
     @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
     @patch("apps.portal.views.stripe.checkout.Session.create")

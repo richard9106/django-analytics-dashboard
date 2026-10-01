@@ -133,6 +133,7 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'pending_intakes': pending_intakes,
             'pending_intake_count': pending_intakes.count(),
             'unread_message_count': unread_message_count,
+            'client_payments_ready': bool(settings.STRIPE_SECRET_KEY and access.practice.can_receive_client_payments),
         })
         return context
 
@@ -236,6 +237,7 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
             'open_request_count': portal_requests.exclude(status=ClientPortalRequest.Status.RESOLVED).count(),
             'pending_intakes': pending_intakes,
             'pending_intake_count': pending_intakes.count(),
+            'client_payments_ready': bool(settings.STRIPE_SECRET_KEY and access.practice.can_receive_client_payments),
         }
 
     def post(self, request):

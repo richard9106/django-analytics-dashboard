@@ -244,6 +244,44 @@ class BillingViewTests(TestCase):
         self.assertContains(response, 'id="package-create-modal"')
         self.assertNotContains(response, "INV-HIDDEN")
 
+    def test_invoice_actions_are_grouped_in_accessible_details_menu_with_csrf(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-ACTIONS",
+            amount=Decimal("150.00"), status=Invoice.Status.DRAFT,
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:list"))
+
+        self.assertContains(response, '<th>Actions</th>', html=True)
+        self.assertContains(response, 'aria-label="Actions for INV-ACTIONS"')
+        self.assertContains(response, "Print invoice")
+        self.assertContains(response, "Publish")
+        self.assertContains(response, "Delete draft")
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
+
+    def test_invoice_action_menu_honors_billing_permissions(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        profile = UserProfile.objects.get(user=user)
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {
+            "billing": {"view": True, "create": False, "edit": False, "delete": False},
+        }
+        profile.save(update_fields=["role", "permissions"])
+        Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-RESTRICTED",
+            amount=Decimal("150.00"), status=Invoice.Status.DRAFT,
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:list"))
+
+        self.assertContains(response, "Print invoice")
+        self.assertNotContains(response, "Edit invoice")
+        self.assertNotContains(response, "Publish")
+        self.assertNotContains(response, "Delete draft")
+
     def test_manual_payment_records_partial_balance_for_invoice(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
         invoice = Invoice.objects.create(

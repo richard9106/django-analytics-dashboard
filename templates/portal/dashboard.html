@@ -27,6 +27,12 @@
       </div>
     </section>
 
+    {% if messages %}
+      <section class="message-list" aria-label="Portal messages">
+        {% for message in messages %}<div class="form-error" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">{{ message }}</div>{% endfor %}
+      </section>
+    {% endif %}
+
     <section class="stats portal-stats" aria-label="Portal summary">
       <article class="stat-card"><span>Next appointment</span><strong>{% if next_appointment %}{{ next_appointment.starts_at|date:"M j" }}{% else %}None scheduled{% endif %}</strong><small>{% if next_appointment %}{{ next_appointment.starts_at|time:"g:i A" }}{% else %}Your practice will schedule future sessions here.{% endif %}</small></article>
       <article class="stat-card"><span>Open balance</span><strong>${{ open_invoice_total }}</strong><small>Open invoice total</small></article>
@@ -77,8 +83,8 @@
       </article>
 
       <article class="panel">
-        <div class="panel-head"><div><h2>Open invoices</h2><p>Invoices that still need attention.</p></div></div>
-         <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Due</th><th>Balance</th><th></th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.balance_due }}</td><td><form method="post" action="{% url 'portal:invoice_pay' invoice.pk %}">{% csrf_token %}<button class="inline-button" type="submit">Pay invoice</button></form></td></tr>{% empty %}<tr><td colspan="5">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
+         <div class="panel-head"><div><h2>Open invoices</h2><p>Invoices that still need attention.</p></div></div>
+         <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Due</th><th>Balance</th><th>Payment</th></tr></thead><tbody>{% for invoice in open_invoices %}<tr><td>{{ invoice.invoice_number }}</td><td><span class="badge brand">{{ invoice.get_status_display }}</span></td><td>{% if invoice.due_date %}{{ invoice.due_date|date:"M j, Y" }}{% else %}Not set{% endif %}</td><td>${{ invoice.balance_due }}</td><td>{% if client_payments_ready %}<form method="post" action="{% url 'portal:invoice_pay' invoice.pk %}">{% csrf_token %}<button class="inline-button" type="submit">Pay invoice</button></form>{% else %}<span class="empty-state">Online payment is not available yet. Please contact {{ portal_practice.name }}.</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No open invoices.</td></tr>{% endfor %}</tbody></table></div>
       </article>
 
       <article class="panel">
