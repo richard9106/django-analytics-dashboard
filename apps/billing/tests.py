@@ -254,7 +254,7 @@ class BillingViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse("billing:list"))
 
-        self.assertContains(response, '<th><span class="sr-only">Actions</span></th>', html=True)
+        self.assertContains(response, '<th scope="col"><span class="sr-only">Actions</span></th>', html=True)
         self.assertContains(response, 'class="invoice-actions-trigger"')
         self.assertContains(response, 'aria-controls="invoice-actions-')
         self.assertContains(response, 'role="menu"')

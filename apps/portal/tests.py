@@ -439,7 +439,7 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertContains(response, "This field is required.", status_code=400)
         self.assertContains(response, f"appointment-change-{appointment.pk}", status_code=400)
-        self.assertContains(response, f"appointment-change-{appointment.pk}')?.showModal", status_code=400)
+        self.assertContains(response, f"openPortalDialog(document.getElementById('appointment-change-{appointment.pk}'))", status_code=400)
         self.assertFalse(ClientPortalRequest.objects.filter(appointment=appointment).exists())
 
     def test_only_one_open_appointment_change_request_is_allowed(self):
