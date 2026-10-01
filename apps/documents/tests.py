@@ -98,9 +98,17 @@ class ClientDocumentViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Visible consent")
         self.assertContains(response, 'id="document-create-modal"')
+        self.assertContains(response, 'role="region" aria-labelledby="document-vault-heading"')
+        self.assertContains(response, '<th scope="col">Document</th>', html=True)
+        self.assertContains(response, '<th scope="col"><span class="sr-only">Actions</span></th>', html=True)
+        self.assertContains(response, 'data-document-actions-trigger')
+        self.assertContains(response, 'role="menu"')
+        self.assertContains(response, 'aria-controls="document-actions-')
+        self.assertContains(response, "Download")
         self.assertContains(response, "Export to Google Drive")
         self.assertContains(response, "Google Drive: Not Synced")
         self.assertContains(response, 'data-confirm-message="Delete this document? The file will be removed from the client record."')
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
         self.assertNotContains(response, "Hidden consent")
 
     def test_document_upload_saves_metadata(self):
