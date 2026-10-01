@@ -1,1 +1,105 @@
-<section class="chat-drawer" data-chat-drawer><button class="chat-drawer-tab" type="button" aria-expanded="false" data-chat-toggle>&#128276; Messages{% if unread_message_count %}<strong>{{ unread_message_count }}</strong>{% endif %}</button><aside class="chat-drawer-panel chat-drawer-linkedin" hidden><header><div><p class="eyebrow">Secure messages</p><h2>Conversations</h2></div><button type="button" data-chat-close>×</button></header><div class="chat-drawer-columns"><nav class="chat-drawer-list">{% for conversation in chat_conversations %}<button type="button" data-chat-conversation="{{ conversation.public_id }}"><strong>{% if chat_is_client %}{{ conversation.subject }}{% else %}{{ conversation.client }}{% endif %}</strong><small>{{ conversation.updated_at|date:"M j, g:i A" }}</small></button>{% empty %}<p class="empty-state">No conversations.</p>{% endfor %}</nav><div class="chat-drawer-threads">{% for conversation in chat_conversations %}<section data-chat-thread="{{ conversation.public_id }}"{% if chat_open_id != conversation.public_id|stringformat:'s' %} hidden{% endif %}><h3>{{ conversation.subject }}</h3><div class="chat-thread">{% for message in conversation.messages.all %}<article class="chat-message chat-message--{{ message.author_kind }}"><strong>{% if message.author_kind == 'client' %}{% if chat_is_client %}You{% else %}{{ conversation.client }}{% endif %}{% else %}{% if chat_is_client %}{{ conversation.practice.name }}{% else %}You{% endif %}{% endif %}</strong><p>{{ message.body|linebreaksbr }}</p></article>{% endfor %}</div>{% if conversation.status == 'open' %}<form method="post" action="{% if chat_is_client %}{% url 'portal:conversation_detail' conversation.public_id %}{% else %}{% url 'portal_requests:conversation_detail' conversation.public_id %}{% endif %}">{% csrf_token %}<input type="hidden" name="drawer" value="1"><textarea name="body" rows="3" required placeholder="Write a reply..."></textarea><button class="btn btn-primary" type="submit">Send</button></form>{% endif %}</section>{% endfor %}</div></div></aside></section><script>document.addEventListener('click',e=>{const d=document.querySelector('[data-chat-drawer]'),p=d?.querySelector('.chat-drawer-panel'),t=e.target.closest('[data-chat-toggle]');if(t){p.hidden=!p.hidden;t.setAttribute('aria-expanded',String(!p.hidden))}if(e.target.closest('[data-chat-close]'))p.hidden=true;const c=e.target.closest('[data-chat-conversation]');if(c){p.hidden=false;d.querySelectorAll('[data-chat-thread]').forEach(x=>x.hidden=x.dataset.chatThread!==c.dataset.chatConversation)}});{% if chat_open_id %}document.addEventListener('DOMContentLoaded',()=>{const d=document.querySelector('[data-chat-drawer]');if(d)d.querySelector('.chat-drawer-panel').hidden=false});{% endif %}</script>
+<section class="chat-drawer" data-chat-drawer>
+  <button class="chat-drawer-tab" type="button" aria-expanded="{% if chat_open_id %}true{% else %}false{% endif %}" aria-controls="chat-drawer-panel" data-chat-toggle>
+    <span aria-hidden="true">&#128276;</span>
+    <span>Messages</span>
+    {% if unread_message_count %}<strong aria-label="{{ unread_message_count }} unread messages">{{ unread_message_count }}</strong>{% endif %}
+  </button>
+
+  <aside class="chat-drawer-panel" id="chat-drawer-panel" aria-label="Secure messages" data-chat-panel{% if not chat_open_id %} hidden{% endif %}>
+    <header class="chat-drawer-header">
+      <div>
+        <p class="eyebrow">Secure messages</p>
+        <h2>Conversations</h2>
+      </div>
+      <button class="chat-drawer-close" type="button" aria-label="Close messages" data-chat-close>
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </header>
+
+    <div class="chat-drawer-columns">
+      <nav class="chat-drawer-list" aria-label="Conversations">
+        {% for conversation in chat_conversations %}
+          <button
+            class="chat-conversation{% if chat_open_id == conversation.public_id|stringformat:'s' %} is-active{% endif %}"
+            type="button"
+            aria-controls="chat-thread-{{ conversation.public_id }}"
+            aria-expanded="{% if chat_open_id == conversation.public_id|stringformat:'s' %}true{% else %}false{% endif %}"
+            data-chat-conversation="{{ conversation.public_id }}">
+            <strong>{% if chat_is_client %}{{ conversation.subject }}{% else %}{{ conversation.client }}{% endif %}</strong>
+            <small>{{ conversation.updated_at|date:"M j, g:i A" }}</small>
+          </button>
+        {% empty %}
+          <p class="empty-state">No conversations.</p>
+        {% endfor %}
+      </nav>
+
+      <div class="chat-drawer-threads">
+        {% for conversation in chat_conversations %}
+          <section id="chat-thread-{{ conversation.public_id }}" class="chat-drawer-thread" data-chat-thread="{{ conversation.public_id }}"{% if chat_open_id != conversation.public_id|stringformat:'s' %} hidden{% endif %}>
+            <div class="chat-thread-heading">
+              <p class="eyebrow">Conversation</p>
+              <h3>{{ conversation.subject }}</h3>
+            </div>
+            <div class="chat-thread" aria-live="polite">
+              {% for message in conversation.messages.all %}
+                <article class="chat-message chat-message--{{ message.author_kind }}">
+                  <strong>{% if message.author_kind == 'client' %}{% if chat_is_client %}You{% else %}{{ conversation.client }}{% endif %}{% else %}{% if chat_is_client %}{{ conversation.practice.name }}{% else %}You{% endif %}{% endif %}</strong>
+                  <p>{{ message.body|linebreaksbr }}</p>
+                </article>
+              {% endfor %}
+            </div>
+            {% if conversation.status == 'open' %}
+              <form class="chat-reply-form" method="post" action="{% if chat_is_client %}{% url 'portal:conversation_detail' conversation.public_id %}{% else %}{% url 'portal_requests:conversation_detail' conversation.public_id %}{% endif %}">
+                {% csrf_token %}
+                <input type="hidden" name="drawer" value="1">
+                <label class="sr-only" for="chat-reply-{{ conversation.public_id }}">Reply to {{ conversation.subject }}</label>
+                <textarea id="chat-reply-{{ conversation.public_id }}" name="body" rows="2" required placeholder="Write a reply..."></textarea>
+                <button class="btn btn-primary" type="submit">Send</button>
+              </form>
+            {% else %}
+              <p class="chat-closed-note">This conversation is closed.</p>
+            {% endif %}
+          </section>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+</section>
+
+<script>
+  (() => {
+    document.querySelectorAll('[data-chat-drawer]').forEach((drawer) => {
+      const toggle = drawer.querySelector('[data-chat-toggle]');
+      const panel = drawer.querySelector('[data-chat-panel]');
+      const close = drawer.querySelector('[data-chat-close]');
+      const conversations = drawer.querySelectorAll('[data-chat-conversation]');
+      const threads = drawer.querySelectorAll('[data-chat-thread]');
+
+      const setOpen = (open) => {
+        panel.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) {
+          const active = drawer.querySelector('.chat-conversation.is-active');
+          if (active) active.focus({ preventScroll: true });
+        } else {
+          toggle.focus({ preventScroll: true });
+        }
+      };
+
+      toggle.addEventListener('click', () => setOpen(panel.hidden));
+      close.addEventListener('click', () => setOpen(false));
+      conversations.forEach((conversation) => {
+        conversation.addEventListener('click', () => {
+          const id = conversation.dataset.chatConversation;
+          const wasActive = conversation.classList.contains('is-active');
+          conversations.forEach((item) => {
+            const active = !wasActive && item === conversation;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-expanded', String(active));
+          });
+          threads.forEach((thread) => { thread.hidden = wasActive || thread.dataset.chatThread !== id; });
+        });
+      });
+    });
+  })();
+</script>
