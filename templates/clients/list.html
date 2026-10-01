@@ -20,7 +20,7 @@
            {% if workspace_permissions.appointments.create %}<a class="btn btn-secondary" href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal">+ New appointment</a>{% endif %}
            {% if workspace_permissions.appointments.view %}<a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>{% endif %}
         </div>
-        <details class="profile-menu">
+        {% include 'partials/message_bell.html' %}<details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">
             <a href="{% url 'profile_settings' %}">Profile settings</a>
