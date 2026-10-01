@@ -602,6 +602,25 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(working_hour.practice, practice)
         self.assertTrue(working_hour.active)
 
+    def test_availability_settings_show_tree_actions(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        PracticeWorkingHour.objects.create(
+            practice=practice,
+            weekday=PracticeWorkingHour.Weekday.MONDAY,
+            starts_at="09:00",
+            ends_at="17:00",
+            active=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('practice_settings:availability'))
+
+        self.assertContains(response, 'role="region" aria-labelledby="availability-ranges-heading"')
+        self.assertContains(response, '<th scope="col">Day</th>', html=True)
+        self.assertContains(response, 'data-row-actions-trigger')
+        self.assertContains(response, 'aria-controls="availability-actions-')
+        self.assertContains(response, 'data-confirm-message="Delete this working-hours range? Scheduling availability will update immediately."')
+
     def test_appointment_create_syncs_to_google_calendar_when_enabled(self):
         user, practice, therapist, client = self.create_practice_user()
         ExternalIntegration.objects.create(

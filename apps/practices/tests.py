@@ -46,6 +46,25 @@ class IntegrationSettingsTests(TestCase):
         self.assertContains(response, "Google Calendar sync")
         self.assertContains(response, "Dropbox")
 
+    def test_connected_google_actions_are_grouped_in_kebab_menu(self):
+        user, practice = self.create_practice_user()
+        ExternalIntegration.objects.create(
+            practice=practice,
+            provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED,
+            account_email="clinic@example.com",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("practice_settings:integrations"))
+
+        self.assertContains(response, 'aria-controls="google-integration-actions"')
+        self.assertContains(response, 'data-row-actions-trigger')
+        self.assertContains(response, 'data-row-actions-menu')
+        self.assertContains(response, "Open Google workspace")
+        self.assertContains(response, "Disconnect Google")
+        self.assertContains(response, 'data-confirm-message="Disconnect Google Workspace? Calendar and email syncing will stop."')
+
     @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
     @patch("apps.practices.views.stripe.AccountLink.create")
     @patch("apps.practices.views.stripe.Account.create")

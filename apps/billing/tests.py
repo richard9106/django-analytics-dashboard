@@ -752,6 +752,11 @@ class BillingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Session Package Templates")
         self.assertContains(response, "Visible package")
+        self.assertContains(response, 'role="region" aria-labelledby="settings-package-templates-heading"')
+        self.assertContains(response, '<th scope="col">Template</th>', html=True)
+        self.assertContains(response, 'data-row-actions-trigger')
+        self.assertContains(response, 'aria-controls="template-actions-')
+        self.assertContains(response, "Edit template")
         self.assertNotContains(response, "Hidden package")
 
     def test_settings_package_template_create_saves_to_user_practice(self):

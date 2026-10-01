@@ -128,6 +128,72 @@
     else labelDialogs();
   })();
 
+  (() => {
+    let openTrigger = null;
+    let openMenu = null;
+    const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
+    const menuItems = (menu) => [...menu.querySelectorAll('a, button')].filter((item) => !item.disabled);
+    const closeMenu = (restoreFocus = true) => {
+      if (!openMenu) return;
+      openMenu.hidden = true;
+      openMenu.classList.remove('is-mobile-sheet');
+      if (openTrigger) {
+        openTrigger.setAttribute('aria-expanded', 'false');
+        if (restoreFocus) openTrigger.focus({ preventScroll: true });
+      }
+      openTrigger = null;
+      openMenu = null;
+    };
+    const positionMenu = () => {
+      if (!openTrigger || !openMenu || openMenu.hidden) return;
+      if (isMobile()) { openMenu.classList.add('is-mobile-sheet'); return; }
+      openMenu.classList.remove('is-mobile-sheet');
+      const rect = openTrigger.getBoundingClientRect();
+      const width = Math.min(192, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
+      const below = rect.bottom + 8;
+      const top = below + openMenu.offsetHeight <= window.innerHeight - 12 ? below : Math.max(12, rect.top - openMenu.offsetHeight - 8);
+      openMenu.style.left = `${left}px`;
+      openMenu.style.top = `${top}px`;
+      openMenu.style.width = `${width}px`;
+    };
+    const openRowMenu = (trigger) => {
+      if (openTrigger === trigger) { closeMenu(false); return; }
+      closeMenu(false);
+      const menu = document.getElementById(trigger.getAttribute('aria-controls'));
+      if (!menu) return;
+      document.body.appendChild(menu);
+      menu.hidden = false;
+      openTrigger = trigger;
+      openMenu = menu;
+      trigger.setAttribute('aria-expanded', 'true');
+      positionMenu();
+      trigger.focus({ preventScroll: true });
+    };
+
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-row-actions-trigger]');
+      if (trigger) { event.preventDefault(); openRowMenu(trigger); return; }
+      if (event.target.closest('[data-row-actions-menu] a, [data-row-actions-menu] button')) { closeMenu(false); return; }
+      if (!event.target.closest('[data-row-actions-menu]')) closeMenu(false);
+    });
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[data-modal-target]')) closeMenu(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (!openMenu) return;
+      const items = menuItems(openMenu);
+      const currentIndex = items.indexOf(document.activeElement);
+      if (event.key === 'Escape') { event.preventDefault(); closeMenu(); return; }
+      if (event.key === 'ArrowDown') { event.preventDefault(); items[(currentIndex + 1 + items.length) % items.length]?.focus(); }
+      if (event.key === 'ArrowUp') { event.preventDefault(); items[(currentIndex - 1 + items.length) % items.length]?.focus(); }
+      if (event.key === 'Home') { event.preventDefault(); items[0]?.focus(); }
+      if (event.key === 'End') { event.preventDefault(); items[items.length - 1]?.focus(); }
+    });
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+  })();
+
   document.addEventListener('submit', (event) => {
     const message = event.submitter?.dataset.confirmMessage || event.target.dataset.confirmMessage;
     if (message && !window.confirm(message)) event.preventDefault();

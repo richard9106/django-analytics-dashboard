@@ -20,11 +20,17 @@
       </section>
       <header class="topbar compact-topbar"><div><p class="eyebrow">Settings</p><h1>Session Package Templates</h1></div></header>
       <section class="panel billing-panel">
-        <div class="panel-head"><div><h2>Available packages</h2><p>These templates can be selected when creating prepaid packages in Billing, and later in the client portal.</p></div><span class="badge brand">{{ templates|length }} templates</span></div>
-        <div class="package-list">
-          {% for template in templates %}
-            <div class="package-card"><div><strong>{{ template.name }}</strong><p>{{ template.sessions_included }} sessions · ${{ template.price }} · {% if template.active %}Active{% else %}Inactive{% endif %}</p></div>{% if workspace_permissions.billing.edit %}<a class="inline-link" href="{% url 'settings:package_template_edit' template.pk %}" data-modal-target="template-modal-{{ template.pk }}">Edit template</a>{% endif %}</div>
-          {% empty %}<p class="empty-state">No package templates yet.</p>{% endfor %}
+        <div class="panel-head"><div><h2 id="settings-package-templates-heading">Available packages</h2><p>These templates can be selected when creating prepaid packages in Billing, and later in the client portal.</p></div><span class="badge brand">{{ templates|length }} templates</span></div>
+        <div class="table-wrap" role="region" aria-labelledby="settings-package-templates-heading" aria-describedby="settings-package-templates-scroll-help" tabindex="0">
+          <p class="sr-only" id="settings-package-templates-scroll-help">Scroll horizontally to view all package template columns.</p>
+          <table>
+            <thead><tr><th scope="col">Template</th><th scope="col">Sessions</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              {% for template in templates %}
+                <tr><td><strong>{{ template.name }}</strong>{% if template.description %}<small class="table-subtext">{{ template.description|truncatechars:80 }}</small>{% endif %}</td><td>{{ template.sessions_included }} sessions</td><td>${{ template.price }}</td><td><span class="badge {% if template.active %}success{% else %}brand{% endif %}">{% if template.active %}Active{% else %}Inactive{% endif %}</span></td><td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ template.name }}" aria-expanded="false" aria-controls="template-actions-{{ template.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="template-actions-{{ template.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'settings:package_template_edit' template.pk %}" data-modal-target="template-modal-{{ template.pk }}">Edit template</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td></tr>
+              {% empty %}<tr><td colspan="5" class="empty-state">No package templates yet.</td></tr>{% endfor %}
+            </tbody>
+          </table>
         </div>
       </section>
 
