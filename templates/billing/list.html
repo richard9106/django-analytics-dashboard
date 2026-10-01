@@ -30,12 +30,12 @@
           <div class="panel-head"><div><h2>Invoices</h2><p>Bill individual sessions or prepaid packages.</p></div><div class="inline-actions"><span class="badge brand">{{ invoices|length }} invoices</span>{% if workspace_permissions.billing.create %}<button class="btn btn-secondary" type="button" data-modal-target="payment-create-modal">Record payment</button>{% endif %}</div></div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>Balance</th><th>For</th></tr></thead>
+               <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>Paid</th><th>Balance</th><th>For</th></tr></thead>
               <tbody>
                 {% for invoice in invoices %}
-                  <tr><td><a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a><br><a class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<br><a class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td></tr>
+                   <tr><td>{% if invoice.status == 'draft' %}<a class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">{{ invoice.invoice_number }}</a>{% else %}{{ invoice.invoice_number }}{% endif %}<br><a class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<br><a class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}{% if invoice.status == 'draft' %}<br><form method="post" action="{% url 'billing:invoice_publish' invoice.pk %}" style="display:inline">{% csrf_token %}<button class="inline-button" type="submit">Publish</button></form>{% endif %}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.payment_total }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}{% if invoice.status == 'draft' %}<br><form method="post" action="{% url 'billing:invoice_delete' invoice.pk %}" style="display:inline">{% csrf_token %}<button class="inline-button" type="submit">Delete draft</button></form>{% endif %}</td></tr>
                 {% empty %}
-                  <tr><td colspan="6">No invoices yet.</td></tr>
+                   <tr><td colspan="7">No invoices yet.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -58,9 +58,9 @@
       <dialog class="modal-dialog" id="package-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Package</p><h2>Create prepaid package</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/package_form.html' with action_url='billing:package_create' submit_label='Create package' %}</div></dialog>
       {% if workspace_permissions.billing.create %}<dialog class="modal-dialog" id="payment-create-modal" aria-labelledby="record-payment-heading"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Manual payment</p><h2 id="record-payment-heading">Record payment</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/payment_form.html' with form=payment_form %}</div></dialog>{% endif %}
 
-      {% for invoice in invoices %}
-        <dialog class="modal-dialog" id="invoice-modal-{{ invoice.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Invoice</p><h2>{{ invoice.invoice_number }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_edit' object=invoice submit_label='Save changes' %}</div></dialog>
-      {% endfor %}
+       {% for invoice in invoices %}{% if invoice.status == 'draft' %}
+         <dialog class="modal-dialog" id="invoice-modal-{{ invoice.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Invoice</p><h2>{{ invoice.invoice_number }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_edit' object=invoice submit_label='Save changes' %}</div></dialog>
+       {% endif %}{% endfor %}
       {% for package in packages %}
         <dialog class="modal-dialog" id="package-modal-{{ package.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Package</p><h2>{{ package.name }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/package_form.html' with action_url='billing:package_edit' object=package submit_label='Save changes' %}</div></dialog>
       {% endfor %}

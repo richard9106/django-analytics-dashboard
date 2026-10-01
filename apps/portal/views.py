@@ -92,7 +92,8 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
         open_invoices = Invoice.objects.filter(
             practice=access.practice,
             client=access.client,
-        ).exclude(status__in=[Invoice.Status.PAID, Invoice.Status.VOID])
+            status__in=[Invoice.Status.SENT, Invoice.Status.OVERDUE],
+        ).prefetch_related('payments')
         visible_documents = ClientDocument.objects.filter(
             practice=access.practice,
             client=access.client,
@@ -122,7 +123,7 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'next_appointment': upcoming_appointments.first(),
             'visible_documents': visible_documents[:8],
             'open_invoices': open_invoices[:8],
-            'open_invoice_total': open_invoices.aggregate(total=Sum('amount'))['total'] or 0,
+            'open_invoice_total': sum(invoice.balance_due for invoice in open_invoices),
             'service_packages': service_packages[:6],
             'remaining_sessions': sum(package.sessions_remaining for package in service_packages),
             'shared_document_count': visible_documents.count(),
@@ -147,7 +148,7 @@ class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
             practice=access.practice,
             client=access.client,
         )
-        if invoice.status in {Invoice.Status.PAID, Invoice.Status.VOID} or invoice.amount <= 0:
+        if invoice.status not in {Invoice.Status.SENT, Invoice.Status.OVERDUE} or invoice.balance_due <= 0:
             messages.error(request, 'This invoice is not available for online payment.')
             return redirect('portal:dashboard')
         if not settings.STRIPE_SECRET_KEY:
@@ -165,7 +166,7 @@ class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
                     'price_data': {
                         'currency': 'usd',
                         'product_data': {'name': f'Invoice {invoice.invoice_number}'},
-                        'unit_amount': int(invoice.amount * 100),
+                         'unit_amount': int(invoice.balance_due * 100),
                     },
                     'quantity': 1,
                 }],
@@ -198,7 +199,8 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
         open_invoices = Invoice.objects.filter(
             practice=access.practice,
             client=access.client,
-        ).exclude(status__in=[Invoice.Status.PAID, Invoice.Status.VOID])
+            status__in=[Invoice.Status.SENT, Invoice.Status.OVERDUE],
+        ).prefetch_related('payments')
         visible_documents = ClientDocument.objects.filter(
             practice=access.practice,
             client=access.client,
@@ -225,7 +227,7 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
             'next_appointment': upcoming_appointments.first(),
             'visible_documents': visible_documents[:8],
             'open_invoices': open_invoices[:8],
-            'open_invoice_total': open_invoices.aggregate(total=Sum('amount'))['total'] or 0,
+            'open_invoice_total': sum(invoice.balance_due for invoice in open_invoices),
             'service_packages': service_packages[:6],
             'remaining_sessions': sum(package.sessions_remaining for package in service_packages),
             'shared_document_count': visible_documents.count(),

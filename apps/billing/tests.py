@@ -314,6 +314,33 @@ class BillingViewTests(TestCase):
         self.assertEqual(invoice.practice, practice)
         self.assertIsNotNone(invoice.paid_at)
 
+    def test_draft_invoice_can_be_published_once_and_is_audited(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-PUBLISH", amount=Decimal("150.00")
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("billing:invoice_publish", args=[invoice.pk]))
+
+        self.assertRedirects(response, reverse("billing:list"))
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.Status.SENT)
+        self.assertEqual(invoice.published_by, user)
+        self.assertIsNotNone(invoice.published_at)
+        log = AuditLog.objects.get(object_type="billing.Invoice", object_id=str(invoice.pk))
+        self.assertEqual(log.metadata["event"], "published")
+
+    def test_published_invoice_cannot_be_edited_or_deleted(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        invoice = Invoice.objects.create(
+            practice=practice, client=client, invoice_number="INV-LOCKED", amount=Decimal("150.00"), status=Invoice.Status.SENT
+        )
+        self.client.force_login(user)
+
+        self.assertEqual(self.client.get(reverse("billing:invoice_edit", args=[invoice.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("billing:invoice_delete", args=[invoice.pk])).status_code, 404)
+
     def test_invoice_create_auto_generates_package_invoice_number(self):
         user, _practice, _therapist, client, _appointment = self.create_practice_user()
         package = ServicePackage.objects.create(

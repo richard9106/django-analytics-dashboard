@@ -100,6 +100,31 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(kwargs["payment_intent_data"]["transfer_data"]["destination"], "acct_practice")
         self.assertEqual(kwargs["metadata"]["invoice_id"], str(invoice.pk))
 
+    def test_portal_hides_draft_and_only_offers_sent_or_overdue_invoices(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-DRAFT", amount=Decimal("120.00"))
+        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-SENT", amount=Decimal("120.00"), status=Invoice.Status.SENT)
+        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-OVERDUE", amount=Decimal("80.00"), status=Invoice.Status.OVERDUE)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal:dashboard"))
+
+        self.assertContains(response, "INV-SENT")
+        self.assertContains(response, "INV-OVERDUE")
+        self.assertNotContains(response, "INV-DRAFT")
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.portal.views.stripe.checkout.Session.create")
+    def test_portal_cannot_pay_a_draft_invoice(self, mock_create):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        invoice = Invoice.objects.create(practice=practice, client=client, invoice_number="INV-DRAFT-PAY", amount=Decimal("120.00"))
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("portal:invoice_pay", args=[invoice.pk]))
+
+        self.assertRedirects(response, reverse("portal:dashboard"))
+        mock_create.assert_not_called()
+
     @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
     @patch("apps.portal.views.stripe.checkout.Session.create")
     def test_client_cannot_pay_another_clients_invoice(self, mock_create):
@@ -155,7 +180,7 @@ class ClientPortalViewTests(TestCase):
             starts_at=starts_at,
             ends_at=starts_at + timedelta(minutes=50),
         )
-        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-VISIBLE", amount=Decimal("120.00"))
+        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-VISIBLE", amount=Decimal("120.00"), status=Invoice.Status.SENT)
         Invoice.objects.create(practice=practice, client=other_client, invoice_number="INV-HIDDEN", amount=Decimal("120.00"))
         ServicePackage.objects.create(
             practice=practice,

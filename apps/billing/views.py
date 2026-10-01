@@ -204,7 +204,7 @@ class InvoiceUpdateView(InvoiceCreateView, UpdateView):
     permission_action = 'edit'
     def get_queryset(self):
         practice = self.get_practice()
-        return Invoice.objects.filter(practice=practice) if practice else Invoice.objects.none()
+        return Invoice.objects.filter(practice=practice, status=Invoice.Status.DRAFT) if practice else Invoice.objects.none()
 
 
 class InvoiceDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
@@ -215,7 +215,7 @@ class InvoiceDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeCon
 
     def get_queryset(self):
         practice = self.get_practice()
-        return Invoice.objects.filter(practice=practice) if practice else Invoice.objects.none()
+        return Invoice.objects.filter(practice=practice, status=Invoice.Status.DRAFT) if practice else Invoice.objects.none()
 
     def form_valid(self, form):
         invoice_id = self.object.pk
@@ -226,6 +226,30 @@ class InvoiceDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeCon
         return response
 
 
+class InvoicePublishView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'billing'
+    permission_action = 'edit'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        practice = self.get_practice()
+        invoice = get_object_or_404(Invoice, pk=pk, practice=practice, status=Invoice.Status.DRAFT)
+        invoice.status = Invoice.Status.SENT
+        invoice.published_at = timezone.now()
+        invoice.published_by = request.user
+        invoice.save(update_fields=['status', 'published_at', 'published_by', 'updated_at'])
+        log_audit_event(
+            request,
+            AuditLog.Action.UPDATE,
+            'billing.Invoice',
+            invoice.pk,
+            practice=practice,
+            metadata={'event': 'published', 'invoice_number': invoice.invoice_number, 'status': invoice.status},
+        )
+        messages.success(request, f'Invoice {invoice.invoice_number} published.')
+        return redirect('billing:list')
+
+
 class InvoicePrintableView(LoginRequiredMixin, PracticeContextMixin, TemplateView):
     template_name = 'billing/printable_invoice.html'
     document_type = 'invoice'
@@ -233,7 +257,7 @@ class InvoicePrintableView(LoginRequiredMixin, PracticeContextMixin, TemplateVie
     def get_invoice(self):
         practice = self.get_practice()
         return get_object_or_404(
-            Invoice.objects.filter(practice=practice).select_related('practice', 'client', 'appointment__therapist__user', 'package'),
+            Invoice.objects.filter(practice=practice).select_related('practice', 'client', 'appointment__therapist__user', 'package', 'published_by').prefetch_related('payments'),
             pk=self.kwargs['pk'],
         )
 
