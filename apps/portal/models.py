@@ -30,6 +30,7 @@ class ClientPortalAccess(models.Model):
 class ClientPortalRequest(models.Model):
     class Category(models.TextChoices):
         RESCHEDULE = "reschedule", "I need to reschedule"
+        CANCELLATION = "cancellation", "I need to cancel"
         BILLING = "billing", "Billing question"
         DOCUMENT = "document", "Document question"
         GENERAL = "general", "General message"
@@ -52,6 +53,16 @@ class ClientPortalRequest(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["appointment"],
+                condition=models.Q(
+                    appointment__isnull=False,
+                    status__in=["new", "reviewed"],
+                ),
+                name="one_open_change_request_per_appointment",
+            ),
+        ]
 
     def clean(self):
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:

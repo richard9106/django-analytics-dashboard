@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
@@ -84,11 +84,15 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         access = context['portal_access']
         now = timezone.now()
-        upcoming_appointments = Appointment.objects.filter(
+        upcoming_appointments = list(Appointment.objects.filter(
             practice=access.practice,
             client=access.client,
             starts_at__gte=now,
-        ).select_related('therapist__user')
+        ).select_related('therapist__user')[:6])
+        for appointment in upcoming_appointments:
+            appointment.change_request_form = AppointmentChangeRequestForm(
+                portal_access=access, appointment=appointment,
+            )
         open_invoices = Invoice.objects.filter(
             practice=access.practice,
             client=access.client,
@@ -119,8 +123,8 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             read_at__isnull=True,
         ).count()
         context.update({
-            'upcoming_appointments': upcoming_appointments[:6],
-            'next_appointment': upcoming_appointments.first(),
+            'upcoming_appointments': upcoming_appointments,
+            'next_appointment': upcoming_appointments[0] if upcoming_appointments else None,
             'visible_documents': visible_documents[:8],
             'open_invoices': open_invoices[:8],
             'open_invoice_total': sum(invoice.balance_due for invoice in open_invoices),
@@ -367,21 +371,36 @@ class AppointmentChangeRequestCreateView(ClientPortalAccessMixin, View):
         )
         form = AppointmentChangeRequestForm(request.POST, portal_access=access, appointment=appointment)
         if form.is_valid():
-            portal_request = form.save()
-            log_audit_event(
-                request,
-                AuditLog.Action.CREATE,
-                'portal.ClientPortalRequest',
-                portal_request.pk,
-                practice=portal_request.practice,
-                metadata={
-                    'client_id': portal_request.client_id,
-                    'appointment_id': appointment.pk,
-                    'category': portal_request.category,
-                    'status': portal_request.status,
-                },
-            )
-        return redirect('portal:dashboard')
+            try:
+                portal_request = form.save()
+            except IntegrityError:
+                form.add_error(None, 'Your practice already has an open change request for this appointment.')
+            else:
+                log_audit_event(
+                    request,
+                    AuditLog.Action.CREATE,
+                    'portal.ClientPortalRequest',
+                    portal_request.pk,
+                    practice=portal_request.practice,
+                    metadata={
+                        'client_id': portal_request.client_id,
+                        'appointment_id': appointment.pk,
+                        'category': portal_request.category,
+                        'status': portal_request.status,
+                    },
+                )
+                messages.success(request, 'Your appointment change request was sent to the practice.')
+                return redirect('portal:dashboard')
+
+        dashboard_view = ClientPortalDashboardView()
+        dashboard_view.setup(request)
+        context = dashboard_view.get_context_data()
+        for dashboard_appointment in context['upcoming_appointments']:
+            if dashboard_appointment.pk == appointment.pk:
+                dashboard_appointment.change_request_form = form
+                break
+        context['open_appointment_change'] = appointment.pk
+        return TemplateResponse(request, 'portal/dashboard.html', context, status=400)
 
 
 class PublicBookingRequestCreateView(PostRateLimitMixin, View):

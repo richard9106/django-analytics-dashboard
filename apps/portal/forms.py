@@ -212,8 +212,8 @@ class AppointmentChangeRequestForm(forms.ModelForm):
         self.portal_access = portal_access
         self.appointment = appointment
         self.fields['category'].choices = [
-            (ClientPortalRequest.Category.RESCHEDULE, ClientPortalRequest.Category.RESCHEDULE.label),
-            (ClientPortalRequest.Category.GENERAL, 'Cancel appointment request'),
+            (ClientPortalRequest.Category.RESCHEDULE, 'Reschedule — request a different appointment time'),
+            (ClientPortalRequest.Category.CANCELLATION, 'Cancel — ask the practice to cancel this appointment'),
         ]
         if portal_access and appointment:
             self.instance.practice = portal_access.practice
@@ -225,6 +225,19 @@ class AppointmentChangeRequestForm(forms.ModelForm):
         cleaned_data = super().clean()
         if self.appointment and self.appointment.status != Appointment.Status.SCHEDULED:
             raise forms.ValidationError('Only scheduled appointments can be changed from the portal.')
+        if self.appointment and self.portal_access:
+            existing = ClientPortalRequest.objects.filter(
+                practice=self.portal_access.practice,
+                client=self.portal_access.client,
+                appointment=self.appointment,
+                status__in=[ClientPortalRequest.Status.NEW, ClientPortalRequest.Status.REVIEWED],
+            )
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            if existing.exists():
+                raise forms.ValidationError(
+                    'Your practice already has an open change request for this appointment.'
+                )
         return cleaned_data
 
     def save(self, commit=True):

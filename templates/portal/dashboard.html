@@ -68,7 +68,7 @@
         <div class="panel-head"><div><h2>Upcoming appointments</h2><p>Your scheduled sessions.</p></div></div>
         <div class="appointment-list">
           {% for appointment in upcoming_appointments %}
-            <div class="appointment-card appointment-card-mini"><div class="appointment-time"><strong>{{ appointment.starts_at|date:"M j" }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span></div><div class="appointment-body"><h3>{{ appointment.get_appointment_type_display }}</h3><p>With {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p><p>{{ appointment.starts_at|date:"l, F j" }} · {{ appointment.ends_at|time:"g:i A" }}</p><button class="inline-button" type="button" data-modal-target="appointment-change-{{ appointment.pk }}">Request change</button></div><span class="badge success">{{ appointment.get_status_display }}</span></div>
+             <div class="appointment-card appointment-card-mini"><div class="appointment-time"><strong>{{ appointment.starts_at|date:"M j" }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span></div><div class="appointment-body"><h3>{{ appointment.get_appointment_type_display }}</h3><p>With {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p><p>{{ appointment.starts_at|date:"l, F j" }} · {{ appointment.ends_at|time:"g:i A" }}</p><button class="inline-button" type="button" data-modal-target="appointment-change-{{ appointment.pk }}">Request change</button></div><span class="badge success">{{ appointment.get_status_display }}</span></div>
           {% empty %}<p class="empty-state">No upcoming appointments.</p>{% endfor %}
         </div>
       </article>
@@ -118,8 +118,11 @@
           <div class="modal-head"><div><p class="eyebrow">Appointment</p><h2>Request a change</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
           <form class="appointment-form" method="post" action="{% url 'portal:appointment_change_request' appointment.pk %}">
             {% csrf_token %}
-            <p>{{ appointment.starts_at|date:"l, F j" }} at {{ appointment.starts_at|time:"g:i A" }} with {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p>
-            <div class="field-grid"><div class="field"><label>Request type</label><select name="category" required><option value="reschedule">I need to reschedule</option><option value="general">Cancel appointment request</option></select></div><div class="field full"><label>Message</label><textarea name="message" rows="4" required placeholder="Share preferred times or the reason for this request."></textarea></div></div>
+             <p>{{ appointment.starts_at|date:"l, F j" }} at {{ appointment.starts_at|time:"g:i A" }} with {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p>
+             {% with change_form=appointment.change_request_form %}
+             {% if change_form.non_field_errors %}<div class="form-error" role="alert">{{ change_form.non_field_errors }}</div>{% endif %}
+             <div class="field-grid"><div class="field"><label for="{{ change_form.category.id_for_label }}">What would you like to do?</label>{{ change_form.category }}{{ change_form.category.errors }}</div><div class="field full"><label for="{{ change_form.message.id_for_label }}">Message</label>{{ change_form.message }}{{ change_form.message.errors }}<small>For a reschedule, share preferred times. For a cancellation, tell us why if you would like.</small></div></div>
+             {% endwith %}
             <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Send request</button></div>
           </form>
         </div>
@@ -141,6 +144,9 @@
     });
     {% if open_request_modal %}
       window.addEventListener('DOMContentLoaded', () => document.getElementById('portal-request-modal')?.showModal());
+    {% endif %}
+    {% if open_appointment_change %}
+      window.addEventListener('DOMContentLoaded', () => document.getElementById('appointment-change-{{ open_appointment_change }}')?.showModal());
     {% endif %}
   </script>
 </body>

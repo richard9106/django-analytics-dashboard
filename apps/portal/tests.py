@@ -399,6 +399,75 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(portal_request.client, client)
         self.assertIn("Appointment change request", portal_request.subject)
 
+    def test_appointment_change_request_shows_success_confirmation(self):
+        user, practice, therapist, client, _access = self.create_portal_user()
+        appointment = Appointment.objects.create(
+            practice=practice, client=client, therapist=therapist,
+            starts_at=timezone.now() + timedelta(days=2),
+            ends_at=timezone.now() + timedelta(days=2, minutes=50),
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("portal:appointment_change_request", args=[appointment.pk]),
+            {"category": ClientPortalRequest.Category.RESCHEDULE, "message": "Friday afternoon would work."},
+            follow=True,
+        )
+
+        self.assertContains(response, "Your appointment change request was sent to the practice.")
+        self.assertEqual(ClientPortalRequest.objects.filter(appointment=appointment).count(), 1)
+
+    def test_invalid_appointment_change_request_keeps_errors_and_reopens_modal(self):
+        user, practice, therapist, client, _access = self.create_portal_user()
+        appointment = Appointment.objects.create(
+            practice=practice, client=client, therapist=therapist,
+            starts_at=timezone.now() + timedelta(days=2),
+            ends_at=timezone.now() + timedelta(days=2, minutes=50),
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("portal:appointment_change_request", args=[appointment.pk]),
+            {"category": ClientPortalRequest.Category.RESCHEDULE, "message": ""},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "This field is required.", status_code=400)
+        self.assertContains(response, f"appointment-change-{appointment.pk}", status_code=400)
+        self.assertContains(response, f"appointment-change-{appointment.pk}')?.showModal", status_code=400)
+        self.assertFalse(ClientPortalRequest.objects.filter(appointment=appointment).exists())
+
+    def test_only_one_open_appointment_change_request_is_allowed(self):
+        user, practice, therapist, client, _access = self.create_portal_user()
+        appointment = Appointment.objects.create(
+            practice=practice, client=client, therapist=therapist,
+            starts_at=timezone.now() + timedelta(days=2),
+            ends_at=timezone.now() + timedelta(days=2, minutes=50),
+        )
+        self.client.force_login(user)
+        payload = {"category": ClientPortalRequest.Category.CANCELLATION, "message": "I can no longer attend."}
+        self.client.post(reverse("portal:appointment_change_request", args=[appointment.pk]), payload)
+
+        response = self.client.post(reverse("portal:appointment_change_request", args=[appointment.pk]), payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "already has an open change request", status_code=400)
+        self.assertEqual(ClientPortalRequest.objects.filter(appointment=appointment).count(), 1)
+
+    def test_appointment_change_modal_clarifies_reschedule_and_cancellation(self):
+        user, practice, therapist, client, _access = self.create_portal_user()
+        appointment = Appointment.objects.create(
+            practice=practice, client=client, therapist=therapist,
+            starts_at=timezone.now() + timedelta(days=2),
+            ends_at=timezone.now() + timedelta(days=2, minutes=50),
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("portal:dashboard"))
+
+        self.assertContains(response, "Reschedule — request a different appointment time")
+        self.assertContains(response, "Cancel — ask the practice to cancel this appointment")
+
     def test_portal_client_cannot_request_change_for_other_client_appointment(self):
         user, _practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
         _other_user, other_practice, other_therapist, other_client, _other_access = self.create_portal_user(
