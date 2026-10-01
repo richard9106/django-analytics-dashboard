@@ -116,6 +116,8 @@ class BillingModelTests(TestCase):
             purchased_at=timezone.localdate(),
         )
 
+        self.appointment.status = Appointment.Status.COMPLETED
+        self.appointment.save(update_fields=["status"])
         PackageUsage.objects.create(
             package=package,
             appointment=self.appointment,
@@ -127,6 +129,34 @@ class BillingModelTests(TestCase):
         self.assertEqual(package.sessions_used, 1)
         self.assertEqual(package.sessions_remaining, 3)
 
+    def test_scheduled_or_cancelled_appointment_cannot_consume_package(self):
+        package = ServicePackage.objects.create(
+            practice=self.practice, client=self.client, name="4 session package",
+            sessions_purchased=4, total_price=Decimal("500.00"), purchased_at=timezone.localdate(),
+        )
+        usage = PackageUsage(package=package, appointment=self.appointment, quantity=1, used_at=timezone.now())
+        with self.assertRaisesMessage(ValidationError, "Scheduled appointments"):
+            usage.full_clean()
+
+        self.appointment.status = Appointment.Status.CANCELLED
+        self.appointment.save(update_fields=["status"])
+        with self.assertRaisesMessage(ValidationError, "Cancelled appointments"):
+            usage.full_clean()
+
+    def test_no_show_requires_explicit_charge_reason(self):
+        package = ServicePackage.objects.create(
+            practice=self.practice, client=self.client, name="4 session package",
+            sessions_purchased=4, total_price=Decimal("500.00"), purchased_at=timezone.localdate(),
+        )
+        self.appointment.status = Appointment.Status.NO_SHOW
+        self.appointment.save(update_fields=["status"])
+        usage = PackageUsage(package=package, appointment=self.appointment, quantity=1, used_at=timezone.now())
+        with self.assertRaisesMessage(ValidationError, "No-show appointments"):
+            usage.full_clean()
+
+        usage.charge_reason = PackageUsage.ChargeReason.NO_SHOW
+        usage.full_clean()
+
     def test_package_usage_rejects_other_client_appointment(self):
         other_client = Client.objects.create(practice=self.practice, first_name="Lucia", last_name="Garcia")
         other_appointment = Appointment.objects.create(
@@ -135,6 +165,7 @@ class BillingModelTests(TestCase):
             therapist=self.therapist,
             starts_at=timezone.now() + timedelta(days=2),
             ends_at=timezone.now() + timedelta(days=2, minutes=50),
+            status=Appointment.Status.COMPLETED,
         )
         package = ServicePackage.objects.create(
             practice=self.practice,

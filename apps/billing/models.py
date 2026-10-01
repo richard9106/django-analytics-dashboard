@@ -226,9 +226,14 @@ class InsuranceRate(models.Model):
 
 
 class PackageUsage(models.Model):
+    class ChargeReason(models.TextChoices):
+        COMPLETED = "completed", "Completed session"
+        NO_SHOW = "no_show", "Approved no-show charge"
+
     package = models.ForeignKey(ServicePackage, on_delete=models.CASCADE, related_name="usages")
     appointment = models.OneToOneField("appointments.Appointment", on_delete=models.CASCADE, related_name="package_usage")
     quantity = models.PositiveIntegerField(default=1)
+    charge_reason = models.CharField(max_length=20, choices=ChargeReason.choices, default=ChargeReason.COMPLETED)
     used_at = models.DateTimeField()
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -249,6 +254,14 @@ class PackageUsage(models.Model):
                 errors["appointment"] = "Usage appointment must belong to the same practice as the package."
             if self.appointment.client_id != self.package.client_id:
                 errors["appointment"] = "Usage appointment must match the package client."
+            if self.appointment.status == self.appointment.Status.CANCELLED:
+                errors["appointment"] = "Cancelled appointments cannot consume package sessions."
+            elif self.appointment.status == self.appointment.Status.SCHEDULED:
+                errors["appointment"] = "Scheduled appointments cannot consume package sessions."
+            elif self.appointment.status == self.appointment.Status.NO_SHOW and self.charge_reason != self.ChargeReason.NO_SHOW:
+                errors["charge_reason"] = "No-show appointments require an approved no-show charge reason."
+            elif self.appointment.status == self.appointment.Status.COMPLETED and self.charge_reason != self.ChargeReason.COMPLETED:
+                errors["charge_reason"] = "Completed appointments require a completed session charge reason."
             existing_usage = self.package.usages.exclude(pk=self.pk).aggregate(total=models.Sum("quantity"))["total"] or 0
             if existing_usage + self.quantity > self.package.sessions_purchased:
                 errors["quantity"] = "Package does not have enough remaining sessions."
@@ -275,7 +288,7 @@ class PackageUsage(models.Model):
         return result
 
     def __str__(self):
-        return f"{self.package} used for {self.appointment}"
+        return f"{self.package} used for {self.appointment} ({self.get_charge_reason_display()})"
 
 
 class Payment(models.Model):

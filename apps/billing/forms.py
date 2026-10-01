@@ -238,7 +238,7 @@ class InsuranceRateForm(forms.ModelForm):
 class PackageUsageForm(forms.ModelForm):
     class Meta:
         model = PackageUsage
-        fields = ['package', 'appointment', 'quantity', 'used_at', 'notes']
+        fields = ['package', 'appointment', 'quantity', 'charge_reason', 'used_at', 'notes']
         widgets = {
             'used_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'notes': forms.Textarea(attrs={'rows': 3}),
