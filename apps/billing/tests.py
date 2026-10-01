@@ -244,7 +244,7 @@ class BillingViewTests(TestCase):
         self.assertContains(response, 'id="package-create-modal"')
         self.assertNotContains(response, "INV-HIDDEN")
 
-    def test_invoice_actions_are_grouped_in_accessible_details_menu_with_csrf(self):
+    def test_invoice_actions_are_grouped_in_floating_kebab_menu_with_csrf(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
         invoice = Invoice.objects.create(
             practice=practice, client=client, invoice_number="INV-ACTIONS",
@@ -255,11 +255,25 @@ class BillingViewTests(TestCase):
         response = self.client.get(reverse("billing:list"))
 
         self.assertContains(response, '<th>Actions</th>', html=True)
-        self.assertContains(response, 'aria-label="Actions for INV-ACTIONS"')
+        self.assertContains(response, 'class="invoice-actions-trigger"')
+        self.assertContains(response, 'aria-controls="invoice-actions-')
+        self.assertContains(response, 'role="menu"')
+        self.assertNotContains(response, '<details class="invoice-actions">')
         self.assertContains(response, "Print invoice")
         self.assertContains(response, "Publish")
         self.assertContains(response, "Delete draft")
         self.assertContains(response, 'name="csrfmiddlewaretoken"')
+
+    def test_invoice_action_menu_includes_keyboard_and_mobile_behavior(self):
+        user, practice, _therapist, client, _appointment = self.create_practice_user()
+        Invoice.objects.create(practice=practice, client=client, invoice_number="INV-BEHAVIOR", amount=Decimal("150.00"))
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("billing:list"))
+
+        self.assertContains(response, "document.body.appendChild(menu)")
+        self.assertContains(response, "event.key === 'Escape'")
+        self.assertContains(response, "is-mobile-sheet")
 
     def test_invoice_action_menu_honors_billing_permissions(self):
         user, practice, _therapist, client, _appointment = self.create_practice_user()
