@@ -9,7 +9,7 @@ from django.utils.text import slugify
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
-from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PublicBookingRequest
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
 
 
 def suggest_portal_username(client):
@@ -143,6 +143,62 @@ class ClientPortalRequestForm(forms.ModelForm):
             portal_request.save()
             self.save_m2m()
         return portal_request
+
+
+class PortalConversationForm(forms.ModelForm):
+    body = forms.CharField(widget=forms.Textarea(attrs={"rows": 5}), max_length=10000)
+
+    class Meta:
+        model = PortalConversation
+        fields = ["subject"]
+
+    def __init__(self, *args, portal_access=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.portal_access = portal_access
+
+    @transaction.atomic
+    def save(self, commit=True):
+        conversation = super().save(commit=False)
+        conversation.practice = self.portal_access.practice
+        conversation.client = self.portal_access.client
+        conversation.created_by = self.portal_access.user
+        if commit:
+            conversation.full_clean()
+            conversation.save()
+            message = PortalMessage(
+                conversation=conversation,
+                practice=conversation.practice,
+                author=self.portal_access.user,
+                author_kind=PortalMessage.AuthorKind.CLIENT,
+                body=self.cleaned_data["body"],
+            )
+            message.full_clean()
+            message.save()
+        return conversation
+
+
+class PortalMessageForm(forms.ModelForm):
+    class Meta:
+        model = PortalMessage
+        fields = ["body"]
+        widgets = {"body": forms.Textarea(attrs={"rows": 4})}
+
+    def __init__(self, *args, conversation=None, author=None, author_kind=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.conversation = conversation
+        self.author = author
+        self.author_kind = author_kind
+
+    def save(self, commit=True):
+        message = super().save(commit=False)
+        message.conversation = self.conversation
+        message.practice = self.conversation.practice
+        message.author = self.author
+        message.author_kind = self.author_kind
+        if commit:
+            message.full_clean()
+            message.save()
+        return message
 
 
 class AppointmentChangeRequestForm(forms.ModelForm):

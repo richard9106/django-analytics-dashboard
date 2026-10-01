@@ -24,7 +24,7 @@ The current version includes these working modules:
 - `clinical`: clinical notes, diagnosis records, treatment plans, linked treatment progress, lock note behavior, review-due workflow.
 - `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, Stripe subscription checkout, plan changes with proration previews, SaaS invoice history, Stripe Customer Portal, Stripe Connect client payouts, 15-day trial, webhooks, and practice subscription persistence.
 - `documents`: client document upload/list/download/delete, file metadata, tenant-scoped downloads, Google Drive export, local storage with Cloudflare R2 production support.
-- `portal`: client-facing dashboard, portal access accounts, enforced temporary password change, visible documents, appointment change requests, intake packet completion, and Stripe Checkout invoice payments routed to the practice's connected account.
+- `portal`: client-facing dashboard, portal access accounts, enforced temporary password change, secure client/practice conversations, visible documents, appointment change requests, intake packet completion, and Stripe Checkout invoice payments routed to the practice's connected account.
 - `intake`: practice intake templates, client packet assignment, client portal submission workflow.
 - `requests`: practice-side inbox for client portal requests and appointment change requests.
 - `notifications`: appointment reminder model and Gmail-based reminder delivery command.
@@ -245,7 +245,6 @@ Any ZIP
 
 ## Remaining Product Roadmap
 
-- Add secure two-way client/practice messaging.
 - Add recurring appointment series editing and cancellation controls.
 - Add Google sync issue dashboard and reconnect state.
 - Add Dropbox OAuth/export support.

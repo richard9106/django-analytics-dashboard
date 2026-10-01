@@ -13,7 +13,7 @@ from django.views.generic import CreateView, DeleteView, FormView, ListView, Tem
 import stripe
 from django.conf import settings
 
-from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, PracticePermissionMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, PracticePermissionMixin, get_practice_for_user, has_practice_permission, permission_redirect
 from apps.accounts.models import UserProfile
 from apps.appointments.google_calendar import sync_appointment_to_google
 from apps.appointments.models import Appointment
@@ -30,12 +30,14 @@ from .forms import (
     AppointmentChangeRequestForm,
     ClientPortalAccessForm,
     ClientPortalRequestForm,
+    PortalConversationForm,
+    PortalMessageForm,
     IntakePacketTemplateForm,
     PublicBookingRequestForm,
     suggest_portal_password,
     suggest_portal_username,
 )
-from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PublicBookingRequest
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
 
 
 class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
@@ -249,6 +251,80 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
         context = self.get_portal_context(access, form)
         context['open_request_modal'] = True
         return TemplateResponse(request, 'portal/dashboard.html', context, status=400)
+
+
+class ClientConversationListView(ClientPortalAccessMixin, TemplateView):
+    template_name = 'portal/conversations.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        access = self.get_portal_access()
+        context.update({
+            'portal_client': access.client,
+            'portal_practice': access.practice,
+            'conversations': PortalConversation.objects.filter(
+                practice=access.practice, client=access.client,
+            ).prefetch_related('messages')[:30],
+            'conversation_form': kwargs.get('conversation_form') or PortalConversationForm(portal_access=access),
+        })
+        return context
+
+    def post(self, request, *args, **kwargs):
+        access = self.get_portal_access()
+        form = PortalConversationForm(request.POST, portal_access=access)
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(conversation_form=form), status=400)
+        conversation = form.save()
+        log_audit_event(
+            request, AuditLog.Action.CREATE, 'portal.PortalConversation', conversation.pk,
+            practice=conversation.practice, metadata={'client_id': conversation.client_id},
+        )
+        log_audit_event(
+            request, AuditLog.Action.CREATE, 'portal.PortalMessage', conversation.messages.first().pk,
+            practice=conversation.practice, metadata={'client_id': conversation.client_id, 'author_kind': PortalMessage.AuthorKind.CLIENT},
+        )
+        return redirect('portal:conversations')
+
+
+class ClientConversationDetailView(ClientPortalAccessMixin, TemplateView):
+    template_name = 'portal/conversation_detail.html'
+
+    def get_conversation(self):
+        access = self.get_portal_access()
+        return get_object_or_404(
+            PortalConversation.objects.prefetch_related('messages__author'),
+            public_id=self.kwargs['public_id'], practice=access.practice, client=access.client,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        conversation = self.get_conversation()
+        context.update({
+            'conversation': conversation,
+            'portal_practice': conversation.practice,
+            'reply_form': kwargs.get('reply_form') or PortalMessageForm(
+                conversation=conversation, author=self.request.user, author_kind=PortalMessage.AuthorKind.CLIENT,
+            ),
+        })
+        return context
+
+    def post(self, request, *args, **kwargs):
+        conversation = self.get_conversation()
+        if conversation.status == PortalConversation.Status.RESOLVED:
+            messages.error(request, 'This conversation has been resolved by your practice.')
+            return redirect('portal:conversation_detail', public_id=conversation.public_id)
+        form = PortalMessageForm(
+            request.POST, conversation=conversation, author=request.user, author_kind=PortalMessage.AuthorKind.CLIENT,
+        )
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(reply_form=form), status=400)
+        message = form.save()
+        conversation.save(update_fields=['updated_at'])
+        log_audit_event(
+            request, AuditLog.Action.CREATE, 'portal.PortalMessage', message.pk,
+            practice=conversation.practice, metadata={'client_id': conversation.client_id, 'author_kind': message.author_kind},
+        )
+        return redirect('portal:conversation_detail', public_id=conversation.public_id)
 
 
 class AppointmentChangeRequestCreateView(ClientPortalAccessMixin, View):
@@ -470,6 +546,63 @@ class PracticePortalRequestStatusView(PracticePermissionMixin, PracticeContextMi
                 metadata={'client_id': portal_request.client_id, 'status': portal_request.status},
             )
         return redirect('portal_requests:list')
+
+
+class PracticeConversationListView(PracticePermissionMixin, PracticeContextMixin, ListView):
+    permission_resource = 'requests'
+    model = PortalConversation
+    template_name = 'requests/conversations.html'
+    context_object_name = 'conversations'
+
+    def get_queryset(self):
+        practice = self.get_practice()
+        return PortalConversation.objects.filter(practice=practice).select_related('client').prefetch_related('messages') if practice else PortalConversation.objects.none()
+
+
+class PracticeConversationDetailView(PracticePermissionMixin, PracticeContextMixin, TemplateView):
+    permission_resource = 'requests'
+    template_name = 'requests/conversation_detail.html'
+
+    def get_conversation(self):
+        return get_object_or_404(
+            PortalConversation.objects.prefetch_related('messages__author'),
+            public_id=self.kwargs['public_id'], practice=self.get_practice(),
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        conversation = self.get_conversation()
+        context.update({
+            'conversation': conversation,
+            'reply_form': kwargs.get('reply_form') or PortalMessageForm(
+                conversation=conversation, author=self.request.user, author_kind=PortalMessage.AuthorKind.STAFF,
+            ),
+        })
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if not has_practice_permission(request.user, self.permission_resource, 'edit'):
+            return permission_redirect(request, 'You do not have permission to reply to or manage client conversations.')
+        conversation = self.get_conversation()
+        if request.POST.get('action') == 'status':
+            status = request.POST.get('status')
+            if status in PortalConversation.Status.values:
+                conversation.status = status
+                conversation.resolved_at = timezone.now() if status == PortalConversation.Status.RESOLVED else None
+                conversation.resolved_by = request.user if status == PortalConversation.Status.RESOLVED else None
+                conversation.save(update_fields=['status', 'resolved_at', 'resolved_by', 'updated_at'])
+                log_audit_event(request, AuditLog.Action.UPDATE, 'portal.PortalConversation', conversation.pk, practice=conversation.practice, metadata={'client_id': conversation.client_id, 'status': status})
+            return redirect('portal_requests:conversation_detail', public_id=conversation.public_id)
+        if conversation.status == PortalConversation.Status.RESOLVED:
+            messages.error(request, 'Reopen the conversation before sending a reply.')
+            return redirect('portal_requests:conversation_detail', public_id=conversation.public_id)
+        form = PortalMessageForm(request.POST, conversation=conversation, author=request.user, author_kind=PortalMessage.AuthorKind.STAFF)
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(reply_form=form), status=400)
+        message = form.save()
+        conversation.save(update_fields=['updated_at'])
+        log_audit_event(request, AuditLog.Action.CREATE, 'portal.PortalMessage', message.pk, practice=conversation.practice, metadata={'client_id': conversation.client_id, 'author_kind': message.author_kind})
+        return redirect('portal_requests:conversation_detail', public_id=conversation.public_id)
 
 
 class PublicBookingRequestApproveView(PracticePermissionMixin, PracticeContextMixin, View):

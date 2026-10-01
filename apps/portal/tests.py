@@ -15,7 +15,7 @@ from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, ServicePackage
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
-from apps.portal.models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PublicBookingRequest
+from apps.portal.models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
 from apps.practices.models import Practice, TherapistProfile
 
 
@@ -221,6 +221,66 @@ class ClientPortalViewTests(TestCase):
         log = AuditLog.objects.get(action=AuditLog.Action.CREATE, object_type="portal.ClientPortalRequest")
         self.assertEqual(log.metadata["client_id"], client.pk)
         self.assertEqual(log.metadata["category"], ClientPortalRequest.Category.RESCHEDULE)
+
+    def test_portal_client_can_start_a_secure_conversation(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("portal:conversations"), {
+            "subject": "Question about my invoice",
+            "body": "Could you confirm the due date?",
+        })
+
+        self.assertRedirects(response, reverse("portal:conversations"))
+        conversation = PortalConversation.objects.get()
+        self.assertEqual(conversation.practice, practice)
+        self.assertEqual(conversation.client, client)
+        message = conversation.messages.get()
+        self.assertEqual(message.author, user)
+        self.assertEqual(message.author_kind, PortalMessage.AuthorKind.CLIENT)
+        self.assertEqual(message.body, "Could you confirm the due date?")
+        self.assertTrue(AuditLog.objects.filter(object_type="portal.PortalMessage", object_id=str(message.pk)).exists())
+
+    def test_portal_client_cannot_read_another_clients_conversation(self):
+        user, practice, _therapist, _client, _access = self.create_portal_user()
+        _other_user, _other_practice, _other_therapist, other_client, _other_access = self.create_portal_user(
+            username="other-client", practice_name="Other Practice",
+        )
+        conversation = PortalConversation.objects.create(
+            practice=other_client.practice,
+            client=other_client,
+            subject="Private conversation",
+        )
+
+        self.client.force_login(user)
+        response = self.client.get(reverse("portal:conversation_detail", args=[conversation.public_id]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(conversation.practice_id, other_client.practice_id)
+
+    def test_practice_can_reply_and_resolve_a_conversation(self):
+        _client_user, practice, _therapist, client, _access = self.create_portal_user()
+        owner = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        conversation = PortalConversation.objects.create(practice=practice, client=client, subject="Billing question")
+        PortalMessage.objects.create(
+            conversation=conversation,
+            practice=practice,
+            author_kind=PortalMessage.AuthorKind.CLIENT,
+            body="Can you help?",
+        )
+
+        self.client.force_login(owner)
+        response = self.client.post(reverse("portal_requests:conversation_detail", args=[conversation.public_id]), {"body": "Yes, we can help."})
+
+        self.assertRedirects(response, reverse("portal_requests:conversation_detail", args=[conversation.public_id]))
+        reply = conversation.messages.get(author_kind=PortalMessage.AuthorKind.STAFF)
+        self.assertEqual(reply.author, owner)
+        response = self.client.post(reverse("portal_requests:conversation_detail", args=[conversation.public_id]), {"action": "status", "status": "resolved"})
+        self.assertRedirects(response, reverse("portal_requests:conversation_detail", args=[conversation.public_id]))
+        conversation.refresh_from_db()
+        self.assertEqual(conversation.status, PortalConversation.Status.RESOLVED)
+        self.assertEqual(conversation.resolved_by, owner)
 
     def test_portal_client_can_request_appointment_change(self):
         user, practice, therapist, client, _access = self.create_portal_user()

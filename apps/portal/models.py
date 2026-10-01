@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -62,6 +64,56 @@ class ClientPortalRequest(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()} from {self.client}"
+
+
+class PortalConversation(models.Model):
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        RESOLVED = "resolved", "Resolved"
+
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="portal_conversations")
+    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="portal_conversations")
+    subject = models.CharField(max_length=160)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    created_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="started_portal_conversations")
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="resolved_portal_conversations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def clean(self):
+        if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
+            raise ValidationError({"client": "Conversation client must belong to the same practice."})
+
+    def __str__(self):
+        return f"{self.subject} ({self.client})"
+
+
+class PortalMessage(models.Model):
+    class AuthorKind(models.TextChoices):
+        CLIENT = "client", "Client"
+        STAFF = "staff", "Practice team"
+
+    conversation = models.ForeignKey(PortalConversation, on_delete=models.CASCADE, related_name="messages")
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="portal_messages")
+    author = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="portal_messages")
+    author_kind = models.CharField(max_length=20, choices=AuthorKind.choices)
+    body = models.TextField(max_length=10000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def clean(self):
+        if self.conversation_id and self.practice_id and self.conversation.practice_id != self.practice_id:
+            raise ValidationError({"practice": "Message must belong to the conversation practice."})
+
+    def __str__(self):
+        return f"{self.get_author_kind_display()} message in {self.conversation}"
 
 
 class PublicBookingRequest(models.Model):

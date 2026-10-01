@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate
+from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage
 
 
 @admin.register(ClientPortalAccess)
@@ -17,6 +17,22 @@ class ClientPortalRequestAdmin(admin.ModelAdmin):
     list_filter = ("practice", "category", "status", "created_at")
     search_fields = ("subject", "message", "client__first_name", "client__last_name", "practice__name")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PortalConversation)
+class PortalConversationAdmin(admin.ModelAdmin):
+    list_display = ("subject", "client", "practice", "status", "updated_at")
+    list_filter = ("practice", "status", "created_at")
+    search_fields = ("subject", "client__first_name", "client__last_name", "practice__name")
+    readonly_fields = ("public_id", "created_at", "updated_at", "resolved_at")
+
+
+@admin.register(PortalMessage)
+class PortalMessageAdmin(admin.ModelAdmin):
+    list_display = ("conversation", "author", "author_kind", "practice", "created_at")
+    list_filter = ("practice", "author_kind", "created_at")
+    search_fields = ("conversation__subject", "author__username", "practice__name")
+    readonly_fields = ("conversation", "practice", "author", "author_kind", "body", "created_at")
 
 
 @admin.register(IntakePacketTemplate)

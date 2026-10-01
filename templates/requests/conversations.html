@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Client Messages | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="app-page"><div class="app-shell">{% include 'partials/sidebar.html' with card_title='Client messages' card_text='Review and respond to portal conversations.' %}<main class="app-main">
+<section class="action-bar"><a class="btn btn-soft" href="{% url 'portal_requests:list' %}">Requests</a></section><header class="topbar compact-topbar"><div><p class="eyebrow">Portal inbox</p><h1>Secure Messages</h1></div></header>
+<section class="panel"><div class="request-list">{% for conversation in conversations %}<article class="request-card"><div class="client-card-head"><div><h3><a class="inline-link" href="{% url 'portal_requests:conversation_detail' conversation.public_id %}">{{ conversation.subject }}</a></h3><p>{{ conversation.client }} · Updated {{ conversation.updated_at|date:"M j, Y g:i A" }}</p></div><span class="badge {% if conversation.status == 'resolved' %}success{% else %}brand{% endif %}">{{ conversation.get_status_display }}</span></div></article>{% empty %}<p class="empty-state">No secure client conversations yet.</p>{% endfor %}</div></section>
+</main></div></body></html>

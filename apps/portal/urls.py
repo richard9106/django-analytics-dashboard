@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import AppointmentChangeRequestCreateView, ClientInvoicePaymentView, ClientIntakeCompleteView, ClientPortalDashboardView, ClientPortalRequestCreateView
+from .views import AppointmentChangeRequestCreateView, ClientConversationDetailView, ClientConversationListView, ClientInvoicePaymentView, ClientIntakeCompleteView, ClientPortalDashboardView, ClientPortalRequestCreateView
 
 app_name = 'portal'
 
@@ -10,4 +10,6 @@ urlpatterns = [
     path('intake/<int:pk>/', ClientIntakeCompleteView.as_view(), name='intake_complete'),
     path('appointments/<int:pk>/change-request/', AppointmentChangeRequestCreateView.as_view(), name='appointment_change_request'),
     path('requests/new/', ClientPortalRequestCreateView.as_view(), name='request_create'),
+    path('messages/', ClientConversationListView.as_view(), name='conversations'),
+    path('messages/<uuid:public_id>/', ClientConversationDetailView.as_view(), name='conversation_detail'),
 ]
