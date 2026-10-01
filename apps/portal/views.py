@@ -344,6 +344,8 @@ class ClientConversationDetailView(ClientPortalAccessMixin, TemplateView):
             request, AuditLog.Action.CREATE, 'portal.PortalMessage', message.pk,
             practice=conversation.practice, metadata={'client_id': conversation.client_id, 'author_kind': message.author_kind},
         )
+        if request.POST.get('drawer'):
+            return redirect(f"{reverse_lazy('portal:dashboard')}?chat={conversation.public_id}")
         if request.POST.get('next') == 'conversations':
             return redirect(f"{reverse_lazy('portal:conversations')}?open={conversation.public_id}")
         return redirect('portal:conversation_detail', public_id=conversation.public_id)
@@ -627,6 +629,8 @@ class PracticeConversationDetailView(PracticePermissionMixin, PracticeContextMix
         message = form.save()
         conversation.save(update_fields=['updated_at'])
         log_audit_event(request, AuditLog.Action.CREATE, 'portal.PortalMessage', message.pk, practice=conversation.practice, metadata={'client_id': conversation.client_id, 'author_kind': message.author_kind})
+        if request.POST.get('drawer'):
+            return redirect(f"{reverse_lazy('dashboard')}?chat={conversation.public_id}")
         return redirect('portal_requests:conversation_detail', public_id=conversation.public_id)
 
 

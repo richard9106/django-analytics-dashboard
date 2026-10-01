@@ -7,13 +7,14 @@ def portal_request_badge(request):
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated or is_client_user(user):
         access = getattr(user, 'client_portal_access', None) if user and user.is_authenticated else None
-        conversations = PortalConversation.objects.filter(practice=access.practice, client=access.client).select_related('client')[:8] if access and access.is_active else []
+        conversations = PortalConversation.objects.filter(practice=access.practice, client=access.client).select_related('client').prefetch_related('messages__author')[:8] if access and access.is_active else []
         unread = PortalMessage.objects.filter(practice=access.practice, conversation__client=access.client, author_kind=PortalMessage.AuthorKind.STAFF, read_at__isnull=True).count() if access and access.is_active else 0
         return {
             'open_portal_request_count': 0,
             'unread_message_count': unread,
             'chat_conversations': conversations,
             'chat_is_client': True,
+            'chat_open_id': request.GET.get('chat', ''),
             'google_workspace_connected': False,
             'practice_setup_complete': True,
             'practice_setup_gmail': False,
@@ -27,6 +28,7 @@ def portal_request_badge(request):
             'unread_message_count': 0,
             'chat_conversations': [],
             'chat_is_client': False,
+            'chat_open_id': '',
             'google_workspace_connected': False,
             'practice_setup_complete': False,
             'practice_setup_gmail': False,
@@ -54,12 +56,13 @@ def portal_request_badge(request):
         author_kind=PortalMessage.AuthorKind.CLIENT,
         read_at__isnull=True,
     ).count()
-    conversations = PortalConversation.objects.filter(practice=practice).select_related('client')[:8]
+    conversations = PortalConversation.objects.filter(practice=practice).select_related('client').prefetch_related('messages__author')[:8]
     return {
         'open_portal_request_count': portal_request_count + booking_request_count,
         'unread_message_count': unread_message_count,
         'chat_conversations': conversations,
         'chat_is_client': False,
+        'chat_open_id': request.GET.get('chat', ''),
         'google_workspace_connected': gmail_connected,
         'practice_setup_complete': gmail_connected and stripe_ready,
         'practice_setup_gmail': gmail_connected,
