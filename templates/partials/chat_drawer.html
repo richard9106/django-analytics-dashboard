@@ -43,7 +43,7 @@
             <div class="chat-thread" aria-live="polite">
               {% for message in conversation.messages.all %}
                 <article class="chat-message chat-message--{{ message.author_kind }}">
-                  <strong>{% if message.author_kind == 'client' %}{% if chat_is_client %}You{% else %}{{ conversation.client }}{% endif %}{% else %}{% if chat_is_client %}{{ conversation.practice.name }}{% else %}You{% endif %}{% endif %}</strong>
+                  <strong>{% if message.author_kind == 'client' %}{% if chat_is_client %}You{% else %}{{ conversation.client }}{% endif %}{% else %}{% if chat_is_client %}{% if conversation.client.primary_therapist %}{{ conversation.client.primary_therapist.user.get_full_name|default:conversation.client.primary_therapist.user.username }}{% else %}{{ conversation.practice.name }}{% endif %}{% else %}You{% endif %}{% endif %}</strong>
                   <p>{{ message.body|linebreaksbr }}</p>
                 </article>
               {% endfor %}

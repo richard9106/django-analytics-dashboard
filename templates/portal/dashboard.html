@@ -16,7 +16,7 @@
         <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <span>NuviaMy Portal</span>
       </a>
-      <a class="btn btn-soft" href="{% url 'portal:conversations' %}" aria-label="Secure messages{% if unread_message_count %}, {{ unread_message_count }} unread{% endif %}">&#128276;{% if unread_message_count %} <strong>{{ unread_message_count }}</strong>{% endif %}</a><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+      <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
     </section>
 
     <section class="welcome-panel">
