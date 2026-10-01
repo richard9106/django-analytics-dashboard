@@ -117,6 +117,7 @@ class Appointment(models.Model):
     reminder_status = models.CharField(max_length=20, choices=ReminderStatus.choices, default=ReminderStatus.PENDING)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
     reminder_error = models.TextField(blank=True)
+    series_id = models.UUIDField(null=True, blank=True, db_index=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -178,3 +179,4 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.client} with {self.therapist} at {self.starts_at:%Y-%m-%d %H:%M}"
+import uuid

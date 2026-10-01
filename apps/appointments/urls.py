@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import AppointmentCreateView, AppointmentDeleteView, AppointmentGoogleSyncView, AppointmentListView, AppointmentRescheduleView, AppointmentUpdateView
+from .views import AppointmentCreateView, AppointmentDeleteView, AppointmentGoogleSyncView, AppointmentListView, AppointmentRescheduleView, AppointmentSeriesCancelView, AppointmentSeriesUpdateView, AppointmentUpdateView
 
 app_name = 'appointments'
 
@@ -10,5 +10,7 @@ urlpatterns = [
     path('<int:pk>/edit/', AppointmentUpdateView.as_view(), name='edit'),
     path('<int:pk>/reschedule/', AppointmentRescheduleView.as_view(), name='reschedule'),
     path('<int:pk>/sync/google/', AppointmentGoogleSyncView.as_view(), name='google_sync'),
+    path('<int:pk>/series/update/', AppointmentSeriesUpdateView.as_view(), name='series_update'),
+    path('<int:pk>/series/cancel/', AppointmentSeriesCancelView.as_view(), name='series_cancel'),
     path('<int:pk>/delete/', AppointmentDeleteView.as_view(), name='delete'),
 ]

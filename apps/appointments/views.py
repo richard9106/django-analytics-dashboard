@@ -1,10 +1,12 @@
 import calendar
+import uuid
 from datetime import date, datetime, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -303,8 +305,11 @@ class AppointmentCreateView(LoginRequiredMixin, PracticePermissionMixin, Practic
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        sync_appointment_to_google(self.object)
         repeat_count = form.cleaned_data.get('repeat_weekly_count') or 1
+        if repeat_count > 1:
+            self.object.series_id = uuid.uuid4()
+            self.object.save(update_fields=['series_id', 'updated_at'])
+        sync_appointment_to_google(self.object)
         if repeat_count > 1:
             delta = self.object.ends_at - self.object.starts_at
             for index in range(1, repeat_count):
@@ -319,6 +324,7 @@ class AppointmentCreateView(LoginRequiredMixin, PracticePermissionMixin, Practic
                     location=self.object.location,
                     meeting_url=self.object.meeting_url,
                     notes=self.object.notes,
+                    series_id=self.object.series_id,
                 )
                 appointment.full_clean()
                 appointment.save()
@@ -382,6 +388,75 @@ class AppointmentDeleteView(LoginRequiredMixin, PracticePermissionMixin, Practic
         except Exception:
             pass
         return super().form_valid(form)
+
+
+class AppointmentSeriesUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
+
+    def post(self, request, pk):
+        practice = self.get_practice()
+        appointment = get_object_or_404(Appointment.objects.filter(practice=practice), pk=pk)
+        if not appointment.series_id:
+            messages.error(request, 'This appointment is not part of a recurring series.')
+            return redirect('appointments:edit', pk=appointment.pk)
+        original_start = appointment.starts_at
+        form = AppointmentForm(request.POST, instance=appointment, practice=practice)
+        if not form.is_valid():
+            messages.error(request, 'Review the appointment details before updating the series.')
+            return redirect('appointments:edit', pk=appointment.pk)
+        updated = form.save(commit=False)
+        start_delta = updated.starts_at - original_start
+        duration = updated.ends_at - updated.starts_at
+        future = list(Appointment.objects.filter(
+            practice=practice, series_id=appointment.series_id,
+            starts_at__gte=original_start, status=Appointment.Status.SCHEDULED,
+        ))
+        try:
+            with transaction.atomic():
+                for occurrence in future:
+                    occurrence.client = updated.client
+                    occurrence.therapist = updated.therapist
+                    occurrence.starts_at = occurrence.starts_at + start_delta
+                    occurrence.ends_at = occurrence.starts_at + duration
+                    occurrence.appointment_type = updated.appointment_type
+                    occurrence.status = updated.status
+                    occurrence.location = updated.location
+                    occurrence.meeting_url = updated.meeting_url
+                    occurrence.notes = updated.notes
+                    occurrence.full_clean()
+                    occurrence.save()
+        except ValidationError as exc:
+            messages.error(request, f'Series could not be updated: {exc}')
+            return redirect('appointments:edit', pk=appointment.pk)
+        for occurrence in future:
+            sync_appointment_to_google(occurrence)
+        messages.success(request, f'Updated {len(future)} upcoming appointments in this series.')
+        return redirect('appointments:list')
+
+
+class AppointmentSeriesCancelView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
+
+    def post(self, request, pk):
+        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        if not appointment.series_id:
+            messages.error(request, 'This appointment is not part of a recurring series.')
+            return redirect('appointments:edit', pk=appointment.pk)
+        future = list(Appointment.objects.filter(
+            practice=appointment.practice, series_id=appointment.series_id,
+            starts_at__gte=appointment.starts_at, status=Appointment.Status.SCHEDULED,
+        ))
+        for occurrence in future:
+            occurrence.status = Appointment.Status.CANCELLED
+            occurrence.save(update_fields=['status', 'updated_at'])
+            try:
+                delete_google_event_for_appointment(occurrence)
+            except Exception:
+                pass
+        messages.success(request, f'Cancelled {len(future)} upcoming appointments in this series.')
+        return redirect('appointments:list')
 
 
 class AppointmentGoogleSyncView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):

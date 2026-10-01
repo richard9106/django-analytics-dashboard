@@ -120,9 +120,13 @@
               <button class="btn btn-danger" type="submit">Delete appointment</button>
             </form>
           {% endif %}
+          {% if object.series_id %}
+            <form method="post" action="{% url 'appointments:series_cancel' object.pk %}">{% csrf_token %}<button class="btn btn-danger" type="submit">Cancel this and future sessions</button></form>
+          {% endif %}
           <div class="form-actions">
             <a class="btn btn-secondary" href="{% url 'appointments:list' %}">Cancel</a>
             {% if object.pk %}<button class="btn btn-soft" type="submit" form="appointment-form" formaction="{% url 'appointments:google_sync' object.pk %}">Sync to Google</button>{% endif %}
+            {% if object.series_id %}<button class="btn btn-soft" type="submit" form="appointment-form" formaction="{% url 'appointments:series_update' object.pk %}">Save this and future sessions</button>{% endif %}
             <button class="btn btn-primary" type="submit" form="appointment-form">{{ submit_label }}</button>
           </div>
         </div>

@@ -245,7 +245,6 @@ Any ZIP
 
 ## Remaining Product Roadmap
 
-- Add recurring appointment series editing and cancellation controls.
 - Add Google sync issue dashboard and reconnect state.
 - Add Dropbox OAuth/export support.
 - Define no-show/cancellation rules for package usage.

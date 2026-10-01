@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from uuid import uuid4
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -523,8 +524,33 @@ class AppointmentViewTests(TestCase):
         self.assertRedirects(response, reverse('appointments:list'))
         appointments = list(Appointment.objects.filter(practice=practice).order_by('starts_at'))
         self.assertEqual(len(appointments), 3)
+        self.assertIsNotNone(appointments[0].series_id)
+        self.assertEqual({appointment.series_id for appointment in appointments}, {appointments[0].series_id})
         self.assertEqual(appointments[1].starts_at, appointments[0].starts_at + timedelta(weeks=1))
         self.assertEqual(appointments[2].starts_at, appointments[0].starts_at + timedelta(weeks=2))
+
+    def test_series_cancel_only_cancels_current_and_future_occurrences(self):
+        user, practice, therapist, client = self.create_practice_user()
+        series_id = uuid4()
+        starts_at = timezone.now() + timedelta(days=1)
+        appointments = [
+            Appointment.objects.create(
+                practice=practice, client=client, therapist=therapist,
+                starts_at=starts_at + timedelta(weeks=index), ends_at=starts_at + timedelta(weeks=index, minutes=50),
+                series_id=series_id,
+            ) for index in range(3)
+        ]
+        self.client.force_login(user)
+
+        response = self.client.post(reverse('appointments:series_cancel', args=[appointments[1].pk]))
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointments[0].refresh_from_db()
+        appointments[1].refresh_from_db()
+        appointments[2].refresh_from_db()
+        self.assertEqual(appointments[0].status, Appointment.Status.SCHEDULED)
+        self.assertEqual(appointments[1].status, Appointment.Status.CANCELLED)
+        self.assertEqual(appointments[2].status, Appointment.Status.CANCELLED)
 
     def test_availability_settings_create_working_hour(self):
         user, practice, _therapist, _client = self.create_practice_user()
