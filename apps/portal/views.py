@@ -520,7 +520,10 @@ class PortalAccessDeleteView(PracticePermissionMixin, PracticeContextMixin, Dele
         return response
 
 
-class PortalAccessPasswordResetView(PracticeContextMixin, View):
+class PortalAccessPasswordResetView(PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'intake'
+    permission_action = 'edit'
+
     def post(self, request, pk):
         practice = self.get_practice()
         access = get_object_or_404(ClientPortalAccess.objects.select_related('client', 'user'), pk=pk, practice=practice)

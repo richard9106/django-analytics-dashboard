@@ -836,6 +836,12 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, client.first_name)
         self.assertContains(response, user.username)
+        self.assertContains(response, 'role="region" aria-labelledby="portal-accounts-heading"')
+        self.assertContains(response, '<th scope="col">Client</th>', html=True)
+        self.assertContains(response, '<th scope="col"><span class="sr-only">Actions</span></th>', html=True)
+        self.assertContains(response, 'data-row-actions-trigger')
+        self.assertContains(response, 'aria-controls="portal-access-actions-')
+        self.assertContains(response, 'data-row-actions-menu')
         self.assertNotContains(response, other_user.username)
 
     def test_portal_settings_create_access(self):
@@ -955,6 +961,27 @@ class ClientPortalViewTests(TestCase):
 
         self.assertContains(response, "Reset password")
         self.assertContains(response, "data-confirm-message=\"Reset this client's portal password? Their current password will stop working.\"")
+        self.assertContains(response, "Delete access")
+        self.assertContains(response, "data-confirm-message=\"Delete this client portal access? The client will lose portal access.\"")
+
+    def test_portal_settings_reset_password_requires_edit_permission(self):
+        user, practice, _therapist, _client, access = self.create_portal_user(username="practice-client")
+        old_password = user.password
+        therapist_user = get_user_model().objects.create_user(username="limited-therapist", password="StrongPass123!")
+        UserProfile.objects.create(
+            user=therapist_user,
+            practice=practice,
+            role=UserProfile.Role.THERAPIST,
+            permissions={"intake": {"view": True, "create": False, "edit": False, "delete": False}},
+        )
+
+        self.client.force_login(therapist_user)
+        response = self.client.post(reverse("portal_settings:portal_access_reset_password", args=[access.pk]))
+
+        user.refresh_from_db()
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(user.password, old_password)
+        self.assertFalse(AuditLog.objects.filter(action=AuditLog.Action.UPDATE, object_type="portal.ClientPortalAccess").exists())
 
     def test_portal_settings_reset_password_is_scoped_to_practice(self):
         _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
