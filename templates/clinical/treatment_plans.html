@@ -16,8 +16,8 @@
     <main class="app-main">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
-          <a class="btn btn-primary" href="{% url 'clinical:treatment_plan_create' %}" data-modal-target="plan-create-modal">+ New plan</a>
-          <a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}" data-modal-target="diagnosis-create-modal">+ Diagnosis</a>
+          {% if workspace_permissions.clinical.create %}<a class="btn btn-primary" href="{% url 'clinical:treatment_plan_create' %}" data-modal-target="plan-create-modal">+ New plan</a>
+          <a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}" data-modal-target="diagnosis-create-modal">+ Diagnosis</a>{% endif %}
           <a class="btn btn-soft" href="{% url 'clinical:list' %}">Notes</a>
         </div>
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
@@ -45,32 +45,25 @@
                 <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'clinical:treatment_plans' %}">Clear</a></div>
               </form>
             </details>
-            <div class="notes-list">
-              {% for plan in plans %}
-                <article class="note-card{% if plan.is_review_due %} review-due-card{% endif %}">
-                  <div class="note-card-head">
-                    <div><h3>{{ plan.title }}</h3><p>{{ plan.client }} with {{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }} · Started {{ plan.start_date|date:"M j, Y" }}</p></div>
-                    <span class="badge {% if plan.is_review_due or plan.status == 'review_due' %}warning{% elif plan.status == 'active' %}success{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{% if plan.is_review_due %}Review due{% else %}{{ plan.get_status_display }}{% endif %}</span>
+            <div class="notes-list clinical-note-tree" aria-label="Treatment plans grouped by client">
+              {% for group in plan_groups %}
+                <details class="client-note-group" {% if plan_filters.client %}open{% endif %}>
+                  <summary><span class="client-avatar small" aria-hidden="true">{{ group.client.first_name|first }}{{ group.client.last_name|first }}</span><span><strong>{{ group.client }}</strong><small>{{ group.plans|length }} plan{{ group.plans|length|pluralize }} in this view</small></span><span class="badge brand">Open plans</span></summary>
+                  <div class="client-note-children">
+                    {% for plan in group.plans %}
+                      <article class="note-tree-item{% if plan.is_review_due %} review-due-card{% endif %}">
+                        <button class="note-tree-trigger" type="button" data-modal-target="plan-detail-modal-{{ plan.pk }}" aria-label="Open {{ plan.title }} for {{ plan.client }}">
+                          <span><strong>{{ plan.title }}</strong><small>{{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }} · Started {{ plan.start_date|date:"M j, Y" }}</small></span>
+                          <span class="badge {% if plan.is_review_due or plan.status == 'review_due' %}warning{% elif plan.status == 'active' %}success{% elif plan.status == 'completed' %}brand{% else %}danger{% endif %}">{% if plan.is_review_due %}Review due{% else %}{{ plan.get_status_display }}{% endif %}</span>
+                        </button>
+                        <p class="note-preview"><strong>Goals:</strong> {{ plan.goals|truncatechars:190 }}</p>
+                        {% if plan.review_date %}<p class="sync-meta">Review date: {{ plan.review_date|date:"M j, Y" }}</p>{% endif %}
+                      </article>
+                    {% endfor %}
                   </div>
-                  <p class="note-preview"><strong>Goals:</strong> {{ plan.goals|truncatechars:190 }}</p>
-                  {% if plan.review_date %}<p class="sync-meta">Review date: {{ plan.review_date|date:"M j, Y" }}</p>{% endif %}
-                  {% if plan.diagnoses.all %}
-                    <p class="sync-meta">Diagnoses: {% for diagnosis in plan.diagnoses.all %}{{ diagnosis.code }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-                  {% endif %}
-                  <div class="inline-actions">
-                    <a class="inline-link" href="{% url 'clinical:treatment_plan_edit' plan.pk %}" data-modal-target="plan-modal-{{ plan.pk }}">Edit plan</a>
-                    {% if plan.is_review_due %}
-                      <form class="inline-review-form" method="post" action="{% url 'clinical:treatment_plan_complete_review' plan.pk %}">
-                        {% csrf_token %}
-                        <label for="next-review-{{ plan.pk }}">Next review</label>
-                        <input id="next-review-{{ plan.pk }}" name="next_review_date" type="date" value="{{ default_next_review_date|date:'Y-m-d' }}" required>
-                        <button class="inline-button" type="submit">Complete review</button>
-                      </form>
-                    {% endif %}
-                  </div>
-                </article>
+                </details>
               {% empty %}
-                <p class="empty-state">No treatment plans have been created yet.</p>
+                <p class="empty-state">No treatment plans match these filters.</p>
               {% endfor %}
             </div>
           </div>
@@ -88,7 +81,7 @@
                   <span class="badge {% if diagnosis.active %}success{% else %}danger{% endif %}">{% if diagnosis.active %}Active{% else %}Inactive{% endif %}</span>
                 </div>
                 {% if diagnosis.notes %}<p>{{ diagnosis.notes|truncatechars:120 }}</p>{% endif %}
-                <a class="inline-link" href="{% url 'clinical:diagnosis_edit' diagnosis.pk %}" data-modal-target="diagnosis-modal-{{ diagnosis.pk }}">Edit diagnosis</a>
+                {% if workspace_permissions.clinical.edit %}<a class="inline-link" href="{% url 'clinical:diagnosis_edit' diagnosis.pk %}" data-modal-target="diagnosis-modal-{{ diagnosis.pk }}">Edit diagnosis</a>{% endif %}
               </article>
             {% empty %}
               <p class="empty-state">No diagnoses have been added yet.</p>
@@ -97,42 +90,64 @@
         </aside>
       </section>
 
-      <dialog class="modal-dialog" id="plan-create-modal">
+      {% if workspace_permissions.clinical.create %}<dialog class="modal-dialog" id="plan-create-modal">
         <div class="modal-card">
           <div class="modal-head"><div><p class="eyebrow">New Treatment Plan</p><h2>Create a care plan</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
           <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_create' %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix='plan-create' %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create plan</button></div></form>
         </div>
-      </dialog>
+      </dialog>{% endif %}
 
       {% for plan in plans %}
-        <dialog class="modal-dialog" id="plan-modal-{{ plan.pk }}">
+        <dialog class="modal-dialog" id="plan-detail-modal-{{ plan.pk }}">
           <div class="modal-card">
-            <div class="modal-head"><div><p class="eyebrow">Edit Treatment Plan</p><h2>{{ plan.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
-            <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_edit' plan.pk %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix=plan.pk plan=plan %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:treatment_plan_delete' plan.pk %}" data-confirm-message="Delete this treatment plan? This cannot be undone.">Delete plan</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
+            <div class="modal-head"><div><p class="eyebrow">Treatment Plan</p><h2>{{ plan.title }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <div class="note-detail-grid">
+              <div><span class="sync-meta">Client</span><strong>{{ plan.client }}</strong></div>
+              <div><span class="sync-meta">Therapist</span><strong>{{ plan.therapist.user.get_full_name|default:plan.therapist.user.username }}</strong></div>
+              <div><span class="sync-meta">Review</span><strong>{% if plan.review_date %}{{ plan.review_date|date:"M j, Y" }}{% else %}Not scheduled{% endif %}</strong></div>
+              <div><span class="sync-meta">Status</span><strong>{% if plan.is_review_due %}Review due{% else %}{{ plan.get_status_display }}{% endif %}</strong></div>
+            </div>
+            <section class="note-detail-section" aria-label="Goals"><h3>Goals</h3><p>{{ plan.goals|default:"No goals documented."|linebreaksbr }}</p></section>
+            {% if plan.objectives %}<section class="note-detail-section" aria-label="Objectives"><h3>Objectives</h3><p>{{ plan.objectives|linebreaksbr }}</p></section>{% endif %}
+            {% if plan.interventions %}<section class="note-detail-section" aria-label="Interventions"><h3>Interventions</h3><p>{{ plan.interventions|linebreaksbr }}</p></section>{% endif %}
+            {% if plan.diagnoses.all %}<p class="sync-panel"><strong>Diagnoses</strong><span>{% for diagnosis in plan.diagnoses.all %}{{ diagnosis.code }} · {{ diagnosis.label }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span></p>{% endif %}
+            <div class="form-actions split-actions">
+              <a class="btn btn-secondary" href="{% url 'clients:detail' plan.client.pk %}">Open client</a>
+              <div class="form-actions">
+                {% if plan.is_review_due and workspace_permissions.clinical.edit %}<form class="inline-review-form" method="post" action="{% url 'clinical:treatment_plan_complete_review' plan.pk %}">{% csrf_token %}<label for="next-review-detail-{{ plan.pk }}">Next review</label><input id="next-review-detail-{{ plan.pk }}" name="next_review_date" type="date" value="{{ default_next_review_date|date:'Y-m-d' }}" required><button class="btn btn-secondary" type="submit">Complete review</button></form>{% endif %}
+                {% if workspace_permissions.clinical.delete %}<form method="post" action="{% url 'clinical:treatment_plan_delete' plan.pk %}" data-confirm-message="Delete this treatment plan? This cannot be undone.">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete plan</button></form>{% endif %}
+                {% if workspace_permissions.clinical.edit %}<a class="btn btn-primary" href="{% url 'clinical:treatment_plan_edit' plan.pk %}">Edit plan</a>{% endif %}
+              </div>
+            </div>
           </div>
         </dialog>
       {% endfor %}
 
-      <dialog class="modal-dialog" id="diagnosis-create-modal">
+      {% for plan in plans %}{% if workspace_permissions.clinical.edit %}
+        <dialog class="modal-dialog" id="plan-modal-{{ plan.pk }}">
+          <div class="modal-card">
+            <div class="modal-head"><div><p class="eyebrow">Edit Treatment Plan</p><h2>{{ plan.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <form class="appointment-form" method="post" action="{% url 'clinical:treatment_plan_edit' plan.pk %}">{% csrf_token %}{% include 'clinical/treatment_plan_fields.html' with prefix=plan.pk plan=plan %}<div class="form-actions split-actions">{% if workspace_permissions.clinical.delete %}<button class="btn btn-danger" type="submit" formaction="{% url 'clinical:treatment_plan_delete' plan.pk %}" data-confirm-message="Delete this treatment plan? This cannot be undone.">Delete plan</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
+          </div>
+        </dialog>
+      {% endif %}{% endfor %}
+
+      {% if workspace_permissions.clinical.create %}<dialog class="modal-dialog" id="diagnosis-create-modal">
         <div class="modal-card">
           <div class="modal-head"><div><p class="eyebrow">New Diagnosis</p><h2>Add client diagnosis</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
           <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_create' %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix='diagnosis-create' %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Add diagnosis</button></div></form>
         </div>
-      </dialog>
+      </dialog>{% endif %}
 
-      {% for diagnosis in diagnoses %}
+      {% for diagnosis in diagnoses %}{% if workspace_permissions.clinical.edit %}
         <dialog class="modal-dialog" id="diagnosis-modal-{{ diagnosis.pk }}">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Edit Diagnosis</p><h2>{{ diagnosis.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
             <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_edit' diagnosis.pk %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix=diagnosis.pk diagnosis=diagnosis %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:diagnosis_delete' diagnosis.pk %}" data-confirm-message="Delete this diagnosis? This cannot be undone.">Delete diagnosis</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
           </div>
         </dialog>
-      {% endfor %}
+      {% endif %}{% endfor %}
     </main>
   </div>
-  <script>
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
-  </script>
 </body>
 </html>

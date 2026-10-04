@@ -843,6 +843,11 @@ class TreatmentPlanViewTests(TestCase):
         self.assertNotContains(response, "Hidden care plan")
         self.assertContains(response, 'id="plan-create-modal"')
         self.assertContains(response, 'id="diagnosis-create-modal"')
+        self.assertContains(response, 'aria-label="Treatment plans grouped by client"')
+        self.assertContains(response, 'class="client-note-group"')
+        self.assertContains(response, 'id="plan-detail-modal-')
+        self.assertEqual(len(response.context["plan_groups"]), 1)
+        self.assertEqual(response.context["plan_groups"][0]["client"], client)
 
     def test_treatment_plan_list_highlights_due_reviews(self):
         user, practice, therapist, client = self.create_practice_user()
@@ -912,6 +917,8 @@ class TreatmentPlanViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Filtered care plan")
         self.assertNotContains(response, "Hidden care plan")
+        self.assertEqual(len(response.context["plan_groups"]), 1)
+        self.assertEqual(response.context["plan_groups"][0]["client"], client)
         self.assertContains(response, 'value="active" selected')
         self.assertContains(response, 'Filter treatment plans')
         self.assertIn(visible_plan, response.context["plans"])
@@ -1085,6 +1092,29 @@ class TreatmentPlanViewTests(TestCase):
         plan.refresh_from_db()
         self.assertEqual(plan.status, TreatmentPlan.Status.ACTIVE)
         self.assertEqual(plan.review_date, next_review)
+
+    def test_treatment_plan_complete_review_rejects_invalid_next_review_date(self):
+        user, practice, therapist, client = self.create_practice_user()
+        plan = TreatmentPlan.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            title="Due care plan",
+            status=TreatmentPlan.Status.REVIEW_DUE,
+            goals="Review goals.",
+            review_date=timezone.localdate(),
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("clinical:treatment_plan_complete_review", args=[plan.pk]),
+            {"next_review_date": "not-a-date"},
+        )
+
+        self.assertRedirects(response, reverse("clinical:treatment_plans"))
+        plan.refresh_from_db()
+        self.assertEqual(plan.status, TreatmentPlan.Status.REVIEW_DUE)
+        self.assertEqual(plan.review_date, timezone.localdate())
 
     def test_treatment_plan_complete_review_is_scoped_to_user_practice(self):
         user, _practice, _therapist, _client = self.create_practice_user()

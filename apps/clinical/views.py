@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
@@ -272,6 +273,7 @@ class TreatmentPlanListView(LoginRequiredMixin, PracticePermissionMixin, Treatme
             TreatmentPlan.objects.filter(practice=practice)
             .select_related('client', 'therapist__user')
             .prefetch_related('diagnoses')
+            .order_by('client__last_name', 'client__first_name', 'review_date', '-updated_at', '-pk')
         )
         filters = self.get_plan_filters()
 
@@ -307,6 +309,13 @@ class TreatmentPlanListView(LoginRequiredMixin, PracticePermissionMixin, Treatme
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
+        plans = list(context['plans'])
+        groups = OrderedDict()
+        for plan in plans:
+            group = groups.setdefault(plan.client_id, {'client': plan.client, 'plans': []})
+            group['plans'].append(plan)
+        context['plans'] = plans
+        context['plan_groups'] = list(groups.values())
         context['diagnoses'] = (
             practice.diagnoses.select_related('client').all() if practice else Diagnosis.objects.none()
         )
@@ -425,7 +434,10 @@ class TreatmentPlanCompleteReviewView(LoginRequiredMixin, PracticePermissionMixi
         next_review_date = request.POST.get('next_review_date')
         plan.status = TreatmentPlan.Status.ACTIVE
         if next_review_date:
-            plan.review_date = date.fromisoformat(next_review_date)
+            parsed_review_date = parse_date(next_review_date)
+            if not parsed_review_date:
+                return redirect('clinical:treatment_plans')
+            plan.review_date = parsed_review_date
         else:
             plan.review_date = timezone.localdate() + timedelta(days=90)
         plan.full_clean()
