@@ -35,7 +35,7 @@
                   <td>{{ document.get_document_type_display }}</td>
                   <td>{{ document.created_at|date:"M j, Y" }}</td>
                   <td>{{ document.get_external_sync_status_display }}{% if document.external_sync_error %}<small class="table-subtext">{{ document.external_sync_error|truncatechars:80 }}</small>{% endif %}</td>
-                  <td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ document.title }}" aria-expanded="false" aria-controls="document-actions-{{ document.pk }}" data-document-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="document-actions-{{ document.pk }}" role="menu" hidden data-document-actions-menu><a role="menuitem" class="inline-link" href="{% url 'documents:download' document.pk %}">Download</a>{% if document.external_file_url %}<a role="menuitem" class="inline-link" href="{{ document.external_file_url }}" target="_blank" rel="noopener">Open in Drive</a>{% endif %}<form method="post" action="{% url 'documents:google_drive_export' document.pk %}">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Export to Google Drive</button></form><form method="post" action="{% url 'documents:delete' document.pk %}" data-confirm-message="Delete this document? The file will be removed from the client record.">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit" data-destructive-action>Delete</button></form></div></td>
+                  <td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ document.title }}" aria-expanded="false" aria-controls="document-actions-{{ document.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="document-actions-{{ document.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'documents:download' document.pk %}">Download</a>{% if document.external_file_url %}<a role="menuitem" class="inline-link" href="{{ document.external_file_url }}" target="_blank" rel="noopener">Open in Drive</a>{% endif %}<form method="post" action="{% url 'documents:google_drive_export' document.pk %}">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Export to Google Drive</button></form><form method="post" action="{% url 'documents:delete' document.pk %}" data-confirm-message="Delete this document? The file will be removed from the client record.">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit" data-destructive-action>Delete</button></form></div></td>
                 </tr>
               {% empty %}<tr><td colspan="6" class="empty-state">No documents have been uploaded yet.</td></tr>{% endfor %}
             </tbody>
@@ -46,69 +46,5 @@
       <dialog class="modal-dialog" id="document-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Upload Document</p><h2>Add a client document</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'documents/partials/document_form.html' with action_url='documents:create' submit_label='Upload document' %}</div></dialog>
     </main>
   </div>
-  <script>
-    (() => {
-      let openTrigger = null;
-      let openMenu = null;
-      const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
-      const menuItems = (menu) => [...menu.querySelectorAll('a, button')].filter((item) => !item.disabled);
-      const closeActions = (restoreFocus = true) => {
-        if (!openMenu) return;
-        openMenu.hidden = true;
-        openMenu.classList.remove('is-mobile-sheet');
-        if (openTrigger) {
-          openTrigger.setAttribute('aria-expanded', 'false');
-          if (restoreFocus) openTrigger.focus();
-        }
-        openTrigger = null;
-        openMenu = null;
-      };
-      const positionMenu = () => {
-        if (!openTrigger || !openMenu || openMenu.hidden) return;
-        if (isMobile()) { openMenu.classList.add('is-mobile-sheet'); return; }
-        openMenu.classList.remove('is-mobile-sheet');
-        const rect = openTrigger.getBoundingClientRect();
-        const width = Math.min(192, window.innerWidth - 24);
-        const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-        const below = rect.bottom + 8;
-        const top = below + openMenu.offsetHeight <= window.innerHeight - 12 ? below : Math.max(12, rect.top - openMenu.offsetHeight - 8);
-        openMenu.style.left = `${left}px`;
-        openMenu.style.top = `${top}px`;
-        openMenu.style.width = `${width}px`;
-      };
-      const openActions = (trigger) => {
-        if (openTrigger === trigger) { closeActions(false); return; }
-        closeActions(false);
-        const menu = document.getElementById(trigger.getAttribute('aria-controls'));
-        if (!menu) return;
-        document.body.appendChild(menu);
-        menu.hidden = false;
-        openTrigger = trigger;
-        openMenu = menu;
-        trigger.setAttribute('aria-expanded', 'true');
-        positionMenu();
-        trigger.focus();
-      };
-      document.addEventListener('click', (event) => {
-        const trigger = event.target.closest('[data-document-actions-trigger]');
-        if (trigger) { event.preventDefault(); openActions(trigger); return; }
-        if (event.target.closest('[data-document-actions-menu] a, [data-document-actions-menu] button')) { closeActions(false); return; }
-        if (!event.target.closest('[data-document-actions-menu]')) closeActions(false);
-      });
-      document.addEventListener('keydown', (event) => {
-        if (!openMenu) return;
-        const items = menuItems(openMenu);
-        const currentIndex = items.indexOf(document.activeElement);
-        if (event.key === 'Escape') { event.preventDefault(); closeActions(); return; }
-        if (event.key === 'ArrowDown') { event.preventDefault(); items[(currentIndex + 1 + items.length) % items.length]?.focus(); }
-        if (event.key === 'ArrowUp') { event.preventDefault(); items[(currentIndex - 1 + items.length) % items.length]?.focus(); }
-        if (event.key === 'Home') { event.preventDefault(); items[0]?.focus(); }
-        if (event.key === 'End') { event.preventDefault(); items[items.length - 1]?.focus(); }
-      });
-      window.addEventListener('resize', positionMenu);
-      window.addEventListener('scroll', positionMenu, true);
-    })();
-    document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});
-  </script>
 </body>
 </html>

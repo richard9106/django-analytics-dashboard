@@ -34,7 +34,7 @@
                <thead><tr><th scope="col">Invoice</th><th scope="col">Client</th><th scope="col">Status</th><th scope="col">Amount</th><th scope="col">Paid</th><th scope="col">Balance</th><th scope="col">For</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {% for invoice in invoices %}
-                   <tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.payment_total }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td><td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ invoice.invoice_number }}" aria-expanded="false" aria-controls="invoice-actions-{{ invoice.pk }}" data-invoice-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="invoice-actions-{{ invoice.pk }}" role="menu" hidden data-invoice-actions-menu>{% if workspace_permissions.billing.view %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.edit %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">Edit invoice</a><form method="post" action="{% url 'billing:invoice_publish' invoice.pk %}" data-confirm-message="Publish this invoice to make it available for billing?">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Publish</button></form>{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.delete %}<form method="post" action="{% url 'billing:invoice_delete' invoice.pk %}" data-confirm-message="Delete this draft invoice? This cannot be undone.">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Delete draft</button></form>{% endif %}</div></td></tr>
+                   <tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.client }}</td><td>{{ invoice.get_status_display }}</td><td>${{ invoice.amount }}</td><td>${{ invoice.payment_total }}</td><td>${{ invoice.balance_due }}</td><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Appointment{% else %}General{% endif %}</td><td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ invoice.invoice_number }}" aria-expanded="false" aria-controls="invoice-actions-{{ invoice.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="invoice-actions-{{ invoice.pk }}" role="menu" hidden data-row-actions-menu>{% if workspace_permissions.billing.view %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_print' invoice.pk %}" target="_blank" rel="noopener">Print invoice</a>{% if invoice.appointment %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_superbill' invoice.pk %}" target="_blank" rel="noopener">Superbill</a>{% endif %}{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.edit %}<a role="menuitem" class="inline-link" href="{% url 'billing:invoice_edit' invoice.pk %}" data-modal-target="invoice-modal-{{ invoice.pk }}">Edit invoice</a><form method="post" action="{% url 'billing:invoice_publish' invoice.pk %}" data-confirm-message="Publish this invoice to make it available for billing?">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Publish</button></form>{% endif %}{% if invoice.status == 'draft' and workspace_permissions.billing.delete %}<form method="post" action="{% url 'billing:invoice_delete' invoice.pk %}" data-confirm-message="Delete this draft invoice? This cannot be undone.">{% csrf_token %}<button role="menuitem" class="inline-button" type="submit">Delete draft</button></form>{% endif %}</div></td></tr>
                 {% empty %}
                    <tr><td colspan="8">No invoices yet.</td></tr>
                 {% endfor %}
@@ -51,7 +51,7 @@
               <thead><tr><th scope="col">Package</th><th scope="col">Client</th><th scope="col">Used</th><th scope="col">Remaining</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {% for package in packages %}
-                  <tr><td><strong>{{ package.name }}</strong><small class="table-subtext">{{ package.sessions_purchased }} purchased</small></td><td>{{ package.client }}</td><td>{{ package.sessions_used }} of {{ package.sessions_purchased }} used</td><td>{{ package.sessions_remaining }} remaining</td><td><span class="badge brand">{{ package.get_status_display }}</span></td><td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ package.name }}" aria-expanded="false" aria-controls="package-actions-{{ package.pk }}" data-package-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="package-actions-{{ package.pk }}" role="menu" hidden data-package-actions-menu><a role="menuitem" class="inline-link" href="{% url 'billing:package_edit' package.pk %}" data-modal-target="package-modal-{{ package.pk }}">Edit package</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td></tr>
+                  <tr><td><strong>{{ package.name }}</strong><small class="table-subtext">{{ package.sessions_purchased }} purchased</small></td><td>{{ package.client }}</td><td>{{ package.sessions_used }} of {{ package.sessions_purchased }} used</td><td>{{ package.sessions_remaining }} remaining</td><td><span class="badge brand">{{ package.get_status_display }}</span></td><td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ package.name }}" aria-expanded="false" aria-controls="package-actions-{{ package.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="package-actions-{{ package.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'billing:package_edit' package.pk %}" data-modal-target="package-modal-{{ package.pk }}">Edit package</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td></tr>
                 {% empty %}
                   <tr><td colspan="6" class="empty-state">No session packages yet.</td></tr>
                 {% endfor %}
@@ -74,64 +74,6 @@
     </main>
   </div>
   <script>
-    (() => {
-      let openTrigger = null;
-      let openMenu = null;
-      const isMobile = () => window.matchMedia('(max-width: 720px)').matches;
-      const focusable = (menu) => [...menu.querySelectorAll('a, button')].filter((item) => !item.disabled);
-      const closeActions = (restoreFocus = true) => {
-        if (!openMenu) return;
-        openMenu.hidden = true;
-        openMenu.classList.remove('is-mobile-sheet');
-        if (openTrigger) {
-          openTrigger.setAttribute('aria-expanded', 'false');
-          if (restoreFocus) openTrigger.focus();
-        }
-        openTrigger = null;
-        openMenu = null;
-      };
-      const positionMenu = () => {
-        if (!openTrigger || !openMenu || openMenu.hidden) return;
-        if (isMobile()) { openMenu.classList.add('is-mobile-sheet'); return; }
-        openMenu.classList.remove('is-mobile-sheet');
-        const rect = openTrigger.getBoundingClientRect();
-        const width = Math.min(192, window.innerWidth - 24);
-        const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-        const below = rect.bottom + 8;
-        const top = below + openMenu.offsetHeight <= window.innerHeight - 12 ? below : Math.max(12, rect.top - openMenu.offsetHeight - 8);
-        openMenu.style.left = `${left}px`;
-        openMenu.style.top = `${top}px`;
-        openMenu.style.width = `${width}px`;
-      };
-      const openActions = (trigger) => {
-        if (openTrigger === trigger) { closeActions(false); return; }
-        closeActions(false);
-        const menu = document.getElementById(trigger.getAttribute('aria-controls'));
-        if (!menu) return;
-        document.body.appendChild(menu);
-        menu.hidden = false;
-        openTrigger = trigger;
-        openMenu = menu;
-        trigger.setAttribute('aria-expanded', 'true');
-        positionMenu();
-        trigger.focus();
-      };
-      document.addEventListener('click', (event) => {
-        const trigger = event.target.closest('[data-invoice-actions-trigger], [data-package-actions-trigger]');
-        if (trigger) { event.preventDefault(); openActions(trigger); return; }
-        if (event.target.closest('[data-invoice-actions-menu] a, [data-invoice-actions-menu] button, [data-package-actions-menu] a, [data-package-actions-menu] button')) { closeActions(false); return; }
-        if (!event.target.closest('[data-invoice-actions-menu], [data-package-actions-menu]')) closeActions(false);
-      });
-      document.addEventListener('keydown', (event) => {
-        if (!openMenu) return;
-        if (event.key === 'Escape') { event.preventDefault(); closeActions(); return; }
-        if (event.key === 'ArrowDown' && event.target === openTrigger) { event.preventDefault(); focusable(openMenu)[0]?.focus(); }
-      });
-      window.addEventListener('resize', positionMenu);
-      window.addEventListener('scroll', positionMenu, true);
-    })();
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); document.querySelector('[data-invoice-actions-trigger][aria-expanded="true"], [data-package-actions-trigger][aria-expanded="true"]')?.click(); dialog.showModal(); });
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
     document.addEventListener('change', (event) => {
       const select = event.target.closest('[data-package-template-select]');
       if (!select) return;

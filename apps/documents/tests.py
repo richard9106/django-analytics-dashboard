@@ -101,7 +101,7 @@ class ClientDocumentViewTests(TestCase):
         self.assertContains(response, 'role="region" aria-labelledby="document-vault-heading"')
         self.assertContains(response, '<th scope="col">Document</th>', html=True)
         self.assertContains(response, '<th scope="col"><span class="sr-only">Actions</span></th>', html=True)
-        self.assertContains(response, 'data-document-actions-trigger')
+        self.assertContains(response, 'data-row-actions-trigger')
         self.assertContains(response, 'role="menu"')
         self.assertContains(response, 'aria-controls="document-actions-')
         self.assertContains(response, "Download")
