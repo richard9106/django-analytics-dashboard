@@ -16,7 +16,7 @@
     <main class="app-main">
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
-          <a class="btn btn-primary" href="{% url 'clinical:create' %}" data-modal-target="note-create-modal">+ New note</a>
+          {% if workspace_permissions.clinical.create %}<a class="btn btn-primary" href="{% url 'clinical:create' %}" data-modal-target="note-create-modal">+ New note</a>{% endif %}
           <a class="btn btn-secondary" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
           <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
         </div>
@@ -45,29 +45,31 @@
               <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Clear</a></div>
             </form>
           </details>
-          <div class="notes-list">
-            {% for note in notes %}
-              <article class="note-card">
-                <div class="note-card-head">
-                  <div><h3>{{ note.get_note_type_display }} for {{ note.client }}</h3><p>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</p></div>
-                  <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
+          <div class="notes-list clinical-note-tree" aria-label="Clinical notes grouped by client">
+            {% for group in note_groups %}
+              <details class="client-note-group" {% if note_filters.client %}open{% endif %}>
+                <summary><span class="client-avatar small" aria-hidden="true">{{ group.client.first_name|first }}{{ group.client.last_name|first }}</span><span><strong>{{ group.client }}</strong><small>{{ group.notes|length }} note{{ group.notes|length|pluralize }} in this view</small></span><span class="badge brand">Open notes</span></summary>
+                <div class="client-note-children">
+                  {% for note in group.notes %}
+                    <article class="note-tree-item">
+                      <button class="note-tree-trigger" type="button" data-modal-target="note-detail-modal-{{ note.pk }}" aria-label="Open {{ note.get_note_type_display }} for {{ note.client }}">
+                        <span><strong>{{ note.get_note_type_display }}</strong><small>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</small></span>
+                        <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
+                      </button>
+                      <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
+                      {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
+                    </article>
+                  {% endfor %}
                 </div>
-                {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
-                <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
-                {% if note.treatment_progress %}<p class="note-preview"><strong>Plan progress:</strong> {{ note.treatment_progress|truncatechars:160 }}</p>{% endif %}
-                 {% if note.is_locked %}
-                   <p class="sync-meta" aria-label="Locked note status">Read-only clinical record. Locked {{ note.locked_at|date:"M j, Y g:i A" }}.</p>
-                 {% else %}
-                   <a class="inline-link" href="{% url 'clinical:edit' note.pk %}" data-modal-target="note-modal-{{ note.pk }}">Edit note</a>
-                 {% endif %}
-              </article>
+              </details>
             {% empty %}
-              <p class="empty-state">No clinical notes have been created yet.</p>
+              <p class="empty-state">No clinical notes match these filters.</p>
             {% endfor %}
           </div>
         </div>
       </section>
 
+      {% if workspace_permissions.clinical.create %}
       <dialog class="modal-dialog" id="note-create-modal">
         <div class="modal-card">
           <div class="modal-head"><div><p class="eyebrow">New Clinical Note</p><h2>Document a client session</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
@@ -87,8 +89,35 @@
           </form>
         </div>
       </dialog>
+      {% endif %}
 
-      {% for note in notes %}{% if not note.is_locked %}
+      {% for note in notes %}
+        <dialog class="modal-dialog" id="note-detail-modal-{{ note.pk }}">
+          <div class="modal-card">
+            <div class="modal-head"><div><p class="eyebrow">Clinical Note</p><h2>{{ note.get_note_type_display }} for {{ note.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+            <div class="note-detail-grid">
+              <div><span class="sync-meta">Client</span><strong>{{ note.client }}</strong></div>
+              <div><span class="sync-meta">Therapist</span><strong>{{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</strong></div>
+              <div><span class="sync-meta">Updated</span><strong>{{ note.updated_at|date:"M j, Y g:i A" }}</strong></div>
+              <div><span class="sync-meta">Status</span><strong>{% if note.is_locked %}Locked{% else %}Draft{% endif %}</strong></div>
+            </div>
+            {% if note.appointment %}<p class="sync-panel"><strong>Session</strong><span>{{ note.appointment.starts_at|date:"M j, Y g:i A" }}</span></p>{% endif %}
+            {% if note.treatment_plan %}<p class="sync-panel"><strong>Treatment plan</strong><span>{{ note.treatment_plan.title }}</span></p>{% endif %}
+            <section class="note-detail-section" aria-label="Note content"><h3>Content</h3><p>{{ note.content|default:"No content yet."|linebreaksbr }}</p></section>
+            {% if note.treatment_progress %}<section class="note-detail-section" aria-label="Treatment progress"><h3>Treatment plan progress</h3><p>{{ note.treatment_progress|linebreaksbr }}</p></section>{% endif %}
+            {% if note.is_locked %}<p class="sync-meta" aria-label="Locked note status">Read-only clinical record. Locked {{ note.locked_at|date:"M j, Y g:i A" }}.</p>{% endif %}
+            <div class="form-actions split-actions">
+              <a class="btn btn-secondary" href="{% url 'clients:detail' note.client.pk %}">Open client</a>
+              <div class="form-actions">
+                {% if not note.is_locked and workspace_permissions.clinical.delete %}<form method="post" action="{% url 'clinical:delete' note.pk %}" data-confirm-message="Delete this clinical note? This cannot be undone.">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete note</button></form>{% endif %}
+                {% if not note.is_locked and workspace_permissions.clinical.edit %}<a class="btn btn-primary" href="{% url 'clinical:edit' note.pk %}">Edit note</a>{% endif %}
+              </div>
+            </div>
+          </div>
+        </dialog>
+      {% endfor %}
+
+      {% for note in notes %}{% if not note.is_locked and workspace_permissions.clinical.edit %}
         <dialog class="modal-dialog" id="note-modal-{{ note.pk }}">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Edit Clinical Note</p><h2>{{ note.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
@@ -104,16 +133,12 @@
                 <div class="field full"><label for="note-treatment-progress-{{ note.pk }}">Treatment plan progress</label><textarea id="note-treatment-progress-{{ note.pk }}" name="treatment_progress" rows="4">{{ note.treatment_progress }}</textarea></div>
                 <div class="field checkbox-field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock note</label></div>
               </div>
-              <div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:delete' note.pk %}">Delete note</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
+              <div class="form-actions split-actions">{% if workspace_permissions.clinical.delete %}<button class="btn btn-danger" type="submit" formaction="{% url 'clinical:delete' note.pk %}" data-confirm-message="Delete this clinical note? This cannot be undone.">Delete note</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
             </form>
           </div>
         </dialog>
       {% endif %}{% endfor %}
     </main>
   </div>
-  <script>
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
-    document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
-  </script>
 </body>
 </html>

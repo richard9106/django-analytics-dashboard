@@ -244,6 +244,7 @@ h1, h2, h3, p { margin-top: 0; }
 .client-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .client-card { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; padding: 16px; border-radius: 18px; background: rgba(255, 255, 255, .86); border: 1px solid rgba(112, 82, 217, .14); box-shadow: var(--shadow-1); }
 .client-avatar { width: 54px; height: 54px; border-radius: 18px; display: grid; place-items: center; background: linear-gradient(145deg, var(--brand-600), var(--aqua-500)); color: #fff; font-weight: 900; letter-spacing: .02em; }
+.client-avatar.small { width: 42px; height: 42px; border-radius: 14px; font-size: 13px; }
 .client-card-body { min-width: 0; }
 .client-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .client-card h3 { margin: 0 0 4px; font-size: 18px; letter-spacing: -.03em; }
@@ -639,6 +640,26 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .appointment-form { display: grid; gap: 20px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .notes-workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; }
+.clinical-note-tree { gap: 10px; }
+.client-note-group { border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255, 255, 255, .86); box-shadow: var(--shadow-1); overflow: hidden; }
+.client-note-group summary { min-height: 64px; padding: 12px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: center; cursor: pointer; list-style: none; }
+.client-note-group summary::-webkit-details-marker { display: none; }
+.client-note-group summary::after { content: "⌄"; color: var(--brand-700); font-weight: 900; }
+.client-note-group[open] summary::after { transform: rotate(180deg); }
+.client-note-group summary:focus-visible, .note-tree-trigger:focus-visible { outline: 3px solid rgba(112, 82, 217, .28); outline-offset: -3px; }
+.client-note-group summary strong, .client-note-group summary small { display: block; }
+.client-note-group summary small { margin-top: 3px; color: var(--slate-500); font-size: 12px; font-weight: 800; }
+.client-note-children { display: grid; gap: 8px; padding: 0 14px 14px 32px; border-left: 2px solid rgba(112, 82, 217, .14); margin-left: 34px; }
+.note-tree-item { padding: 12px; border: 1px solid var(--slate-100); border-radius: 14px; background: linear-gradient(135deg, #fff, var(--slate-50)); }
+.note-tree-trigger { width: 100%; padding: 0; border: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; background: transparent; color: var(--slate-800); text-align: left; cursor: pointer; }
+.note-tree-trigger strong, .note-tree-trigger small { display: block; }
+.note-tree-trigger small { margin-top: 4px; color: var(--slate-500); font-size: 12px; font-weight: 800; }
+.note-detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.note-detail-grid > div, .note-detail-section { padding: 12px; border: 1px solid var(--slate-100); border-radius: 14px; background: rgba(255,255,255,.78); }
+.note-detail-grid strong { display: block; margin-top: 3px; color: var(--slate-900); font-size: 14px; }
+.note-detail-section { margin-top: 12px; }
+.note-detail-section h3 { margin: 0 0 8px; color: var(--slate-900); font-size: 15px; }
+.note-detail-section p { color: var(--slate-700); line-height: 1.6; }
 .filter-sidebar { position: sticky; top: 88px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: linear-gradient(145deg, rgba(255,255,255,.94), var(--brand-50)); box-shadow: var(--shadow-1); overflow: hidden; }
 .filter-sidebar summary { min-height: 52px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--slate-900); font-weight: 900; cursor: pointer; list-style: none; }
 .filter-sidebar summary::-webkit-details-marker { display: none; }
@@ -845,6 +866,13 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .quick-actions, .topbar-actions, .form-actions { width: 100%; display: grid; grid-template-columns: 1fr; }
   .quick-actions .btn, .topbar-actions .btn, .form-actions .btn { width: 100%; }
   .notes-workspace { grid-template-columns: 1fr; }
+  .client-note-group summary { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .client-note-group summary::after { grid-column: 3; grid-row: 1; }
+  .client-note-group summary .badge { grid-column: 2; justify-self: start; }
+  .client-note-children { margin-left: 16px; padding-left: 16px; }
+  .note-tree-trigger { display: grid; }
+  .note-tree-trigger .badge { justify-self: start; }
+  .note-detail-grid { grid-template-columns: 1fr; }
   .filter-sidebar { position: static; }
   .filter-actions { display: grid; grid-template-columns: 1fr; }
   .filter-actions .btn { width: 100%; }

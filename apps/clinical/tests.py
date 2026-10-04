@@ -397,8 +397,14 @@ class SessionNoteViewTests(TestCase):
         self.assertContains(response, "Visible clinical content")
         self.assertNotContains(response, "Hidden clinical content")
         self.assertContains(response, 'id="note-create-modal"')
+        self.assertContains(response, 'class="notes-list clinical-note-tree"')
+        self.assertContains(response, 'class="client-note-group"')
+        self.assertContains(response, f'id="note-detail-modal-{note.pk}"')
         self.assertContains(response, f'id="note-modal-{note.pk}"')
         self.assertContains(response, reverse("clinical:edit", args=[note.pk]))
+        self.assertEqual(len(response.context["note_groups"]), 1)
+        self.assertEqual(response.context["note_groups"][0]["client"], client)
+        self.assertEqual(response.context["note_groups"][0]["notes"], [note])
 
     def test_note_list_can_filter_by_client_type_status_session_and_date(self):
         user, practice, therapist, client, appointment = self.create_practice_user()
@@ -443,6 +449,8 @@ class SessionNoteViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Filtered visible note.")
         self.assertNotContains(response, "Filtered hidden note.")
+        self.assertEqual(len(response.context["note_groups"]), 1)
+        self.assertEqual(response.context["note_groups"][0]["client"], client)
         self.assertContains(response, 'value="locked" selected')
         self.assertContains(response, 'Apply filters')
         self.assertContains(response, reverse("clinical:list"))

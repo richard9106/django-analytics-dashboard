@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from datetime import date, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -80,7 +81,7 @@ class SessionNoteListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         notes = (
             SessionNote.objects.filter(practice=practice)
             .select_related('client', 'therapist__user', 'appointment', 'treatment_plan')
-            .order_by('-created_at')
+            .order_by('client__last_name', 'client__first_name', '-updated_at', '-pk')
         )
         filters = self.get_note_filters()
 
@@ -116,6 +117,13 @@ class SessionNoteListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        notes = list(context['notes'])
+        groups = OrderedDict()
+        for note in notes:
+            group = groups.setdefault(note.client_id, {'client': note.client, 'notes': []})
+            group['notes'].append(note)
+        context['notes'] = notes
+        context['note_groups'] = list(groups.values())
         context['note_filters'] = self.get_note_filters()
         context['note_type_choices'] = SessionNote.NoteType.choices
         return context
