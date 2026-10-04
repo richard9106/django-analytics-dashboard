@@ -11,18 +11,18 @@
 </head>
 <body class="app-page">
   <div class="app-shell">
-    {% include 'partials/sidebar.html' with card_title='Team settings' card_text='Manage internal users while respecting your subscription seat limit.' %}
+    {% include 'partials/sidebar.html' with card_title='Team settings' card_text='Manage internal users and keep subscription billing aligned with active staff.' %}
 
     <main class="app-main">
       <section class="action-bar" aria-label="Team actions">
         <div class="quick-actions">
           <a class="btn btn-soft" href="{% url 'profile_settings' %}">Profile settings</a>
-          {% if can_add_team_member %}<a class="btn btn-primary" href="#team-member-modal" data-modal-target="team-member-modal">+ Add team member</a>{% else %}<a class="btn btn-primary" href="{% url 'profile_settings' %}">Upgrade plan</a>{% endif %}
+          <a class="btn btn-primary" href="#team-member-modal" data-modal-target="team-member-modal">+ Add team member</a>
         </div>
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
-      <header class="topbar compact-topbar"><div><p class="eyebrow">Account</p><h1>Team management</h1><p>Add internal users, review roles, and keep your practice within plan limits.</p></div></header>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Account</p><h1>Team management</h1><p>Add internal users, review roles, and track the active users included in subscription billing.</p></div></header>
 
       {% if messages %}<section class="message-list" aria-label="Team messages">{% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}</section>{% endif %}
       {% if not gmail_connected %}<section class="team-gmail-notice"><strong>Connect Gmail to send invitations from your practice email.</strong><p>Google OAuth keeps access secure and lets NuviaMy send temporary passwords without storing an email password.</p><a class="inline-link" href="{% url 'practice_settings:integrations' %}">Connect Gmail</a></section>{% endif %}
@@ -50,23 +50,21 @@
         </article>
 
         <aside class="panel subscription-panel">
-          <div class="panel-head compact"><div><h2>Plan seats</h2><p>The practice owner is included at no extra seat. Client portal users do not count.</p></div></div>
+          <div class="panel-head compact"><div><h2>Billable users</h2><p>Active owners, admins, and therapists count. Client portal users do not.</p></div></div>
           {% if subscription %}
             <div class="subscription-summary">
-              <span class="badge success">{{ subscription.get_plan_display }}</span>
-              <h3>{{ subscription.internal_user_count }} of {{ subscription.internal_user_limit }}</h3>
-              <p>{{ subscription.internal_user_slots_remaining }} team seat{{ subscription.internal_user_slots_remaining|pluralize }} remaining. Owner included separately.</p>
+              <span class="badge success">Per-user billing</span>
+              <h3>{{ billable_user_count }} active user{{ billable_user_count|pluralize }}</h3>
+              <p>Deactivated staff are not counted. Stripe subscription quantity is based on active internal users with a minimum of one.</p>
             </div>
-            {% if not can_add_team_member %}<p class="empty-state">Upgrade your plan before adding another internal user.</p><a class="btn btn-primary" href="{% url 'profile_settings' %}">Change subscription plan</a>{% endif %}
           {% else %}
-            <p class="empty-state">No subscription is connected yet. Choose a plan to manage team limits.</p>
+            <p class="empty-state">No subscription is connected yet. Choose a plan to start per-user billing.</p>
             <a class="btn btn-primary" href="{% url 'pricing' %}">Choose a plan</a>
           {% endif %}
         </aside>
       </section>
 
-      {% if can_add_team_member %}
-        <dialog class="modal-dialog" id="team-member-modal">
+      <dialog class="modal-dialog" id="team-member-modal">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Team</p><h2>Add team member</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
             <form class="appointment-form" method="post" enctype="multipart/form-data" action="{% url 'team_management' %}">
@@ -90,8 +88,7 @@
               <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create team member</button></div>
             </form>
           </div>
-        </dialog>
-      {% endif %}
+      </dialog>
     </main>
   </div>
   <script>

@@ -185,10 +185,6 @@ class TeamMemberCreateForm(forms.Form):
             ).exists():
                 self.add_error("license_number", "A therapist profile with this license already exists in that state.")
 
-        if self.practice:
-            subscription = getattr(self.practice, "subscription", None)
-            if subscription and not subscription.can_add_internal_user():
-                self.add_error("role", f"Your {subscription.get_plan_display()} plan has no internal user seats available.")
         if password_mode == 'custom':
             if not password:
                 self.add_error('password', 'Enter a password or choose a temporary password.')

@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pricing | NuviaMy Therapy Practice Management Software</title>
-  <meta name="description" content="Simple monthly and yearly pricing for NuviaMy therapy practice management software. Plans for solo therapists, group practices, and clinics with 10% off annual subscriptions.">
+  <meta name="description" content="Simple per-user monthly and yearly pricing for NuviaMy therapy practice management software with 10% off annual subscriptions.">
   <meta name="keywords" content="therapy practice management software pricing, therapist software subscription, mental health practice management pricing, counseling practice software cost, therapy EHR monthly subscription, private practice software pricing">
   <link rel="canonical" href="https://nuviamy.com/pricing/">
   <meta property="og:title" content="NuviaMy Pricing | Therapy Practice Management Software">
-  <meta property="og:description" content="Monthly and yearly subscription plans for therapists, counselors, psychologists, and mental health practices. Save 10% annually.">
+  <meta property="og:description" content="Fair per-user subscription pricing for therapists, counselors, psychologists, and mental health practices. Save 10% annually.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nuviamy.com/pricing/">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
@@ -26,18 +26,16 @@
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "url": "https://nuviamy.com/pricing/",
-        "description": "Therapy practice management software with monthly and yearly subscription plans.",
+        "description": "Therapy practice management software with per-user monthly and yearly subscription pricing.",
         "offers": [
-          {"@type": "Offer", "name": "Solo Therapist", "price": "39", "priceCurrency": "USD", "billingDuration": "P1M"},
-          {"@type": "Offer", "name": "Group Practice", "price": "79", "priceCurrency": "USD", "billingDuration": "P1M"},
-          {"@type": "Offer", "name": "Clinic", "price": "149", "priceCurrency": "USD", "billingDuration": "P1M"}
+          {"@type": "Offer", "name": "Per-user monthly", "price": "39", "priceCurrency": "USD", "billingDuration": "P1M"}
         ]
       },
       {
         "@type": "FAQPage",
         "mainEntity": [
           {"@type": "Question", "name": "Does NuviaMy offer monthly and yearly subscriptions?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. NuviaMy offers monthly subscriptions and annual subscriptions with a 10% discount."}},
-          {"@type": "Question", "name": "Which plan is best for a solo therapist?", "acceptedAnswer": {"@type": "Answer", "text": "The Solo Therapist plan is designed for independent therapists and private practices that need scheduling, notes, treatment plans, billing, documents, intake, reminders, and client portal workflows."}},
+          {"@type": "Question", "name": "Who counts as a billable user?", "acceptedAnswer": {"@type": "Answer", "text": "Active owners, admins, and therapists count as billable users. Client portal users and deactivated staff do not count."}},
           {"@type": "Question", "name": "Is NuviaMy HIPAA certified?", "acceptedAnswer": {"@type": "Answer", "text": "NuviaMy is built with HIPAA-aware architecture patterns, tenant isolation, and secure workflow defaults, but practices should complete their own compliance review before production clinical use."}}
         ]
       }
@@ -50,111 +48,66 @@
 
   <main>
     <section class="pricing-hero">
-      <h1>Subscription pricing for therapists, group practices, and clinics.</h1>
-      <p>Choose monthly or yearly billing after your 15-day free trial. Every plan includes the core therapy practice management workflows: scheduling, clinical notes, treatment plans, billing, documents, intake, portal access, reminders, and Google integrations.</p>
-      <div class="billing-note"><strong>15-day free trial:</strong> choose the plan that fits your practice and get started.</div>
+      <h1>Fair per-user pricing for therapy practices.</h1>
+      <p>Choose monthly or yearly billing after your 15-day free trial. Every active internal user gets the full NuviaMy workspace: scheduling, clinical notes, treatment plans, billing, documents, intake, portal access, reminders, and Google integrations.</p>
+      <div class="billing-note"><strong>15-day free trial:</strong> start with one user and add your team when you need them.</div>
     </section>
 
     <section class="visual-band pricing-banner" aria-label="Pricing plan guidance">
       <div>
         <p class="eyebrow coral-eyebrow">Choose gently, grow steadily</p>
-        <h2>Plans sized around real therapy operations.</h2>
-        <p>Start small with essential private practice workflows, then move into shared scheduling, documentation, portal requests, insurance settings, and practice-wide visibility as your team grows.</p>
+        <h2>One plan that grows with the people using it.</h2>
+        <p>No forced tiers or artificial seat ceilings. Active owners, admins, and therapists are billed per user; client portal users and deactivated staff do not count.</p>
       </div>
-      <div class="plan-visual" aria-hidden="true"><span>Solo</span><span>Group</span><span>Clinic</span></div>
+      <div class="plan-visual" aria-hidden="true"><span>Owner</span><span>Admin</span><span>Therapist</span></div>
     </section>
 
     <section class="pricing-grid" aria-label="NuviaMy subscription plans">
-      <article class="pricing-card">
-        <p class="eyebrow">Solo Therapist</p>
-        <h2>$39<span>/month</span></h2>
-        <p class="annual-price">$421/year with 10% annual discount</p>
-        <p>For independent therapists, counselors, psychologists, and private practices launching a professional workspace.</p>
+      <article class="pricing-card featured">
+        <span class="badge coral">Simple pricing</span>
+        <p class="eyebrow">Per active user</p>
+        <h2>$39<span>/user/month</span></h2>
+        <p class="annual-price">$421/user/year with 10% annual discount</p>
+        <p>For solo therapists, growing groups, and clinics that want the same complete workflow without plan gates.</p>
         <ul>
-          <li>1 team seat plus the practice owner</li>
+          <li>Active owners, admins, and therapists count</li>
+          <li>Client portal users are included at no extra charge</li>
           <li>Client records and appointment scheduling</li>
           <li>Clinical notes and treatment plans</li>
           <li>Billing, invoices, superbills, and documents</li>
-          <li>Client portal, intake packets, and reminders</li>
+          <li>Intake, reminders, insurance settings, and Google integrations</li>
         </ul>
         <div class="pricing-actions">
           {% if user.is_authenticated %}
-            <a class="btn btn-secondary" href="{% url 'billing:subscribe' 'solo' 'monthly' %}">Start Solo monthly</a>
+            <a class="btn btn-primary" href="{% url 'billing:subscribe' 'solo' 'monthly' %}">Start monthly</a>
             <a class="btn btn-ghost" href="{% url 'billing:subscribe' 'solo' 'yearly' %}">Pay yearly</a>
           {% else %}
-            <a class="btn btn-secondary" href="{% url 'signup' %}?plan=solo&period=monthly">Start Solo monthly</a>
+            <a class="btn btn-primary" href="{% url 'signup' %}?plan=solo&period=monthly">Start monthly</a>
             <a class="btn btn-ghost" href="{% url 'signup' %}?plan=solo&period=yearly">Pay yearly</a>
-          {% endif %}
-        </div>
-      </article>
-
-      <article class="pricing-card featured">
-        <span class="badge coral">Most popular</span>
-        <p class="eyebrow">Group Practice</p>
-        <h2>$79<span>/month</span></h2>
-        <p class="annual-price">$853/year with 10% annual discount</p>
-        <p>For growing practices that need shared workflows, team visibility, therapist scheduling, and stronger operations.</p>
-        <ul>
-          <li>5 team seats plus the practice owner</li>
-          <li>Practice-wide dashboard and client management</li>
-          <li>Recurring appointments and availability controls</li>
-          <li>Treatment plan review workflow</li>
-          <li>Google Calendar, Gmail, and Drive integrations</li>
-        </ul>
-        <div class="pricing-actions">
-          {% if user.is_authenticated %}
-            <a class="btn btn-primary" href="{% url 'billing:subscribe' 'group' 'monthly' %}">Start Group monthly</a>
-            <a class="btn btn-ghost" href="{% url 'billing:subscribe' 'group' 'yearly' %}">Pay yearly</a>
-          {% else %}
-            <a class="btn btn-primary" href="{% url 'signup' %}?plan=group&period=monthly">Start Group monthly</a>
-            <a class="btn btn-ghost" href="{% url 'signup' %}?plan=group&period=yearly">Pay yearly</a>
-          {% endif %}
-        </div>
-      </article>
-
-      <article class="pricing-card">
-        <p class="eyebrow">Clinic</p>
-        <h2>$149<span>/month</span></h2>
-        <p class="annual-price">$1,609/year with 10% annual discount</p>
-        <p>For clinics and multi-provider mental health teams that need broader workflows and operational control.</p>
-        <ul>
-          <li>15 team seats plus the practice owner</li>
-          <li>Priority setup guidance</li>
-          <li>Expanded client portal workflows</li>
-          <li>Insurance payer and reimbursement settings</li>
-          <li>Custom workflow planning for larger teams</li>
-        </ul>
-        <div class="pricing-actions">
-          {% if user.is_authenticated %}
-            <a class="btn btn-secondary" href="{% url 'billing:subscribe' 'clinic' 'monthly' %}">Start Clinic monthly</a>
-            <a class="btn btn-ghost" href="{% url 'billing:subscribe' 'clinic' 'yearly' %}">Pay yearly</a>
-          {% else %}
-            <a class="btn btn-secondary" href="{% url 'signup' %}?plan=clinic&period=monthly">Start Clinic monthly</a>
-            <a class="btn btn-ghost" href="{% url 'signup' %}?plan=clinic&period=yearly">Pay yearly</a>
           {% endif %}
         </div>
       </article>
     </section>
 
     <section class="marketing-band pricing-advice">
-      <div><p class="eyebrow">Pricing recommendation</p><h2>Start with clear monthly pricing, then validate with real therapists.</h2></div>
-      <p>These prices position NuviaMy below many established EHR platforms while still valuing clinical documentation, billing, intake, portal, reminders, and Google workspace features. If conversion is strong, raise prices after you add payments, subscription billing, and production compliance documentation.</p>
+      <div><p class="eyebrow">Pricing recommendation</p><h2>Predictable billing without feature gates.</h2></div>
+      <p>Every practice gets the same workflow depth. Your subscription scales only when active internal users are added, so small practices can start lean and larger teams can grow without changing tiers.</p>
     </section>
 
     <section class="marketing-section pricing-faq" id="faq">
       <p class="eyebrow">Pricing FAQ</p>
       <h2>Questions therapists ask before choosing practice management software.</h2>
       <div class="marketing-grid two">
-        <article><h3>Can I pay monthly?</h3><p>Yes. Monthly subscriptions are available for solo therapists, group practices, and clinics.</p></article>
+        <article><h3>Can I pay monthly?</h3><p>Yes. Monthly per-user subscriptions are available, and yearly billing includes a 10% discount.</p></article>
         <article><h3>Do yearly plans include a discount?</h3><p>Yes. Yearly billing includes a 10% discount compared with paying monthly for 12 months.</p></article>
-        <article><h3>Is this for solo therapists or clinics?</h3><p>NuviaMy supports solo private practices, group therapy practices, counselors, psychologists, behavioral health providers, and mental health clinics.</p></article>
+        <article><h3>Who counts as a user?</h3><p>Active owners, admins, and therapists count. Client portal users and deactivated staff do not.</p></article>
         <article><h3>Is NuviaMy HIPAA certified?</h3><p>NuviaMy is HIPAA-aware and built around tenant isolation and secure defaults, but practices should complete their own compliance review before using it for production clinical operations.</p></article>
       </div>
     </section>
 
     <section class="marketing-cta">
       <p class="eyebrow">Start monthly or save yearly</p>
-      <h2>Choose the plan that fits your therapy practice today.</h2>
+      <h2>Start with per-user pricing today.</h2>
       <p>You can start with a 15-day free trial, add your card securely through Stripe, and move to annual billing when the workflow fits your practice.</p>
       <a class="btn btn-primary" href="{% url 'signup' %}?plan=solo&period=monthly">Create your practice workspace</a>
     </section>

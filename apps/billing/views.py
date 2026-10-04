@@ -49,6 +49,10 @@ def _subscription_item_id(stripe_subscription):
     return items[0].get('id', '') if items else ''
 
 
+def _stripe_subscription_quantity(practice):
+    return PracticeSubscription.billable_user_count_for_practice(practice)
+
+
 def _sync_subscription_from_stripe(stripe_subscription, practice=None):
     price_id = ''
     items = stripe_subscription.get('items', {}).get('data', [])
@@ -583,10 +587,11 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
         stripe.api_key = settings.STRIPE_SECRET_KEY
         subscription = getattr(practice, 'subscription', None)
         customer_id = subscription.stripe_customer_id if subscription else ''
+        quantity = _stripe_subscription_quantity(practice)
         session_kwargs = {
             'mode': 'subscription',
             'payment_method_collection': 'always',
-            'line_items': [{'price': price_id, 'quantity': 1}],
+            'line_items': [{'price': price_id, 'quantity': quantity}],
             'success_url': request.build_absolute_uri(reverse('billing:subscribe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url': request.build_absolute_uri(reverse('billing:subscribe_cancel')),
             'client_reference_id': str(practice.pk),
@@ -667,15 +672,6 @@ class StripeChangePlanView(LoginRequiredMixin, PracticePermissionMixin, ClientPo
             messages.error(request, 'Create a practice workspace before changing plans.')
             return redirect('signup')
 
-        internal_user_count = practice.user_profiles.exclude(role__in=['client', 'owner']).count()
-        target_limit = PracticeSubscription.internal_user_limit_for_plan(plan)
-        if internal_user_count > target_limit:
-            messages.error(
-                request,
-                f'This practice has {internal_user_count} internal users. The {PracticeSubscription.Plan(plan).label} plan allows up to {target_limit}.',
-            )
-            return redirect('profile_settings')
-
         subscription = getattr(practice, 'subscription', None)
         if not subscription or not subscription.stripe_subscription_id:
             return redirect('billing:subscribe', plan=plan, period=period)
@@ -687,6 +683,7 @@ class StripeChangePlanView(LoginRequiredMixin, PracticePermissionMixin, ClientPo
             return redirect('profile_settings')
 
         stripe.api_key = settings.STRIPE_SECRET_KEY
+        quantity = _stripe_subscription_quantity(practice)
         try:
             stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
             items = stripe_subscription.get('items', {}).get('data', [])
@@ -695,7 +692,7 @@ class StripeChangePlanView(LoginRequiredMixin, PracticePermissionMixin, ClientPo
                 return redirect('profile_settings')
             stripe.Subscription.modify(
                 subscription.stripe_subscription_id,
-                items=[{'id': items[0]['id'], 'price': price_id}],
+                items=[{'id': items[0]['id'], 'price': price_id, 'quantity': quantity}],
                 proration_behavior='create_prorations',
                 metadata={'practice_id': str(practice.pk), 'plan': plan, 'period': period},
             )
@@ -707,7 +704,8 @@ class StripeChangePlanView(LoginRequiredMixin, PracticePermissionMixin, ClientPo
         subscription.billing_period = period
         subscription.stripe_price_id = price_id
         subscription.save(update_fields=['plan', 'billing_period', 'stripe_price_id', 'updated_at'])
-        messages.success(request, f'Plan changed to {PracticeSubscription.Plan(plan).label}.')
+        user_label = 'user' if quantity == 1 else 'users'
+        messages.success(request, f'Billing updated for {quantity} active {user_label}.')
         return redirect('profile_settings')
 
 
@@ -726,16 +724,6 @@ class StripePlanPreviewView(LoginRequiredMixin, PracticePermissionMixin, ClientP
         if not practice:
             return JsonResponse({'error': 'Create a practice workspace before changing plans.'}, status=400)
 
-        internal_user_count = practice.user_profiles.exclude(role__in=['client', 'owner']).count()
-        target_limit = PracticeSubscription.internal_user_limit_for_plan(plan)
-        if internal_user_count > target_limit:
-            return JsonResponse({
-                'error': (
-                    f'This practice has {internal_user_count} internal users. '
-                    f'The {PracticeSubscription.Plan(plan).label} plan allows up to {target_limit}.'
-                )
-            }, status=400)
-
         subscription = getattr(practice, 'subscription', None)
         if not subscription or not subscription.stripe_subscription_id:
             return JsonResponse({
@@ -749,6 +737,7 @@ class StripePlanPreviewView(LoginRequiredMixin, PracticePermissionMixin, ClientP
             return JsonResponse({'error': 'Online subscription previews are not configured yet.'}, status=400)
 
         stripe.api_key = settings.STRIPE_SECRET_KEY
+        quantity = _stripe_subscription_quantity(practice)
         try:
             stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
             item_id = _subscription_item_id(stripe_subscription)
@@ -758,7 +747,7 @@ class StripePlanPreviewView(LoginRequiredMixin, PracticePermissionMixin, ClientP
                 customer=subscription.stripe_customer_id,
                 subscription=subscription.stripe_subscription_id,
                 subscription_details={
-                    'items': [{'id': item_id, 'price': price_id}],
+                    'items': [{'id': item_id, 'price': price_id, 'quantity': quantity}],
                     'proration_behavior': 'create_prorations',
                 },
             )
@@ -769,8 +758,9 @@ class StripePlanPreviewView(LoginRequiredMixin, PracticePermissionMixin, ClientP
         subtotal = preview.get('subtotal', 0)
         amount_due = preview.get('amount_due', 0)
         credit = sum(line.get('amount', 0) for line in preview.get('lines', {}).get('data', []) if line.get('amount', 0) < 0)
+        user_label = 'user' if quantity == 1 else 'users'
         return JsonResponse({
-            'summary': 'Stripe estimate based on your current billing period. Final taxes or payment timing may vary in Stripe.',
+            'summary': f'Stripe estimate for {quantity} active {user_label}. Final taxes or payment timing may vary in Stripe.',
             'amount_due': _format_stripe_amount(amount_due, currency),
             'subtotal': _format_stripe_amount(subtotal, currency),
             'credit': _format_stripe_amount(abs(credit), currency) if credit else '',

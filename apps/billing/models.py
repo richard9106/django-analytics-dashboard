@@ -338,11 +338,7 @@ class Payment(models.Model):
 
 
 class PracticeSubscription(models.Model):
-    PLAN_INTERNAL_USER_LIMITS = {
-        "solo": 1,
-        "group": 5,
-        "clinic": 15,
-    }
+    BILLABLE_ROLES = {"owner", "admin", "therapist"}
 
     class Plan(models.TextChoices):
         SOLO = "solo", "Solo Therapist"
@@ -381,25 +377,32 @@ class PracticeSubscription(models.Model):
 
     @property
     def internal_user_limit(self):
-        return self.internal_user_limit_for_plan(self.plan)
+        return None
 
     @classmethod
     def internal_user_limit_for_plan(cls, plan):
-        return cls.PLAN_INTERNAL_USER_LIMITS[plan]
+        return None
 
     @property
     def internal_user_count(self):
-        return self.practice.user_profiles.exclude(role__in=["client", "owner"]).count()
+        return self.billable_user_count()
 
     @property
     def internal_user_slots_remaining(self):
-        return max(self.internal_user_limit - self.internal_user_count, 0)
+        return None
 
-    def can_add_internal_user(self, exclude_profile_id=None):
-        profiles = self.practice.user_profiles.exclude(role__in=["client", "owner"])
+    @classmethod
+    def billable_user_count_for_practice(cls, practice, exclude_profile_id=None):
+        profiles = practice.user_profiles.filter(role__in=cls.BILLABLE_ROLES, user__is_active=True)
         if exclude_profile_id:
             profiles = profiles.exclude(pk=exclude_profile_id)
-        return profiles.count() < self.internal_user_limit
+        return max(profiles.count(), 1)
+
+    def billable_user_count(self, exclude_profile_id=None):
+        return self.billable_user_count_for_practice(self.practice, exclude_profile_id=exclude_profile_id)
+
+    def can_add_internal_user(self, exclude_profile_id=None):
+        return True
 
     def __str__(self):
         return f"{self.practice} - {self.get_plan_display()} ({self.get_status_display()})"

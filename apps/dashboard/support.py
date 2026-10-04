@@ -20,9 +20,9 @@ FAQS = [
         'tags': 'team invitation therapist admin password',
     },
     {
-        'question': 'What counts toward my plan seats?',
-        'answer': 'Solo includes one team seat plus the practice owner. Group includes five team seats plus the owner. Clinic includes fifteen team seats plus the owner. Client portal users do not consume team seats.',
-        'tags': 'plan seats users subscription billing',
+        'question': 'Who counts as a billable subscription user?',
+        'answer': 'Active owners, admins, and therapists count as billable users. Client portal users and deactivated staff do not count.',
+        'tags': 'per user subscription billing users',
     },
     {
         'question': 'How do I reset my password?',

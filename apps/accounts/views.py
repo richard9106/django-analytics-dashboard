@@ -49,6 +49,28 @@ def send_team_invitation(request, user, temporary_password):
     return ""
 
 
+def sync_subscription_user_quantity(practice):
+    subscription = getattr(practice, 'subscription', None) if practice else None
+    if not settings.STRIPE_SECRET_KEY or not subscription or not subscription.stripe_subscription_id:
+        return True
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    quantity = subscription.billable_user_count()
+    try:
+        stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+        items = stripe_subscription.get('items', {}).get('data', [])
+        if not items:
+            return False
+        stripe.Subscription.modify(
+            subscription.stripe_subscription_id,
+            items=[{'id': items[0]['id'], 'quantity': quantity}],
+            proration_behavior='create_prorations',
+            metadata={'practice_id': str(practice.pk), 'quantity': str(quantity)},
+        )
+    except stripe.error.StripeError:
+        return False
+    return True
+
+
 class RoleAwareLoginView(PostRateLimitMixin, LoginView):
     template_name = "dashboard/login.html"
     authentication_form = EmailAuthenticationForm
@@ -174,7 +196,7 @@ class ProfileSettingsView(LoginRequiredMixin, FormView):
                     "period": period,
                     "label": PracticeSubscription.Plan(plan).label,
                     "period_label": PracticeSubscription.BillingPeriod(period).label,
-                    "limit": PracticeSubscription.internal_user_limit_for_plan(plan),
+                    "limit": None,
                     "is_current": bool(subscription and subscription.plan == plan and subscription.billing_period == period),
                 }
                 for plan in PracticeSubscription.Plan.values
@@ -245,7 +267,8 @@ class TeamManagementView(LoginRequiredMixin, FormView):
             "practice": practice,
             "subscription": subscription,
             "team_members": practice.user_profiles.exclude(role=UserProfile.Role.CLIENT).select_related("user", "user__therapist_profile") if practice else [],
-            "can_add_team_member": not subscription or subscription.can_add_internal_user(),
+            "can_add_team_member": True,
+            "billable_user_count": subscription.billable_user_count() if subscription else 0,
             "gmail_connected": bool(practice and get_gmail_integration(practice)),
             "profile_role_label": self.request.user.nuvia_profile.get_role_display() if hasattr(self.request.user, "nuvia_profile") else "Not assigned",
         })
@@ -286,6 +309,8 @@ class TeamManagementView(LoginRequiredMixin, FormView):
             practice=user.nuvia_profile.practice,
             metadata={"user_id": user.pk, "role": user.nuvia_profile.role},
         )
+        if not sync_subscription_user_quantity(user.nuvia_profile.practice):
+            messages.warning(self.request, 'Team member was created, but Stripe subscription quantity could not be updated. Please review billing in Stripe.')
         return super().form_valid(form)
 
 
@@ -348,14 +373,14 @@ class TeamMemberActionView(LoginRequiredMixin, View):
             target.user.is_active = False
             target.user.save(update_fields=["is_active"])
             messages.success(request, f"{target.user.get_full_name() or target.user.email} was deactivated.")
+            if not sync_subscription_user_quantity(practice):
+                messages.warning(request, 'Stripe subscription quantity could not be updated. Please review billing in Stripe.')
         elif action == "reactivate":
-            subscription = getattr(practice, "subscription", None)
-            if subscription and not subscription.can_add_internal_user(exclude_profile_id=target.pk):
-                messages.error(request, "There are no available internal seats on the current plan.")
-                return redirect("team_management")
             target.user.is_active = True
             target.user.save(update_fields=["is_active"])
             messages.success(request, f"{target.user.get_full_name() or target.user.email} was reactivated.")
+            if not sync_subscription_user_quantity(practice):
+                messages.warning(request, 'Stripe subscription quantity could not be updated. Please review billing in Stripe.')
         elif action == "resend_invitation":
             password = get_random_string(14)
             target.user.set_password(password)

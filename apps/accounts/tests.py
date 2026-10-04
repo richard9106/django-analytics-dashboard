@@ -38,7 +38,7 @@ class UserProfileModelTests(TestCase):
         profile.full_clean()
         self.assertEqual(str(profile), "practiceadmin - Practice Admin")
 
-    def test_internal_user_profile_respects_subscription_plan_limit(self):
+    def test_subscription_counts_active_internal_users_for_billing(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
         owner = get_user_model().objects.create_user(username="owner")
         owner_profile = UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
@@ -54,10 +54,10 @@ class UserProfileModelTests(TestCase):
         admin_profile = UserProfile(user=admin, practice=practice, role=UserProfile.Role.ADMIN)
 
         owner_profile.full_clean()
-        self.assertEqual(subscription.internal_user_count, 1)
-        self.assertEqual(subscription.internal_user_slots_remaining, 0)
-        with self.assertRaisesMessage(ValidationError, "allows up to 1 team seat"):
-            admin_profile.full_clean()
+        admin_profile.full_clean()
+        self.assertEqual(subscription.internal_user_count, 2)
+        self.assertIsNone(subscription.internal_user_slots_remaining)
+        self.assertTrue(subscription.can_add_internal_user())
 
     def test_client_profile_does_not_count_against_subscription_plan_limit(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
@@ -73,7 +73,7 @@ class UserProfileModelTests(TestCase):
         client_profile = UserProfile(user=client_user, practice=practice, role=UserProfile.Role.CLIENT)
 
         client_profile.full_clean()
-        self.assertEqual(subscription.internal_user_count, 0)
+        self.assertEqual(subscription.internal_user_count, 1)
 
 
 class PracticeSignupViewTests(TestCase):
@@ -216,17 +216,16 @@ class ProfileSettingsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Profile & subscription")
-        self.assertContains(response, "Group Practice")
+        self.assertContains(response, "Per-user subscription")
         self.assertContains(response, "Yearly billing")
-        self.assertContains(response, "0 of 5 team seats used")
-        self.assertContains(response, "5 team seats remaining")
-        self.assertContains(response, "Change plan")
-        self.assertContains(response, "Change subscription plan")
+        self.assertContains(response, "1 active user")
+        self.assertContains(response, "Billing period")
+        self.assertContains(response, "Change billing period")
         self.assertContains(response, 'id="plan-change-modal"')
         self.assertContains(response, 'data-plan-change-form')
         self.assertContains(response, "Monthly")
         self.assertContains(response, "Annual")
-        self.assertContains(response, reverse("billing:change_plan", args=["clinic", "yearly"]))
+        self.assertContains(response, reverse("billing:change_plan", args=["group", "yearly"]))
         self.assertNotContains(response, "cus_test")
         self.assertNotContains(response, "sub_test")
         self.assertContains(response, reverse("billing:customer_portal"))
@@ -349,7 +348,8 @@ class TeamManagementViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Team management")
-        self.assertContains(response, "0 of 5")
+        self.assertContains(response, "1 active user")
+        self.assertContains(response, "Per-user billing")
         self.assertContains(response, "Add team member")
         self.assertContains(response, "owner@example.com")
         self.assertContains(response, "Connect Gmail")
@@ -453,7 +453,7 @@ class TeamManagementViewTests(TestCase):
         self.assertContains(response, "email could not be sent")
         self.assertContains(response, "Temporary password:")
 
-    def test_team_management_blocks_when_plan_limit_is_reached(self):
+    def test_team_management_allows_adding_beyond_old_plan_limit(self):
         user, practice = self.create_practice_user(plan=PracticeSubscription.Plan.SOLO)
         existing_member = get_user_model().objects.create_user(username="existing-member")
         UserProfile.objects.create(user=existing_member, practice=practice, role=UserProfile.Role.ADMIN)
@@ -461,9 +461,29 @@ class TeamManagementViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.post(reverse("team_management"), self.team_payload())
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Upgrade your plan before adding another internal user")
-        self.assertFalse(get_user_model().objects.filter(email="laura@example.com").exists())
+        self.assertRedirects(response, reverse("team_management"))
+        self.assertTrue(get_user_model().objects.filter(email="laura@example.com").exists())
+
+    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
+    @patch("apps.accounts.views.stripe.Subscription.modify")
+    @patch("apps.accounts.views.stripe.Subscription.retrieve")
+    def test_team_member_creation_syncs_stripe_user_quantity(self, mock_retrieve, mock_modify):
+        user, practice = self.create_practice_user()
+        subscription = practice.subscription
+        subscription.stripe_subscription_id = "sub_123"
+        subscription.save(update_fields=["stripe_subscription_id"])
+        mock_retrieve.return_value = {"items": {"data": [{"id": "si_123"}]}}
+
+        self.client.force_login(user)
+        response = self.client.post(reverse("team_management"), self.team_payload())
+
+        self.assertRedirects(response, reverse("team_management"))
+        mock_modify.assert_called_once_with(
+            "sub_123",
+            items=[{"id": "si_123", "quantity": 2}],
+            proration_behavior="create_prorations",
+            metadata={"practice_id": str(practice.pk), "quantity": "2"},
+        )
 
     def test_therapist_cannot_manage_team(self):
         user, _practice = self.create_practice_user(role=UserProfile.Role.THERAPIST)

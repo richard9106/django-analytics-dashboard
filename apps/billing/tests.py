@@ -937,7 +937,7 @@ class BillingViewTests(TestCase):
         mock_retrieve.assert_called_once_with("sub_123")
         mock_modify.assert_called_once_with(
             "sub_123",
-            items=[{"id": "si_123", "price": "price_group_yearly"}],
+            items=[{"id": "si_123", "price": "price_group_yearly", "quantity": 1}],
             proration_behavior="create_prorations",
             metadata={"practice_id": str(practice.pk), "plan": "group", "period": "yearly"},
         )
@@ -945,29 +945,6 @@ class BillingViewTests(TestCase):
         self.assertEqual(subscription.plan, PracticeSubscription.Plan.GROUP)
         self.assertEqual(subscription.billing_period, PracticeSubscription.BillingPeriod.YEARLY)
         self.assertEqual(subscription.stripe_price_id, "price_group_yearly")
-
-    @override_settings(STRIPE_SECRET_KEY="stripe-secret-placeholder")
-    def test_change_plan_blocks_downgrade_when_internal_users_exceed_target_limit(self):
-        user, practice, _therapist, _client, _appointment = self.create_practice_user()
-        second_user = get_user_model().objects.create_user(username="second")
-        UserProfile.objects.create(user=second_user, practice=practice, role=UserProfile.Role.ADMIN)
-        third_user = get_user_model().objects.create_user(username="third")
-        UserProfile.objects.create(user=third_user, practice=practice, role=UserProfile.Role.ADMIN)
-        PracticeSubscription.objects.create(
-            practice=practice,
-            plan=PracticeSubscription.Plan.GROUP,
-            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
-            status=PracticeSubscription.Status.ACTIVE,
-            stripe_customer_id="cus_123",
-            stripe_subscription_id="sub_123",
-        )
-
-        self.client.force_login(user)
-        response = self.client.post(reverse("billing:change_plan", args=["solo", "monthly"]))
-
-        self.assertRedirects(response, reverse("profile_settings"))
-        subscription = PracticeSubscription.objects.get(practice=practice)
-        self.assertEqual(subscription.plan, PracticeSubscription.Plan.GROUP)
 
     def test_change_plan_without_stripe_subscription_redirects_to_checkout(self):
         user, practice, _therapist, _client, _appointment = self.create_practice_user()
@@ -1023,31 +1000,10 @@ class BillingViewTests(TestCase):
             customer="cus_123",
             subscription="sub_123",
             subscription_details={
-                "items": [{"id": "si_123", "price": "price_group_monthly"}],
+                "items": [{"id": "si_123", "price": "price_group_monthly", "quantity": 1}],
                 "proration_behavior": "create_prorations",
             },
         )
-
-    def test_plan_preview_blocks_downgrade_when_internal_users_exceed_target_limit(self):
-        user, practice, _therapist, _client, _appointment = self.create_practice_user()
-        second_user = get_user_model().objects.create_user(username="second")
-        UserProfile.objects.create(user=second_user, practice=practice, role=UserProfile.Role.ADMIN)
-        third_user = get_user_model().objects.create_user(username="third")
-        UserProfile.objects.create(user=third_user, practice=practice, role=UserProfile.Role.ADMIN)
-        PracticeSubscription.objects.create(
-            practice=practice,
-            plan=PracticeSubscription.Plan.GROUP,
-            billing_period=PracticeSubscription.BillingPeriod.MONTHLY,
-            status=PracticeSubscription.Status.ACTIVE,
-            stripe_customer_id="cus_123",
-            stripe_subscription_id="sub_123",
-        )
-
-        self.client.force_login(user)
-        response = self.client.post(reverse("billing:plan_preview", args=["solo", "monthly"]))
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("allows up to 1", response.json()["error"])
 
     @override_settings(
         STRIPE_SECRET_KEY="stripe-secret-placeholder",
@@ -1060,6 +1016,8 @@ class BillingViewTests(TestCase):
     @patch("apps.billing.views.stripe.checkout.Session.create")
     def test_subscribe_creates_checkout_session_for_practice(self, mock_create):
         user, practice, _therapist, _client, _appointment = self.create_practice_user()
+        admin_user = get_user_model().objects.create_user(username="active-admin")
+        UserProfile.objects.create(user=admin_user, practice=practice, role=UserProfile.Role.ADMIN)
         mock_create.return_value = SimpleNamespace(url="https://checkout.stripe.test/session")
 
         self.client.force_login(user)
@@ -1069,7 +1027,7 @@ class BillingViewTests(TestCase):
         self.assertEqual(response.url, "https://checkout.stripe.test/session")
         mock_create.assert_called_once()
         kwargs = mock_create.call_args.kwargs
-        self.assertEqual(kwargs["line_items"], [{"price": "price_solo_monthly", "quantity": 1}])
+        self.assertEqual(kwargs["line_items"], [{"price": "price_solo_monthly", "quantity": 2}])
         self.assertEqual(kwargs["payment_method_collection"], "always")
         self.assertEqual(kwargs["subscription_data"]["trial_period_days"], 15)
         self.assertEqual(kwargs["metadata"]["practice_id"], str(practice.pk))

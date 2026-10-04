@@ -137,18 +137,20 @@ FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_PER_USER_MONTHLY = os.getenv('STRIPE_PRICE_PER_USER_MONTHLY', '')
+STRIPE_PRICE_PER_USER_YEARLY = os.getenv('STRIPE_PRICE_PER_USER_YEARLY', '')
 STRIPE_PRICE_IDS = {
     'solo': {
-        'monthly': os.getenv('STRIPE_PRICE_SOLO_MONTHLY', ''),
-        'yearly': os.getenv('STRIPE_PRICE_SOLO_YEARLY', ''),
+        'monthly': STRIPE_PRICE_PER_USER_MONTHLY or os.getenv('STRIPE_PRICE_SOLO_MONTHLY', ''),
+        'yearly': STRIPE_PRICE_PER_USER_YEARLY or os.getenv('STRIPE_PRICE_SOLO_YEARLY', ''),
     },
     'group': {
-        'monthly': os.getenv('STRIPE_PRICE_GROUP_MONTHLY', ''),
-        'yearly': os.getenv('STRIPE_PRICE_GROUP_YEARLY', ''),
+        'monthly': STRIPE_PRICE_PER_USER_MONTHLY or os.getenv('STRIPE_PRICE_GROUP_MONTHLY', ''),
+        'yearly': STRIPE_PRICE_PER_USER_YEARLY or os.getenv('STRIPE_PRICE_GROUP_YEARLY', ''),
     },
     'clinic': {
-        'monthly': os.getenv('STRIPE_PRICE_CLINIC_MONTHLY', ''),
-        'yearly': os.getenv('STRIPE_PRICE_CLINIC_YEARLY', ''),
+        'monthly': STRIPE_PRICE_PER_USER_MONTHLY or os.getenv('STRIPE_PRICE_CLINIC_MONTHLY', ''),
+        'yearly': STRIPE_PRICE_PER_USER_YEARLY or os.getenv('STRIPE_PRICE_CLINIC_YEARLY', ''),
     },
 }
 
