@@ -927,7 +927,7 @@ class ClientPortalViewTests(TestCase):
         response = self.client.get(reverse("portal_settings:portal_access"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Last login:")
+        self.assertContains(response, "Sep 23, 2026")
         self.assertNotContains(response, "Last login: Never")
 
     def test_portal_settings_reset_password_creates_temporary_credentials_and_audit_log(self):
