@@ -322,10 +322,10 @@ h1, h2, h3, p { margin-top: 0; }
 .credential-box { white-space: pre-line; overflow-wrap: anywhere; padding: 14px; border: 1px dashed rgba(112, 82, 217, .35); border-radius: 16px; background: rgba(255,255,255,.8); color: var(--slate-800); font-weight: 800; line-height: 1.7; }
 .credential-hint { padding: 12px 14px; border-radius: 14px; background: var(--slate-50); color: var(--slate-600); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .profile-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 18px; align-items: start; }
-.profile-detail-list { display: grid; gap: 12px; margin: 0; }
-.profile-detail-list div { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--slate-100); }
-.profile-detail-list dt { color: var(--slate-500); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
-.profile-detail-list dd { margin: 0; color: var(--slate-800); font-weight: 800; overflow-wrap: anywhere; }
+.profile-detail-list { display: grid; gap: 14px; margin: 0; }
+.profile-detail-list div { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 18px; align-items: baseline; }
+.profile-detail-list dt { color: var(--slate-500); font-size: 12px; font-weight: 900; letter-spacing: .02em; }
+.profile-detail-list dd { margin: 0; color: var(--slate-900); font-weight: 850; overflow-wrap: anywhere; }
 .subscription-panel { background: radial-gradient(circle at top right, rgba(204, 251, 245, .56), transparent 32%), #fff; }
 .subscription-summary { display: grid; gap: 8px; margin-bottom: 18px; padding: 18px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 18px; background: rgba(255,255,255,.78); }
 .subscription-summary h3 { margin: 0; color: var(--slate-900); font-size: 28px; letter-spacing: -.04em; }
@@ -366,28 +366,22 @@ h1, h2, h3, p { margin-top: 0; }
 .export-status { display: flex; align-items: flex-start; gap: 7px; color: var(--slate-500); font-size: 11px; line-height: 1.45; }
 .export-status span { width: 17px; height: 17px; display: inline-grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: var(--brand-50); color: var(--brand-700); font-size: 10px; font-weight: 900; }
 .invoice-table-wrap { max-width: 100%; overflow-x: auto; }
-.account-settings-surface { overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-1); }
+.account-settings-surface { display: grid; gap: 28px; overflow: hidden; background: #fff; border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-1); padding: 28px; }
 .account-settings-surface > .settings-section { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
-.account-settings-surface .settings-overview { gap: 0; padding: 0; }
-.account-settings-surface .settings-overview .settings-section-card { padding: 24px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
-.account-settings-surface .settings-overview .settings-section-card + .settings-section-card { border-left: 1px solid var(--slate-100); }
-.settings-sections-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; align-items: stretch; border-top: 1px solid var(--slate-100); }
-.account-settings-surface .settings-sections-grid > .settings-section { min-width: 0; margin: 0; padding: 24px; display: flex; flex-direction: column; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
-.settings-sections-grid > .settings-section + .settings-section { border-left: 1px solid var(--slate-100); }
+.account-settings-surface .settings-overview { gap: 36px; padding: 0; }
+.account-settings-surface .settings-overview .settings-section-card { padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.settings-sections-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: stretch; }
+.account-settings-surface .settings-sections-grid > .settings-section { min-width: 0; margin: 0; padding: 0; display: flex; flex-direction: column; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .settings-sections-grid .client-payments-panel .btn { margin-top: auto; align-self: flex-start; }
 .account-settings-surface .subscription-panel,
 .account-settings-surface .practice-export-panel { background: transparent; }
-.account-settings-surface .setup-checklist-panel { border: 0; border-radius: 0; box-shadow: none; border-bottom: 1px solid var(--slate-100); }
-.account-settings-surface .message-list { border-bottom: 1px solid var(--slate-100); padding: 14px 24px 0; }
-.account-settings-surface .subscription-invoices-panel { margin-top: 0; padding: 24px; border-top: 1px solid var(--slate-100); }
+.account-settings-surface .setup-checklist-panel { border: 0; border-radius: 18px; box-shadow: none; background: var(--slate-50); }
+.account-settings-surface .message-list { padding: 0; }
+.account-settings-surface .subscription-invoices-panel { margin-top: 0; padding: 0; }
 .profile-settings-page .app-main { gap: 12px; padding: 20px; }
 .profile-settings-page .settings-page-header { padding-bottom: 2px; }
-.profile-settings-page .account-settings-surface .settings-overview .settings-section-card { padding: 20px; }
-.profile-settings-page .account-settings-surface .settings-sections-grid > .settings-section { padding: 20px; }
-.profile-settings-page .account-settings-surface .subscription-invoices-panel { padding: 20px; }
 .profile-settings-page .account-settings-surface .setup-checklist-panel { padding: 16px 20px; }
-.profile-settings-page .profile-detail-list { gap: 8px; }
-.profile-settings-page .profile-detail-list div { padding: 8px 0; }
+.profile-settings-page .profile-detail-list { gap: 14px; }
 .profile-settings-page .subscription-summary { margin-bottom: 14px; padding: 14px; }
 .profile-settings-page .plan-change-panel { margin-top: 16px; padding-top: 14px; }
 .plan-preview-box { padding: 14px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 16px; background: rgba(255,255,255,.78); }
@@ -920,14 +914,13 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .document-grid { grid-template-columns: 1fr; }
    .profile-grid { grid-template-columns: 1fr; }
     .profile-settings-page .app-main { gap: 10px; padding: 14px; }
-    .profile-settings-page .account-settings-surface .settings-overview .settings-section-card { padding: 16px; }
-    .account-settings-surface .settings-overview .settings-section-card + .settings-section-card { border-top: 1px solid var(--slate-100); border-left: 0; }
+    .account-settings-surface { gap: 24px; padding: 18px; }
+    .profile-settings-page .account-settings-surface .settings-overview .settings-section-card { padding: 0; }
     .settings-sections-grid { grid-template-columns: 1fr; }
-    .profile-settings-page .settings-sections-grid > .settings-section { padding: 16px; }
-    .settings-sections-grid > .settings-section + .settings-section { border-top: 1px solid var(--slate-100); border-left: 0; }
-    .profile-settings-page .account-settings-surface .subscription-invoices-panel { padding: 16px; }
+    .profile-settings-page .settings-sections-grid > .settings-section { padding: 0; }
+    .profile-settings-page .account-settings-surface .subscription-invoices-panel { padding: 0; }
     .profile-settings-page .account-settings-surface .setup-checklist-panel { padding: 14px 16px; }
-    .profile-settings-page .account-settings-surface .message-list { padding: 12px 16px 0; }
+    .profile-settings-page .account-settings-surface .message-list { padding: 0; }
    .practice-export-layout { grid-template-columns: 1fr; }
   .practice-export-controls .btn { width: 100%; }
   .export-options small { margin-left: 0; }
