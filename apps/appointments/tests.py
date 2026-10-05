@@ -405,6 +405,10 @@ class AppointmentViewTests(TestCase):
 
         self.assertContains(response, 'availability-block')
         self.assertContains(response, 'Unavailable')
+        self.assertContains(response, 'data-availability-configured="1"')
+        self.assertContains(response, 'data-availability-ranges="540-1020"')
+        self.assertContains(response, 'data-availability-prompt')
+        self.assertContains(response, 'name="end_date"')
 
     def test_appointment_reschedule_updates_start_and_end(self):
         user, _practice, therapist, client = self.create_practice_user()
@@ -712,6 +716,26 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(overrides[2].date, target_date + timedelta(weeks=2))
         self.assertTrue(practice.audit_logs.filter(action=AuditLog.Action.CREATE, object_type='appointments.PracticeAvailabilityOverride').exists())
 
+    def test_calendar_availability_create_date_range(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        target_date = timezone.localdate() + timedelta(days=1)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:availability_create'), {
+            'date': target_date.isoformat(),
+            'end_date': (target_date + timedelta(days=2)).isoformat(),
+            'is_available': 'on',
+            'starts_at': '09:00',
+            'ends_at': '12:00',
+            'repeat': 'weekly',
+            'repeat_count': '4',
+        })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        overrides = list(PracticeAvailabilityOverride.objects.filter(practice=practice).order_by('date'))
+        self.assertEqual(len(overrides), 3)
+        self.assertEqual([override.date for override in overrides], [target_date, target_date + timedelta(days=1), target_date + timedelta(days=2)])
+
     def test_calendar_availability_is_scoped_to_user_practice(self):
         user, practice, _therapist, _client = self.create_practice_user()
         _other_user, other_practice, _other_therapist, _other_client = self.create_practice_user(
@@ -732,6 +756,16 @@ class AppointmentViewTests(TestCase):
         self.assertRedirects(response, reverse('appointments:list'))
         self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=practice).count(), 1)
         self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=other_practice).count(), 0)
+
+    def test_settings_sidebar_does_not_show_availability_link(self):
+        user, _practice, _therapist, _client = self.create_practice_user()
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '>Availability</a>')
+        self.assertContains(response, 'Set availability')
 
     def test_appointment_create_syncs_to_google_calendar_when_enabled(self):
         user, practice, therapist, client = self.create_practice_user()

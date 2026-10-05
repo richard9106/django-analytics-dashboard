@@ -199,7 +199,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                     )
                     configured = True
             if not configured:
-                return {'configured': False, 'blocks': []}
+                return {'configured': False, 'blocks': [], 'ranges': ''}
             cursor = self.calendar_start_hour * 60
             end_of_grid = self.calendar_end_hour * 60
             blocks = []
@@ -215,7 +215,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                 blocks.append({
                     'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(end_of_grid - cursor) * (self.calendar_hour_height / 60)}px;',
                 })
-            return {'configured': True, 'blocks': blocks}
+            ranges = ';'.join(f'{start}-{end}' for start, end in sorted(available_intervals))
+            return {'configured': True, 'blocks': blocks, 'ranges': ranges}
 
         def has_availability(current_day):
             return bool(availability_for_day(current_day)['configured'])
@@ -249,6 +250,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                 'appointments': appointments_by_date.get(current_day, []),
                 'timed_events': [self.get_timed_event(appointment) for appointment in appointments_by_date.get(current_day, [])],
                 'availability_blocks': availability_for_day(current_day)['blocks'],
+                'availability_configured': availability_for_day(current_day)['configured'],
+                'availability_ranges': availability_for_day(current_day)['ranges'],
                 'availability_overrides': overrides_by_date.get(current_day, []),
             })
 
@@ -288,7 +291,9 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'calendar_day_appointments': appointments_by_date.get(anchor, []),
             'calendar_day_timed_events': day_timed_events,
             'calendar_day_availability_blocks': day_availability['blocks'],
+            'calendar_day_availability_ranges': day_availability['ranges'],
             'calendar_availability_configured': bool(configured_hours),
+            'calendar_day_availability_configured': day_availability['configured'],
             'calendar_year_months': year_months,
             'calendar_hours': [time(hour=hour) for hour in range(self.calendar_start_hour, self.calendar_end_hour + 1)],
             'calendar_grid_height': (self.calendar_end_hour - self.calendar_start_hour + 1) * self.calendar_hour_height,
@@ -611,18 +616,25 @@ class CalendarAvailabilityCreateView(LoginRequiredMixin, PracticePermissionMixin
         base = form.save(commit=False)
         repeat = form.cleaned_data.get('repeat') or PracticeAvailabilityOverrideForm.REPEAT_NONE
         repeat_count = form.cleaned_data.get('repeat_count') or 1
+        end_date = form.cleaned_data.get('end_date')
         created = []
         try:
             with transaction.atomic():
                 target_dates = []
-                for index in range(repeat_count):
-                    if repeat == PracticeAvailabilityOverrideForm.REPEAT_WEEKLY:
-                        override_date = base.date + timedelta(weeks=index)
-                    elif repeat == PracticeAvailabilityOverrideForm.REPEAT_MONTHLY:
-                        override_date = add_months(base.date, index)
-                    else:
-                        override_date = base.date
-                    target_dates.append(override_date)
+                if end_date:
+                    current_date = base.date
+                    while current_date <= end_date:
+                        target_dates.append(current_date)
+                        current_date += timedelta(days=1)
+                else:
+                    for index in range(repeat_count):
+                        if repeat == PracticeAvailabilityOverrideForm.REPEAT_WEEKLY:
+                            override_date = base.date + timedelta(weeks=index)
+                        elif repeat == PracticeAvailabilityOverrideForm.REPEAT_MONTHLY:
+                            override_date = add_months(base.date, index)
+                        else:
+                            override_date = base.date
+                        target_dates.append(override_date)
                 PracticeAvailabilityOverride.objects.filter(practice=practice, date__in=target_dates).delete()
                 for override_date in target_dates:
                     override = PracticeAvailabilityOverride(
@@ -646,7 +658,7 @@ class CalendarAvailabilityCreateView(LoginRequiredMixin, PracticePermissionMixin
             'appointments.PracticeAvailabilityOverride',
             created[0].pk if created else None,
             practice=practice,
-            metadata={'count': len(created), 'repeat': repeat, 'date': base.date.isoformat()},
+            metadata={'count': len(created), 'repeat': repeat, 'date': base.date.isoformat(), 'end_date': end_date.isoformat() if end_date else ''},
         )
         date_label = 'date' if len(created) == 1 else 'dates'
         messages.success(request, f'Saved availability for {len(created)} {date_label}.')

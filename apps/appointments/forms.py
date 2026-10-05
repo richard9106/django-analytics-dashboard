@@ -95,6 +95,7 @@ class PracticeAvailabilityOverrideForm(forms.ModelForm):
 
     repeat = forms.ChoiceField(choices=REPEAT_CHOICES, required=False, initial=REPEAT_NONE)
     repeat_count = forms.IntegerField(min_value=1, max_value=52, required=False, initial=1, label='Occurrences')
+    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}), label='End date')
 
     class Meta:
         model = PracticeAvailabilityOverride
@@ -121,7 +122,14 @@ class PracticeAvailabilityOverrideForm(forms.ModelForm):
         cleaned_data = super().clean()
         repeat = cleaned_data.get('repeat') or self.REPEAT_NONE
         repeat_count = cleaned_data.get('repeat_count') or 1
-        if repeat == self.REPEAT_NONE:
+        start_date = cleaned_data.get('date')
+        end_date = cleaned_data.get('end_date')
+        if end_date and start_date and end_date < start_date:
+            self.add_error('end_date', 'End date must be on or after the start date.')
+        if end_date:
+            cleaned_data['repeat'] = self.REPEAT_NONE
+            cleaned_data['repeat_count'] = 1
+        elif repeat == self.REPEAT_NONE:
             cleaned_data['repeat_count'] = 1
         elif repeat_count < 2:
             self.add_error('repeat_count', 'Use at least 2 occurrences when repeating availability.')
