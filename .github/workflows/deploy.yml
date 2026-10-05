@@ -12,8 +12,8 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +38,8 @@ jobs:
   deploy:
     needs: test
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
 
     steps:
       - name: Deploy to VPS
