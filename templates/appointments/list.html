@@ -160,28 +160,6 @@
           {% endif %}
         </article>
 
-        <aside class="panel calendar-availability-panel" aria-labelledby="availability-overrides-heading">
-          <div class="panel-head compact"><div><p class="eyebrow">Availability</p><h2 id="availability-overrides-heading">Date-specific changes</h2><p>Overrides visible in this calendar period.</p></div><span class="badge brand">{{ calendar_availability_overrides|length }}</span></div>
-          <div class="package-list">
-            {% for override in calendar_availability_overrides %}
-              <article class="package-card">
-                <div class="package-card-head">
-                  <div><strong>{{ override.date|date:"D, M j" }}</strong><p>{% if override.is_full_day_unavailable %}All day{% elif override.starts_at and override.ends_at %}{{ override.starts_at|time:"g:i A" }} - {{ override.ends_at|time:"g:i A" }}{% else %}Custom availability{% endif %}</p></div>
-                  <span class="badge {% if override.is_available %}success{% else %}warning{% endif %}">{% if override.is_available %}Available{% else %}Unavailable{% endif %}</span>
-                </div>
-                {% if override.note %}<p class="sync-meta">{{ override.note }}</p>{% endif %}
-                <form method="post" action="{% url 'appointments:availability_delete' override.pk %}" data-confirm-message="Delete this date-specific availability change? Scheduling validation will update immediately.">
-                  {% csrf_token %}
-                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                  <button class="inline-button-danger" type="submit">Delete override</button>
-                </form>
-              </article>
-            {% empty %}
-              <p class="empty-state">No date-specific availability changes in this period.</p>
-            {% endfor %}
-          </div>
-        </aside>
-
       </section>
 
       <dialog class="modal-dialog" id="client-create-modal">

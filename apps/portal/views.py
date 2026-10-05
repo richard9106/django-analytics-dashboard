@@ -1,3 +1,5 @@
+from datetime import datetime, time, timedelta
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
@@ -16,7 +18,7 @@ from django.conf import settings
 from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, PracticePermissionMixin, get_practice_for_user, has_practice_permission, permission_redirect
 from apps.accounts.models import UserProfile
 from apps.appointments.google_calendar import sync_appointment_to_google
-from apps.appointments.models import Appointment
+from apps.appointments.models import Appointment, practice_allows_interval
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import Invoice, ServicePackage
@@ -38,6 +40,51 @@ from .forms import (
     suggest_portal_username,
 )
 from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
+
+
+PUBLIC_BOOKING_SLOT_MINUTES = 50
+PUBLIC_BOOKING_SLOT_STEP_MINUTES = 30
+
+
+def public_booking_date_options(days=14):
+    today = timezone.localdate()
+    return [today + timedelta(days=offset) for offset in range(1, days + 1)]
+
+
+def selected_public_booking_date(request):
+    raw_value = request.POST.get('booking_date') or request.GET.get('date')
+    options = public_booking_date_options()
+    if raw_value:
+        try:
+            selected = datetime.strptime(raw_value, '%Y-%m-%d').date()
+        except ValueError:
+            selected = options[0]
+        return selected if selected in options else options[0]
+    return options[0]
+
+
+def public_booking_slots(practice, selected_date):
+    slots = []
+    grid_start = timezone.make_aware(datetime.combine(selected_date, time(hour=7)))
+    grid_end = timezone.make_aware(datetime.combine(selected_date, time(hour=20)))
+    existing = list(Appointment.objects.filter(
+        practice=practice,
+        status=Appointment.Status.SCHEDULED,
+        starts_at__lt=grid_end,
+        ends_at__gt=grid_start,
+    ).only('starts_at', 'ends_at'))
+    cursor = grid_start
+    while cursor + timedelta(minutes=PUBLIC_BOOKING_SLOT_MINUTES) <= grid_end:
+        slot_end = cursor + timedelta(minutes=PUBLIC_BOOKING_SLOT_MINUTES)
+        overlaps = any(appointment.starts_at < slot_end and appointment.ends_at > cursor for appointment in existing)
+        if not overlaps and practice_allows_interval(practice, cursor, slot_end):
+            local_start = timezone.localtime(cursor)
+            slots.append({
+                'value': local_start.strftime('%Y-%m-%dT%H:%M'),
+                'label': f'{local_start:%-I:%M %p} - {timezone.localtime(slot_end):%-I:%M %p}',
+            })
+        cursor += timedelta(minutes=PUBLIC_BOOKING_SLOT_STEP_MINUTES)
+    return slots
 
 
 class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
@@ -414,20 +461,43 @@ class PublicBookingRequestCreateView(PostRateLimitMixin, View):
 
     def get(self, request, slug):
         practice = self.get_practice()
-        form = PublicBookingRequestForm(practice=practice)
-        return TemplateResponse(request, self.template_name, {'practice': practice, 'form': form})
+        selected_date = selected_public_booking_date(request)
+        slots = public_booking_slots(practice, selected_date)
+        form = PublicBookingRequestForm(practice=practice, available_slots=slots, selected_date=selected_date)
+        return TemplateResponse(request, self.template_name, {
+            'practice': practice,
+            'form': form,
+            'selected_date': selected_date,
+            'date_options': public_booking_date_options(),
+            'available_slots': slots,
+        })
 
     def post(self, request, slug):
         practice = self.get_practice()
-        form = PublicBookingRequestForm(request.POST, practice=practice)
+        selected_date = selected_public_booking_date(request)
+        slots = public_booking_slots(practice, selected_date)
+        form = PublicBookingRequestForm(request.POST, practice=practice, available_slots=slots, selected_date=selected_date)
         if form.is_valid():
             booking_request = form.save()
             return TemplateResponse(
                 request,
                 self.template_name,
-                {'practice': practice, 'form': PublicBookingRequestForm(practice=practice), 'submitted_request': booking_request},
+                {
+                    'practice': practice,
+                    'form': PublicBookingRequestForm(practice=practice, available_slots=public_booking_slots(practice, selected_date), selected_date=selected_date),
+                    'submitted_request': booking_request,
+                    'selected_date': selected_date,
+                    'date_options': public_booking_date_options(),
+                    'available_slots': slots,
+                },
             )
-        return TemplateResponse(request, self.template_name, {'practice': practice, 'form': form}, status=400)
+        return TemplateResponse(request, self.template_name, {
+            'practice': practice,
+            'form': form,
+            'selected_date': selected_date,
+            'date_options': public_booking_date_options(),
+            'available_slots': slots,
+        }, status=400)
 
 
 class PortalAccessListView(PracticePermissionMixin, PracticeContextMixin, ListView):

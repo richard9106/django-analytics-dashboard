@@ -1,5 +1,5 @@
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django import forms
 from django.contrib.auth import get_user_model
@@ -255,25 +255,44 @@ class AppointmentChangeRequestForm(forms.ModelForm):
 
 
 class PublicBookingRequestForm(forms.ModelForm):
+    booking_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+    requested_slot = forms.ChoiceField(
+        widget=forms.RadioSelect,
+        label='Available times',
+        error_messages={'invalid_choice': 'Choose one of the available appointment times.'},
+    )
+
     class Meta:
         model = PublicBookingRequest
-        fields = ['first_name', 'last_name', 'email', 'phone', 'requested_starts_at', 'appointment_type', 'reason']
+        fields = ['first_name', 'last_name', 'email', 'phone', 'appointment_type', 'reason']
         widgets = {
-            'requested_starts_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'reason': forms.Textarea(attrs={'rows': 4}),
         }
 
-    def __init__(self, *args, practice=None, **kwargs):
+    def __init__(self, *args, practice=None, available_slots=None, selected_date=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
+        self.available_slots = available_slots or []
         self.instance.practice = practice
-        self.fields['requested_starts_at'].input_formats = ['%Y-%m-%dT%H:%M']
+        self.fields['booking_date'].initial = selected_date
+        self.fields['requested_slot'].choices = [
+            (slot['value'], slot['label'])
+            for slot in self.available_slots
+        ]
         self.fields['reason'].label = 'What would you like support with?'
         self.fields['reason'].required = False
+
+    def clean_requested_slot(self):
+        slot = self.cleaned_data['requested_slot']
+        if slot not in {item['value'] for item in self.available_slots}:
+            raise forms.ValidationError('Choose one of the available appointment times.')
+        return slot
 
     def save(self, commit=True):
         booking_request = super().save(commit=False)
         booking_request.practice = self.practice
+        selected_slot = datetime.strptime(self.cleaned_data['requested_slot'], '%Y-%m-%dT%H:%M')
+        booking_request.requested_starts_at = timezone.make_aware(selected_slot)
         booking_request.requested_ends_at = booking_request.requested_starts_at + timedelta(minutes=50)
         if commit:
             booking_request.full_clean()

@@ -15,7 +15,7 @@
       <a class="brand" href="{% url 'home' %}"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy</span></a>
       <p class="eyebrow">Appointment request</p>
       <h1>Request a session with {{ practice.name }}</h1>
-      <p>Share your preferred time and contact details. The practice will review the request before confirming the appointment.</p>
+      <p>Choose an available time and share your contact details. The practice will review the request before confirming the appointment.</p>
       <div class="signup-highlight"><strong>What happens next?</strong><span>Your requested time is not confirmed until the practice approves it.</span></div>
     </section>
     <section class="login-card">
@@ -26,9 +26,21 @@
         </div>
       {% endif %}
       <h2>Preferred appointment</h2>
+      <form class="appointment-form" method="get" aria-label="Choose appointment date">
+        <div class="field">
+          <label for="booking-date-select">Choose a date</label>
+          <select id="booking-date-select" name="date">
+            {% for option_date in date_options %}
+              <option value="{{ option_date|date:'Y-m-d' }}" {% if option_date == selected_date %}selected{% endif %}>{{ option_date|date:"D, M j" }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-secondary" type="submit">Show available times</button>
+      </form>
       <form class="appointment-form" method="post" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+        {{ form.booking_date.as_hidden }}
         <div class="field-grid two">
           <div class="field"><label for="{{ form.first_name.id_for_label }}">First name</label>{{ form.first_name }}{{ form.first_name.errors }}</div>
           <div class="field"><label for="{{ form.last_name.id_for_label }}">Last name</label>{{ form.last_name }}{{ form.last_name.errors }}</div>
@@ -38,11 +50,20 @@
           <div class="field"><label for="{{ form.phone.id_for_label }}">Phone</label>{{ form.phone }}{{ form.phone.errors }}</div>
         </div>
         <div class="field-grid two">
-          <div class="field"><label for="{{ form.requested_starts_at.id_for_label }}">Preferred date and time</label>{{ form.requested_starts_at }}{{ form.requested_starts_at.errors }}</div>
           <div class="field"><label for="{{ form.appointment_type.id_for_label }}">Appointment type</label>{{ form.appointment_type }}{{ form.appointment_type.errors }}</div>
+          <div class="field"><label>Duration</label><input value="50 minutes" disabled></div>
         </div>
+        <fieldset class="field booking-slot-field">
+          <legend>Available times for {{ selected_date|date:"D, M j" }}</legend>
+          {% if available_slots %}
+            {{ form.requested_slot }}
+          {% else %}
+            <p class="empty-state">No available appointment times for this date. Choose another date.</p>
+          {% endif %}
+          {{ form.requested_slot.errors }}
+        </fieldset>
         <div class="field"><label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>{{ form.reason }}{{ form.reason.errors }}</div>
-        <button class="btn btn-primary" type="submit">Send request</button>
+        <button class="btn btn-primary" type="submit" {% if not available_slots %}disabled{% endif %}>Send request</button>
       </form>
     </section>
   </main>

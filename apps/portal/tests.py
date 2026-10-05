@@ -4,14 +4,14 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import stripe
 
-from apps.appointments.models import Appointment
+from apps.appointments.models import Appointment, PracticeAvailabilityOverride
 from apps.accounts.models import UserProfile
 from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, ServicePackage
@@ -713,14 +713,16 @@ class ClientPortalViewTests(TestCase):
 
     def test_public_booking_page_accepts_appointment_request(self):
         _user, practice, _therapist, _client, _access = self.create_portal_user()
-        starts_at = timezone.localtime().replace(hour=14, minute=0, second=0, microsecond=0) + timedelta(days=3)
+        selected_date = timezone.localdate() + timedelta(days=3)
+        starts_at = timezone.make_aware(datetime.combine(selected_date, time(14, 0)))
 
         response = self.client.post(reverse("public_booking", args=[practice.public_booking_slug]), {
             "first_name": "Jordan",
             "last_name": "Rivera",
             "email": "jordan@example.com",
             "phone": "555-0101",
-            "requested_starts_at": starts_at.strftime("%Y-%m-%dT%H:%M"),
+            "booking_date": selected_date.isoformat(),
+            "requested_slot": starts_at.strftime("%Y-%m-%dT%H:%M"),
             "appointment_type": Appointment.AppointmentType.VIDEO,
             "reason": "I would like an intake appointment.",
         })
@@ -730,6 +732,136 @@ class ClientPortalViewTests(TestCase):
         booking_request = PublicBookingRequest.objects.get(practice=practice, email="jordan@example.com")
         self.assertEqual(booking_request.status, PublicBookingRequest.Status.PENDING)
         self.assertEqual(timezone.localtime(booking_request.requested_starts_at).strftime("%H:%M"), "14:00")
+
+    def test_public_booking_page_shows_available_slots(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user()
+        selected_date = timezone.localdate() + timedelta(days=2)
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=selected_date,
+            starts_at=time(10, 0),
+            ends_at=time(12, 0),
+            is_available=True,
+        )
+
+        response = self.client.get(reverse("public_booking", args=[practice.public_booking_slug]), {"date": selected_date.isoformat()})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Available times")
+        self.assertContains(response, "10:00 AM - 10:50 AM")
+        self.assertContains(response, f'value="{selected_date.isoformat()}T10:00"')
+
+    def test_public_booking_slots_hide_blocked_override_times(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user()
+        selected_date = timezone.localdate() + timedelta(days=2)
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=selected_date,
+            starts_at=time(9, 0),
+            ends_at=time(12, 0),
+            is_available=True,
+        )
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=selected_date,
+            starts_at=time(10, 0),
+            ends_at=time(11, 0),
+            is_available=False,
+        )
+
+        response = self.client.get(reverse("public_booking", args=[practice.public_booking_slug]), {"date": selected_date.isoformat()})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "9:00 AM - 9:50 AM")
+        self.assertNotContains(response, "10:00 AM - 10:50 AM")
+
+    def test_public_booking_slots_hide_existing_appointments(self):
+        _user, practice, therapist, client, _access = self.create_portal_user()
+        selected_date = timezone.localdate() + timedelta(days=2)
+        starts_at = timezone.make_aware(datetime.combine(selected_date, time(10, 0)))
+        Appointment.objects.create(
+            practice=practice,
+            client=client,
+            therapist=therapist,
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=50),
+            status=Appointment.Status.SCHEDULED,
+        )
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=selected_date,
+            starts_at=time(9, 0),
+            ends_at=time(12, 0),
+            is_available=True,
+        )
+
+        response = self.client.get(reverse("public_booking", args=[practice.public_booking_slug]), {"date": selected_date.isoformat()})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "10:00 AM - 10:50 AM")
+        self.assertContains(response, "11:00 AM - 11:50 AM")
+
+    def test_public_booking_rejects_manually_posted_unavailable_slot(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user()
+        selected_date = timezone.localdate() + timedelta(days=2)
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=selected_date,
+            starts_at=time(9, 0),
+            ends_at=time(10, 0),
+            is_available=True,
+        )
+        invalid_slot = timezone.make_aware(datetime.combine(selected_date, time(14, 0)))
+
+        response = self.client.post(reverse("public_booking", args=[practice.public_booking_slug]), {
+            "first_name": "Jordan",
+            "last_name": "Rivera",
+            "email": "jordan@example.com",
+            "booking_date": selected_date.isoformat(),
+            "requested_slot": invalid_slot.strftime("%Y-%m-%dT%H:%M"),
+            "appointment_type": Appointment.AppointmentType.VIDEO,
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "Choose one of the available appointment times")
+        self.assertFalse(PublicBookingRequest.objects.filter(practice=practice, email="jordan@example.com").exists())
+
+    def test_public_booking_slots_are_scoped_to_practice(self):
+        _user, practice, _therapist, _client, _access = self.create_portal_user(username="practice-client")
+        _other_user, other_practice, other_therapist, other_client, _other_access = self.create_portal_user(
+            username="other-client",
+            practice_name="Other Practice",
+        )
+        selected_date = timezone.localdate() + timedelta(days=2)
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=selected_date,
+            starts_at=time(9, 0),
+            ends_at=time(10, 0),
+            is_available=True,
+        )
+        PracticeAvailabilityOverride.objects.create(
+            practice=other_practice,
+            date=selected_date,
+            starts_at=time(15, 0),
+            ends_at=time(16, 0),
+            is_available=True,
+        )
+        other_starts_at = timezone.make_aware(datetime.combine(selected_date, time(9, 0)))
+        Appointment.objects.create(
+            practice=other_practice,
+            client=other_client,
+            therapist=other_therapist,
+            starts_at=other_starts_at,
+            ends_at=other_starts_at + timedelta(minutes=50),
+            status=Appointment.Status.SCHEDULED,
+        )
+
+        response = self.client.get(reverse("public_booking", args=[practice.public_booking_slug]), {"date": selected_date.isoformat()})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "9:00 AM - 9:50 AM")
+        self.assertNotContains(response, "3:00 PM - 3:50 PM")
 
     def test_public_booking_is_rate_limited(self):
         _user, practice, _therapist, _client, _access = self.create_portal_user()

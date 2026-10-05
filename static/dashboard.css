@@ -157,10 +157,7 @@ h1, h2, h3, p { margin-top: 0; }
 .sync-panel { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--slate-200); border-radius: 14px; background: var(--slate-50); }
 .inline-link { display: inline-flex; margin-top: 8px; color: var(--brand-700); font-size: 13px; font-weight: 800; }
 .inline-actions { display: flex; gap: 14px; flex-wrap: wrap; }
-.calendar-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: 18px; align-items: start; }
-.calendar-availability-panel { position: sticky; top: 88px; }
-.package-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.package-card-head p { margin: 4px 0 0; color: var(--slate-500); font-size: 13px; font-weight: 700; }
+.calendar-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
 .calendar-panel { overflow-x: auto; background: linear-gradient(145deg, #fff, rgba(248, 249, 251, .82)); }
 .upcoming-panel { background: linear-gradient(180deg, #fff, rgba(255, 227, 216, .34)); border-color: rgba(243, 111, 86, .18); }
 .calendar-head { align-items: center; }
