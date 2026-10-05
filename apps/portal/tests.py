@@ -823,7 +823,7 @@ class ClientPortalViewTests(TestCase):
         })
 
         self.assertEqual(response.status_code, 400)
-        self.assertContains(response, "Choose one of the available appointment times")
+        self.assertContains(response, "Choose one of the available appointment times", status_code=400)
         self.assertFalse(PublicBookingRequest.objects.filter(practice=practice, email="jordan@example.com").exists())
 
     def test_public_booking_slots_are_scoped_to_practice(self):

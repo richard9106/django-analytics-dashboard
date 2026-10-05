@@ -757,7 +757,7 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=practice).count(), 1)
         self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=other_practice).count(), 0)
 
-    def test_calendar_lists_date_specific_availability_overrides(self):
+    def test_calendar_hides_date_specific_availability_override_inspector(self):
         user, practice, _therapist, _client = self.create_practice_user()
         target_date = timezone.localdate() + timedelta(days=1)
         PracticeAvailabilityOverride.objects.create(
@@ -773,10 +773,9 @@ class AppointmentViewTests(TestCase):
         response = self.client.get(reverse('appointments:list'), {'view': 'week', 'date': target_date.isoformat()})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Date-specific changes')
-        self.assertContains(response, 'School holiday hours')
-        self.assertContains(response, '10:00 AM - 2:00 PM')
-        self.assertContains(response, 'Delete override')
+        self.assertNotContains(response, 'Date-specific changes')
+        self.assertNotContains(response, 'School holiday hours')
+        self.assertNotContains(response, 'Delete override')
 
     def test_calendar_availability_delete_is_scoped_to_user_practice(self):
         user, practice, _therapist, _client = self.create_practice_user()
