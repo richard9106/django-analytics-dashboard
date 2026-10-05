@@ -32,7 +32,7 @@
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'package_templates' %} active{% endif %}" href="{% url 'settings:package_templates' %}">Session packages</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'insurance' %} active{% endif %}" href="{% url 'settings:insurance' %}">Insurance</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'integrations' %} active{% endif %}" href="{% url 'practice_settings:integrations' %}">Integrations</a>
-      <a class="nav-item subitem{% if request.resolver_match.url_name == 'availability' %} active{% endif %}" href="{% url 'practice_settings:availability' %}">Availability</a>
+      <a class="nav-item subitem{% if request.resolver_match.url_name == 'availability' %} active{% endif %}" href="{% url 'appointments:list' %}?view=week">Availability</a>
       {% if can_manage_team %}<a class="nav-item subitem{% if request.resolver_match.url_name == 'team_management' %} active{% endif %}" href="{% url 'team_management' %}">Team</a>{% endif %}
       <a class="nav-item subitem{% if request.resolver_match.namespace == 'portal_settings' %} active{% endif %}" href="{% url 'portal_settings:portal_access' %}">Client portal</a>
     </details>

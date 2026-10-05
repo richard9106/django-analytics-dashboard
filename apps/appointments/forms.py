@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Appointment, PracticeWorkingHour
+from .models import Appointment, PracticeAvailabilityOverride, PracticeWorkingHour
 
 
 class AppointmentForm(forms.ModelForm):
@@ -81,3 +81,57 @@ class PracticeWorkingHourForm(forms.ModelForm):
             working_hour.save()
             self.save_m2m()
         return working_hour
+
+
+class PracticeAvailabilityOverrideForm(forms.ModelForm):
+    REPEAT_NONE = 'none'
+    REPEAT_WEEKLY = 'weekly'
+    REPEAT_MONTHLY = 'monthly'
+    REPEAT_CHOICES = (
+        (REPEAT_NONE, 'Only this date'),
+        (REPEAT_WEEKLY, 'Repeat weekly'),
+        (REPEAT_MONTHLY, 'Repeat monthly'),
+    )
+
+    repeat = forms.ChoiceField(choices=REPEAT_CHOICES, required=False, initial=REPEAT_NONE)
+    repeat_count = forms.IntegerField(min_value=1, max_value=52, required=False, initial=1, label='Occurrences')
+
+    class Meta:
+        model = PracticeAvailabilityOverride
+        fields = ['date', 'is_available', 'starts_at', 'ends_at', 'note']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'starts_at': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+            'ends_at': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+        }
+        labels = {
+            'is_available': 'Available during these hours',
+            'starts_at': 'Start time',
+            'ends_at': 'End time',
+        }
+
+    def __init__(self, *args, practice=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.practice = practice
+        self.instance.practice = practice
+        self.fields['starts_at'].input_formats = ['%H:%M']
+        self.fields['ends_at'].input_formats = ['%H:%M']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        repeat = cleaned_data.get('repeat') or self.REPEAT_NONE
+        repeat_count = cleaned_data.get('repeat_count') or 1
+        if repeat == self.REPEAT_NONE:
+            cleaned_data['repeat_count'] = 1
+        elif repeat_count < 2:
+            self.add_error('repeat_count', 'Use at least 2 occurrences when repeating availability.')
+        return cleaned_data
+
+    def save(self, commit=True):
+        override = super().save(commit=False)
+        override.practice = self.practice
+        if commit:
+            override.full_clean()
+            override.save()
+            self.save_m2m()
+        return override

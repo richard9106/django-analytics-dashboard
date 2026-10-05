@@ -56,7 +56,7 @@
               <p>Switch between day, week, and month views. Shaded time is outside configured availability.</p>
             </div>
             <div class="calendar-actions">
-              <a class="btn btn-soft" href="{% url 'practice_settings:availability' %}">Manage availability</a>
+              <button class="btn btn-soft" type="button" data-modal-target="availability-modal" data-availability-date="{{ calendar_anchor_date|date:'Y-m-d' }}">Set availability</button>
               <a class="btn btn-secondary" href="{{ previous_period_url }}">Previous</a>
               <a class="btn btn-soft" href="{{ today_period_url }}">Today</a>
               <a class="btn btn-secondary" href="{{ next_period_url }}">Next</a>
@@ -94,7 +94,7 @@
                 {% for hour in calendar_hours %}<span>{{ hour|time:"g A" }}</span>{% endfor %}
               </aside>
               <section class="gcal-day-column" style="--calendar-grid-height: {{ calendar_grid_height }}px;" data-drop-date="{{ calendar_anchor_date|date:'Y-m-d' }}">
-                <div class="gcal-day-head"><strong>{{ calendar_anchor_date|date:"D" }}</strong><span>{{ calendar_anchor_date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a></div>
+                <div class="gcal-day-head"><strong>{{ calendar_anchor_date|date:"D" }}</strong><span>{{ calendar_anchor_date|date:"j" }}</span><button class="calendar-add" type="button" data-modal-target="availability-modal" data-availability-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Set availability on {{ calendar_anchor_date|date:'F j' }}">✓</button><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ calendar_anchor_date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ calendar_anchor_date|date:'Y-m-d' }}" aria-label="Add appointment on {{ calendar_anchor_date|date:'F j' }}">+</a></div>
                  <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>{% for block in calendar_day_availability_blocks %}<div class="availability-block" style="{{ block.style }}"><span>Unavailable</span></div>{% endfor %}
                 {% if calendar_show_current_time and calendar_anchor_date == calendar_today %}<div class="gcal-now-line" style="top: {{ calendar_current_time_top }}px;"><span>Now</span></div>{% endif %}
                 {% for event in calendar_day_timed_events %}
@@ -116,7 +116,7 @@
               <div class="gcal-week-columns" style="--calendar-grid-height: {{ calendar_grid_height }}px;">
                 {% for day in calendar_week_days %}
                   <section class="gcal-day-column{% if day.is_today %} today{% endif %}" data-drop-date="{{ day.date|date:'Y-m-d' }}">
-                    <div class="gcal-day-head"><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"j" }}</span><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a></div>
+                    <div class="gcal-day-head"><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"j" }}</span><button class="calendar-add" type="button" data-modal-target="availability-modal" data-availability-date="{{ day.date|date:'Y-m-d' }}" aria-label="Set availability on {{ day.date|date:'F j' }}">✓</button><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a></div>
                      <div class="gcal-time-grid">{% for hour in calendar_hours %}<span></span>{% endfor %}</div>{% for block in day.availability_blocks %}<div class="availability-block" style="{{ block.style }}"><span>Unavailable</span></div>{% endfor %}
                     {% if calendar_show_current_time and day.date == calendar_today %}<div class="gcal-now-line" style="top: {{ calendar_current_time_top }}px;"><span>Now</span></div>{% endif %}
                     {% for event in day.timed_events %}
@@ -142,8 +142,9 @@
                     <div class="calendar-day-head">
                       <span class="calendar-date">{{ day.date|date:"j" }}</span>
                       <span class="calendar-day-name">{{ day.date|date:"D, M j" }}</span>
-                      <a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
+                      <button class="calendar-add" type="button" data-modal-target="availability-modal" data-availability-date="{{ day.date|date:'Y-m-d' }}" aria-label="Set availability on {{ day.date|date:'F j' }}">✓</button><a class="calendar-add" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}" aria-label="Add appointment on {{ day.date|date:'F j' }}">+</a>
                     </div>
+                    {% if day.availability_overrides %}<p class="sync-meta">Availability adjusted</p>{% endif %}
                     <div class="calendar-events">
                       {% for appointment in day.appointments %}
                         <a class="calendar-event" href="{% url 'appointments:edit' appointment.pk %}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true" data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}">
@@ -269,6 +270,27 @@
               <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
               <button class="btn btn-primary" type="submit">Create appointment</button>
             </div>
+          </form>
+        </div>
+      </dialog>
+
+      <dialog class="modal-dialog" id="availability-modal">
+        <div class="modal-card">
+          <div class="modal-head"><div><p class="eyebrow">Availability</p><h2>Set calendar availability</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
+          <form class="appointment-form" method="post" action="{% url 'appointments:availability_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div class="field-grid two">
+              <div class="field"><label for="availability-date">Date</label><input id="availability-date" name="date" type="date" required></div>
+              <div class="field checkbox-field"><label><input id="availability-is-available" name="is_available" type="checkbox" checked> Available during these hours</label></div>
+              <div class="field"><label for="availability-start">Start time</label><input id="availability-start" name="starts_at" type="time"></div>
+              <div class="field"><label for="availability-end">End time</label><input id="availability-end" name="ends_at" type="time"></div>
+              <div class="field"><label for="availability-repeat">Repeat</label><select id="availability-repeat" name="repeat"><option value="none">Only this date</option><option value="weekly">Repeat weekly</option><option value="monthly">Repeat monthly</option></select></div>
+              <div class="field"><label for="availability-repeat-count">Occurrences</label><input id="availability-repeat-count" name="repeat_count" type="number" min="1" max="52" value="1"></div>
+              <div class="field full"><label for="availability-note">Note</label><input id="availability-note" name="note" maxlength="160" placeholder="Optional, for example: conference day"></div>
+            </div>
+            <p class="empty-state">Uncheck availability and leave times blank to mark the whole day unavailable. Uncheck with times to block only that time range.</p>
+            <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save availability</button></div>
           </form>
         </div>
       </dialog>
@@ -473,6 +495,16 @@
         const end = dialog.querySelector('[name="ends_at"]');
         start.value = `${trigger.dataset.appointmentDate}T09:00`;
         end.value = `${trigger.dataset.appointmentDate}T09:50`;
+      }
+      if (trigger.dataset.availabilityDate) {
+        const dateInput = dialog.querySelector('[name="date"]');
+        const start = dialog.querySelector('[name="starts_at"]');
+        const end = dialog.querySelector('[name="ends_at"]');
+        const isAvailable = dialog.querySelector('[name="is_available"]');
+        if (dateInput) dateInput.value = trigger.dataset.availabilityDate;
+        if (start && !start.value) start.value = '09:00';
+        if (end && !end.value) end.value = '17:00';
+        if (isAvailable) isAvailable.checked = true;
       }
       dialog.showModal();
     });

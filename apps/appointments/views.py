@@ -18,8 +18,16 @@ from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMi
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
-from .models import Appointment, PracticeWorkingHour
-from .forms import AppointmentForm, PracticeWorkingHourForm
+from .models import Appointment, PracticeAvailabilityOverride, PracticeWorkingHour
+from .forms import AppointmentForm, PracticeAvailabilityOverrideForm, PracticeWorkingHourForm
+
+
+def add_months(value, months):
+    month = value.month - 1 + months
+    year = value.year + month // 12
+    month = month % 12 + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -145,21 +153,59 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         month_start = self.get_calendar_month() if selected_view == 'month' else anchor.replace(day=1)
         month_dates = calendar.Calendar(firstweekday=0).monthdatescalendar(month_start.year, month_start.month)
         today = timezone.localdate()
-        configured_hours = list(self.get_practice().working_hours.filter(active=True)) if self.get_practice() else []
+        practice = self.get_practice()
+        configured_hours = list(practice.working_hours.filter(active=True)) if practice else []
+        period_start = month_dates[0][0] if selected_view == 'month' else (anchor - timedelta(days=anchor.weekday()) if selected_view == 'week' else anchor)
+        period_end = month_dates[-1][-1] if selected_view == 'month' else (period_start + timedelta(days=6) if selected_view == 'week' else anchor)
+        availability_overrides = list(practice.availability_overrides.filter(date__gte=period_start, date__lte=period_end)) if practice else []
+        overrides_by_date = {}
+        for override in availability_overrides:
+            overrides_by_date.setdefault(override.date, []).append(override)
         hours_by_weekday = {}
         for working_hour in configured_hours:
             hours_by_weekday.setdefault(working_hour.weekday, []).append(working_hour)
 
+        def subtract_interval(intervals, blocked_start, blocked_end):
+            updated = []
+            for start, end in intervals:
+                if blocked_end <= start or blocked_start >= end:
+                    updated.append((start, end))
+                    continue
+                if blocked_start > start:
+                    updated.append((start, blocked_start))
+                if blocked_end < end:
+                    updated.append((blocked_end, end))
+            return updated
+
         def availability_for_day(current_day):
-            if not configured_hours:
+            day_overrides = overrides_by_date.get(current_day, [])
+            if any(override.is_full_day_unavailable for override in day_overrides):
+                available_intervals = []
+                configured = True
+            else:
+                available_overrides = [override for override in day_overrides if override.is_available]
+                if available_overrides:
+                    available_intervals = [(override.starts_at.hour * 60 + override.starts_at.minute, override.ends_at.hour * 60 + override.ends_at.minute) for override in available_overrides]
+                    configured = True
+                else:
+                    day_hours = hours_by_weekday.get(current_day.weekday(), [])
+                    available_intervals = [(hour.starts_at.hour * 60 + hour.starts_at.minute, hour.ends_at.hour * 60 + hour.ends_at.minute) for hour in day_hours]
+                    configured = bool(configured_hours)
+                for override in [item for item in day_overrides if not item.is_available and item.starts_at and item.ends_at]:
+                    available_intervals = subtract_interval(
+                        available_intervals,
+                        override.starts_at.hour * 60 + override.starts_at.minute,
+                        override.ends_at.hour * 60 + override.ends_at.minute,
+                    )
+                    configured = True
+            if not configured:
                 return {'configured': False, 'blocks': []}
-            day_hours = hours_by_weekday.get(current_day.weekday(), [])
             cursor = self.calendar_start_hour * 60
             end_of_grid = self.calendar_end_hour * 60
             blocks = []
-            for working_hour in sorted(day_hours, key=lambda hour: hour.starts_at):
-                start_minutes = max(cursor, working_hour.starts_at.hour * 60 + working_hour.starts_at.minute)
-                end_minutes = min(end_of_grid, working_hour.ends_at.hour * 60 + working_hour.ends_at.minute)
+            for start, end in sorted(available_intervals):
+                start_minutes = max(cursor, start)
+                end_minutes = min(end_of_grid, end)
                 if start_minutes > cursor:
                     blocks.append({
                         'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(start_minutes - cursor) * (self.calendar_hour_height / 60)}px;',
@@ -170,6 +216,9 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                     'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(end_of_grid - cursor) * (self.calendar_hour_height / 60)}px;',
                 })
             return {'configured': True, 'blocks': blocks}
+
+        def has_availability(current_day):
+            return bool(availability_for_day(current_day)['configured'])
 
         appointments_by_date = {}
         for appointment in appointments:
@@ -184,7 +233,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                     'in_month': day.month == month_start.month,
                     'is_today': day == today,
                     'appointments': appointments_by_date.get(day, []),
-                    'outside_availability': availability_for_day(day)['configured'] and not hours_by_weekday.get(day.weekday()),
+                    'outside_availability': has_availability(day) and not availability_for_day(day)['blocks'],
+                    'availability_overrides': overrides_by_date.get(day, []),
                 }
                 for day in week
             ])
@@ -199,6 +249,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                 'appointments': appointments_by_date.get(current_day, []),
                 'timed_events': [self.get_timed_event(appointment) for appointment in appointments_by_date.get(current_day, [])],
                 'availability_blocks': availability_for_day(current_day)['blocks'],
+                'availability_overrides': overrides_by_date.get(current_day, []),
             })
 
         day_timed_events = [self.get_timed_event(appointment) for appointment in appointments_by_date.get(anchor, [])]
@@ -269,6 +320,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         practice = self.get_practice()
         context['appointment_clients'] = practice.clients.all() if practice else []
         context['appointment_therapists'] = practice.therapists.select_related('user') if practice else []
+        context['availability_form'] = PracticeAvailabilityOverrideForm(practice=practice)
         return context
 
 
@@ -536,6 +588,68 @@ class AppointmentRescheduleView(LoginRequiredMixin, PracticePermissionMixin, Pra
         appointment.save()
         sync_appointment_to_google(appointment)
         messages.success(request, 'Appointment moved successfully.')
+        return redirect(self.get_success_url())
+
+
+class CalendarAvailabilityCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
+
+    def get_success_url(self):
+        next_url = self.request.POST.get('next')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            return next_url
+        return reverse_lazy('appointments:list')
+
+    def post(self, request, *args, **kwargs):
+        practice = self.get_practice()
+        form = PracticeAvailabilityOverrideForm(request.POST, practice=practice)
+        if not form.is_valid():
+            messages.error(request, 'Review the availability details before saving.')
+            return redirect(self.get_success_url())
+
+        base = form.save(commit=False)
+        repeat = form.cleaned_data.get('repeat') or PracticeAvailabilityOverrideForm.REPEAT_NONE
+        repeat_count = form.cleaned_data.get('repeat_count') or 1
+        created = []
+        try:
+            with transaction.atomic():
+                target_dates = []
+                for index in range(repeat_count):
+                    if repeat == PracticeAvailabilityOverrideForm.REPEAT_WEEKLY:
+                        override_date = base.date + timedelta(weeks=index)
+                    elif repeat == PracticeAvailabilityOverrideForm.REPEAT_MONTHLY:
+                        override_date = add_months(base.date, index)
+                    else:
+                        override_date = base.date
+                    target_dates.append(override_date)
+                PracticeAvailabilityOverride.objects.filter(practice=practice, date__in=target_dates).delete()
+                for override_date in target_dates:
+                    override = PracticeAvailabilityOverride(
+                        practice=practice,
+                        date=override_date,
+                        starts_at=base.starts_at,
+                        ends_at=base.ends_at,
+                        is_available=base.is_available,
+                        note=base.note,
+                    )
+                    override.full_clean()
+                    override.save()
+                    created.append(override)
+        except ValidationError as exc:
+            messages.error(request, f'Availability could not be saved: {exc}')
+            return redirect(self.get_success_url())
+
+        log_audit_event(
+            request,
+            AuditLog.Action.CREATE,
+            'appointments.PracticeAvailabilityOverride',
+            created[0].pk if created else None,
+            practice=practice,
+            metadata={'count': len(created), 'repeat': repeat, 'date': base.date.isoformat()},
+        )
+        date_label = 'date' if len(created) == 1 else 'dates'
+        messages.success(request, f'Saved availability for {len(created)} {date_label}.')
         return redirect(self.get_success_url())
 
 

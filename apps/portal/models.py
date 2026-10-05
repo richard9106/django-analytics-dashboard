@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-from apps.appointments.models import Appointment
+from apps.appointments.models import Appointment, practice_allows_interval
 
 
 class ClientPortalAccess(models.Model):
@@ -160,14 +160,7 @@ class PublicBookingRequest(models.Model):
         if self.requested_starts_at and self.requested_starts_at < timezone.now():
             errors["requested_starts_at"] = "Choose a future appointment time."
         if self.practice_id and self.requested_starts_at and self.requested_ends_at:
-            local_start = timezone.localtime(self.requested_starts_at)
-            local_end = timezone.localtime(self.requested_ends_at)
-            configured_hours = self.practice.working_hours.filter(active=True)
-            working_hours = self.practice.working_hours.filter(active=True, weekday=local_start.weekday())
-            if configured_hours.exists() and not working_hours.filter(
-                starts_at__lte=local_start.time(),
-                ends_at__gte=local_end.time(),
-            ).exists():
+            if not practice_allows_interval(self.practice, self.requested_starts_at, self.requested_ends_at):
                 errors["requested_starts_at"] = "Choose a time within the practice working hours."
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
             errors["client"] = "Booking request client must belong to the same practice."

@@ -32,6 +32,71 @@ class PracticeWorkingHour(models.Model):
         return f"{self.practice} {self.get_weekday_display()} {self.starts_at}-{self.ends_at}"
 
 
+class PracticeAvailabilityOverride(models.Model):
+    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="availability_overrides")
+    date = models.DateField()
+    starts_at = models.TimeField(null=True, blank=True)
+    ends_at = models.TimeField(null=True, blank=True)
+    is_available = models.BooleanField(default=True)
+    note = models.CharField(max_length=160, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["date", "starts_at", "ends_at"]
+
+    def clean(self):
+        errors = {}
+        if self.is_available and (not self.starts_at or not self.ends_at):
+            errors["starts_at"] = "Available hours need a start and end time."
+        if bool(self.starts_at) != bool(self.ends_at):
+            errors["ends_at"] = "Enter both start and end time, or leave both blank for a full unavailable day."
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            errors["ends_at"] = "Availability must end after it starts."
+        if not self.is_available and not self.starts_at and not self.ends_at and not self.date:
+            errors["date"] = "Choose the unavailable date."
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def is_full_day_unavailable(self):
+        return not self.is_available and not self.starts_at and not self.ends_at
+
+    def __str__(self):
+        if self.is_full_day_unavailable:
+            return f"{self.practice} unavailable on {self.date}"
+        status = "available" if self.is_available else "unavailable"
+        return f"{self.practice} {status} on {self.date} {self.starts_at}-{self.ends_at}"
+
+
+def practice_allows_interval(practice, starts_at, ends_at):
+    local_start = timezone.localtime(starts_at)
+    local_end = timezone.localtime(ends_at)
+    interval_date = local_start.date()
+    start_time = local_start.time()
+    end_time = local_end.time()
+    overrides = list(practice.availability_overrides.filter(date=interval_date))
+    if any(override.is_full_day_unavailable for override in overrides):
+        return False
+
+    available_overrides = [override for override in overrides if override.is_available]
+    unavailable_overrides = [override for override in overrides if not override.is_available and override.starts_at and override.ends_at]
+    if any(override.starts_at < end_time and override.ends_at > start_time for override in unavailable_overrides):
+        return False
+
+    if available_overrides:
+        return any(override.starts_at <= start_time and override.ends_at >= end_time for override in available_overrides)
+
+    configured_hours = practice.working_hours.filter(active=True)
+    if not configured_hours.exists():
+        return True
+    return configured_hours.filter(
+        weekday=local_start.weekday(),
+        starts_at__lte=start_time,
+        ends_at__gte=end_time,
+    ).exists()
+
+
 class Appointment(models.Model):
     """Scheduled session between a client and a therapist."""
 
@@ -133,14 +198,7 @@ class Appointment(models.Model):
             errors["ends_at"] = "The appointment must end after it starts."
 
         if self.practice_id and self.starts_at and self.ends_at:
-            local_start = timezone.localtime(self.starts_at)
-            local_end = timezone.localtime(self.ends_at)
-            configured_hours = self.practice.working_hours.filter(active=True)
-            working_hours = self.practice.working_hours.filter(active=True, weekday=local_start.weekday())
-            if configured_hours.exists() and not working_hours.filter(
-                starts_at__lte=local_start.time(),
-                ends_at__gte=local_end.time(),
-            ).exists():
+            if not practice_allows_interval(self.practice, self.starts_at, self.ends_at):
                 errors["starts_at"] = "Appointment must be within practice working hours."
 
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:

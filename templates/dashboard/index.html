@@ -54,7 +54,7 @@
           <a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong><span>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</span></a>
           <a href="{% url 'profile_settings' %}" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong><span>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</span></a>
           <a href="{% url 'clients:list' %}" class="{% if not practice_setup_complete %}setup-locked{% endif %}"><strong>3</strong><span>Add your first client</span></a>
-          <a href="{% url 'practice_settings:availability' %}"><strong>4</strong><span>Set availability</span></a>
+          <a href="{% url 'appointments:list' %}?view=week"><strong>4</strong><span>Set availability</span></a>
         </div>
       </section>
 

@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.audit.models import AuditLog
-from apps.appointments.models import Appointment, PracticeWorkingHour
+from apps.appointments.models import Appointment, PracticeAvailabilityOverride, PracticeWorkingHour
 from apps.appointments.reminders import due_reminder_appointments, send_appointment_reminder
 from apps.clients.models import Client
 from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
@@ -536,6 +536,75 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'working hours')
         self.assertEqual(Appointment.objects.count(), 0)
 
+    def test_date_availability_override_allows_specific_day(self):
+        user, practice, therapist, client = self.create_practice_user()
+        target_date = timezone.localdate() + timedelta(days=1)
+        PracticeWorkingHour.objects.create(
+            practice=practice,
+            weekday=(target_date.weekday() + 1) % 7,
+            starts_at='09:00',
+            ends_at='17:00',
+        )
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=target_date,
+            starts_at=time(12, 0),
+            ends_at=time(15, 0),
+            is_available=True,
+        )
+        starts_at = timezone.make_aware(datetime.combine(target_date, time(13, 0)))
+        ends_at = starts_at + timedelta(minutes=50)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:create'), {
+            'client': client.pk,
+            'therapist': therapist.pk,
+            'starts_at': starts_at.strftime('%Y-%m-%dT%H:%M'),
+            'ends_at': ends_at.strftime('%Y-%m-%dT%H:%M'),
+            'appointment_type': Appointment.AppointmentType.VIDEO,
+            'status': Appointment.Status.SCHEDULED,
+            'location': '',
+            'meeting_url': '',
+            'notes': '',
+        })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        self.assertEqual(Appointment.objects.filter(practice=practice).count(), 1)
+
+    def test_full_day_unavailable_override_blocks_appointments(self):
+        user, practice, therapist, client = self.create_practice_user()
+        target_date = timezone.localdate() + timedelta(days=1)
+        PracticeWorkingHour.objects.create(
+            practice=practice,
+            weekday=target_date.weekday(),
+            starts_at='09:00',
+            ends_at='17:00',
+        )
+        PracticeAvailabilityOverride.objects.create(
+            practice=practice,
+            date=target_date,
+            is_available=False,
+        )
+        starts_at = timezone.make_aware(datetime.combine(target_date, time(10, 0)))
+        ends_at = starts_at + timedelta(minutes=50)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:create'), {
+            'client': client.pk,
+            'therapist': therapist.pk,
+            'starts_at': starts_at.strftime('%Y-%m-%dT%H:%M'),
+            'ends_at': ends_at.strftime('%Y-%m-%dT%H:%M'),
+            'appointment_type': Appointment.AppointmentType.VIDEO,
+            'status': Appointment.Status.SCHEDULED,
+            'location': '',
+            'meeting_url': '',
+            'notes': '',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'working hours')
+        self.assertEqual(Appointment.objects.filter(practice=practice).count(), 0)
+
     def test_appointment_create_can_create_weekly_recurring_series(self):
         user, practice, therapist, client = self.create_practice_user()
         starts_at = timezone.localtime().replace(hour=11, minute=0, second=0, microsecond=0) + timedelta(days=1)
@@ -620,6 +689,49 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, 'data-row-actions-trigger')
         self.assertContains(response, 'aria-controls="availability-actions-')
         self.assertContains(response, 'data-confirm-message="Delete this working-hours range? Scheduling availability will update immediately."')
+
+    def test_calendar_availability_create_repeats_weekly(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        target_date = timezone.localdate() + timedelta(days=1)
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:availability_create'), {
+            'date': target_date.isoformat(),
+            'is_available': 'on',
+            'starts_at': '10:00',
+            'ends_at': '14:00',
+            'repeat': 'weekly',
+            'repeat_count': '3',
+            'note': 'Short clinic day',
+        })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        overrides = list(PracticeAvailabilityOverride.objects.filter(practice=practice).order_by('date'))
+        self.assertEqual(len(overrides), 3)
+        self.assertEqual(overrides[1].date, target_date + timedelta(weeks=1))
+        self.assertEqual(overrides[2].date, target_date + timedelta(weeks=2))
+        self.assertTrue(practice.audit_logs.filter(action=AuditLog.Action.CREATE, object_type='appointments.PracticeAvailabilityOverride').exists())
+
+    def test_calendar_availability_is_scoped_to_user_practice(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        _other_user, other_practice, _other_therapist, _other_client = self.create_practice_user(
+            username='otherdoc',
+            practice_name='Other Practice',
+        )
+
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:availability_create'), {
+            'date': (timezone.localdate() + timedelta(days=1)).isoformat(),
+            'is_available': 'on',
+            'starts_at': '10:00',
+            'ends_at': '14:00',
+            'repeat': 'none',
+            'repeat_count': '1',
+        })
+
+        self.assertRedirects(response, reverse('appointments:list'))
+        self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=practice).count(), 1)
+        self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=other_practice).count(), 0)
 
     def test_appointment_create_syncs_to_google_calendar_when_enabled(self):
         user, practice, therapist, client = self.create_practice_user()
