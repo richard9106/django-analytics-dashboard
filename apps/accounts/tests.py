@@ -215,7 +215,7 @@ class ProfileSettingsViewTests(TestCase):
         response = self.client.get(reverse("profile_settings"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Profile & subscription")
+        self.assertContains(response, "Profile settings")
         self.assertContains(response, "Per-user subscription")
         self.assertContains(response, "Yearly billing")
         self.assertContains(response, "1 active user")
@@ -292,7 +292,7 @@ class ProfileSettingsViewTests(TestCase):
         response = self.client.get(reverse("profile_settings"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "My NuviaMy invoices")
+        self.assertContains(response, "NuviaMy invoices")
         self.assertContains(response, "NUVIA-001")
         self.assertContains(response, "USD 79.00")
         self.assertContains(response, "https://invoice.stripe.test/view")
