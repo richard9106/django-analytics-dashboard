@@ -665,6 +665,40 @@ class CalendarAvailabilityCreateView(LoginRequiredMixin, PracticePermissionMixin
         return redirect(self.get_success_url())
 
 
+class CalendarAvailabilityDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'delete'
+    http_method_names = ['post']
+
+    def get_success_url(self):
+        next_url = self.request.POST.get('next')
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
+            return next_url
+        return reverse_lazy('appointments:list')
+
+    def post(self, request, pk, *args, **kwargs):
+        practice = self.get_practice()
+        override = get_object_or_404(PracticeAvailabilityOverride.objects.filter(practice=practice), pk=pk)
+        metadata = {
+            'date': override.date.isoformat(),
+            'is_available': override.is_available,
+            'starts_at': override.starts_at.isoformat() if override.starts_at else '',
+            'ends_at': override.ends_at.isoformat() if override.ends_at else '',
+        }
+        override_id = override.pk
+        override.delete()
+        log_audit_event(
+            request,
+            AuditLog.Action.DELETE,
+            'appointments.PracticeAvailabilityOverride',
+            override_id,
+            practice=practice,
+            metadata=metadata,
+        )
+        messages.success(request, 'Availability override deleted.')
+        return redirect(self.get_success_url())
+
+
 class AvailabilitySettingsView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, ListView):
     permission_resource = 'appointments'
     model = PracticeWorkingHour
