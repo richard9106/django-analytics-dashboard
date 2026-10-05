@@ -17,12 +17,12 @@ This project is educational and portfolio-focused. It is designed with HIPAA-awa
 
 The current version includes these working modules:
 
-- `accounts`: signup, email-based login/logout, password recovery, editable profiles with optional photos, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary/custom-password invitations, Gmail/SMTP delivery, granular therapist permissions, and plan seat enforcement.
+- `accounts`: signup, email-based login/logout, password recovery, editable profiles with optional photos, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary/custom-password invitations, Gmail/SMTP delivery, granular therapist permissions, and active-user billing quantity sync.
 - `practices`: practice and therapist profile models, tenant scoping, integration settings, encrypted Google OAuth tokens, and Stripe Connect payout onboarding.
 - `clients`: Odoo-style tree directory, optional client photos, tenant-scoped client records, full Client Workspace, breadcrumbs, create/edit/delete popups, add note from client, assign package from client, and create appointment popup from client workspace.
-- `appointments`: Monday-start Day/Week/Month calendar, client search, therapist/status/type/sync filters, create/edit/delete popups, today highlighting, tenant-scoped scheduling, weekly recurrence, visible availability blocks, Google Calendar sync, and Gmail reminder command.
+- `appointments`: Monday-start Day/Week/Month calendar, client search, therapist/status/type/sync filters, create/edit/delete popups, today highlighting, tenant-scoped scheduling, weekly recurrence, date-based availability from the calendar, weekly baseline availability, visible unavailable blocks, Google Calendar sync, and Gmail reminder command.
 - `clinical`: clinical notes, diagnosis records, treatment plans, linked treatment progress, lock note behavior, review-due workflow.
-- `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, Stripe subscription checkout, plan changes with proration previews, SaaS invoice history, Stripe Customer Portal, Stripe Connect client payouts, 15-day trial, webhooks, and practice subscription persistence.
+- `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, per-active-user Stripe subscription checkout, billing-period changes with proration previews, SaaS invoice history, Stripe Customer Portal, Stripe Connect client payouts, 15-day trial, webhooks, and practice subscription persistence.
 - `documents`: client document upload/list/download/delete, file metadata, tenant-scoped downloads, Google Drive export, local storage with Cloudflare R2 production support.
 - `portal`: client-facing dashboard, portal access accounts, enforced temporary password change, secure client/practice conversations, visible documents, appointment change requests, intake packet completion, and Stripe Checkout invoice payments routed to the practice's connected account.
 - `intake`: practice intake templates, client packet assignment, client portal submission workflow.
@@ -30,7 +30,7 @@ The current version includes these working modules:
 - `notifications`: appointment reminder model and Gmail-based reminder delivery command.
 - `audit`: audit logging for sensitive workflows such as auth, documents, clinical notes, billing, portal, intake, and integrations.
 - `dashboard`: operational practice dashboard with today appointments, automatic alerts, assignable team tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a Gmail + Stripe setup gate, and a contextual guided onboarding tour.
-- `settings`: session package templates, insurance settings, availability, portal access, Google integrations, Google workspace.
+- `settings`: session package templates, insurance settings, portal access, Google integrations, Google workspace, and legacy weekly availability baseline management.
 - `telehealth`: telehealth room model reserved for future provider integration.
 - `admin`: Django admin registration for core domain models, including subscriptions.
 
@@ -69,8 +69,12 @@ The current version includes these working modules:
 - Day-level `+` opens appointment creation popup and pre-fills date/time.
 - Existing appointment opens edit popup.
 - Delete appointment from edit popup.
-- Availability rules can be configured under Settings.
-- Availability is configured as one or more weekly day/range intervals and is visibly shaded in Day/Week calendar views.
+- Availability is managed from the calendar through the `Set availability` action.
+- Date-specific availability can mark a day or date range as available, unavailable all day, or unavailable for a specific time range.
+- Date-specific availability can repeat weekly or monthly for a configured number of occurrences.
+- Clicking an unavailable calendar time prompts the user to enable that day/range before scheduling.
+- Weekly availability remains as a baseline fallback; date-specific calendar availability overrides it.
+- Unavailable time is visibly shaded in Day/Week calendar views.
 - Week is the default calendar view; Year view was removed to keep calendar navigation focused.
 - Search and compact filters preserve state while navigating the calendar.
 - Weekly recurring appointments can be generated at creation time.
@@ -109,10 +113,12 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 - Practice owners/admins can configure Stripe Connect from Profile Settings so client payments go to the practice.
 - Clients can pay eligible sent/overdue invoices from the portal through Stripe Checkout.
 - Signed Stripe webhooks mark client invoices as paid and record `paid_at`.
-- Stripe Checkout creates SaaS subscriptions for Solo, Group, and Clinic plans.
+- Stripe Checkout creates SaaS subscriptions using per-active-user pricing.
 - New signups are routed to Stripe Checkout with a 15-day free trial and card collection.
+- Active owners, admins, and therapists count as billable users; client portal users and deactivated staff do not.
+- Team create/deactivate/reactivate actions best-effort sync the Stripe subscription quantity.
 - Stripe webhooks update local `PracticeSubscription` records for checkout completion, subscription updates/deletions, and failed payments.
-- Profile Settings includes plan switching, Stripe proration previews, SaaS invoice history, and Stripe Customer Portal access.
+- Profile Settings includes billing-period switching, Stripe proration previews, SaaS invoice history, and Stripe Customer Portal access.
 
 ### Documents
 
@@ -178,7 +184,7 @@ PKG-{package_id}-{YYYYMMDD}-{sequence}
 
 ### Stripe Subscriptions
 
-- Public pricing page supports Solo, Group, and Clinic plans.
+- Public pricing page uses one per-active-user plan.
 - Monthly and yearly Stripe Price IDs are configured through environment variables.
 - Signup preserves selected plan/period and redirects to Checkout after account creation.
 - Checkout uses a 15-day trial with card collection.
@@ -226,6 +232,8 @@ Stripe settings are read from environment variables and must not be committed:
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_PER_USER_MONTHLY=
+STRIPE_PRICE_PER_USER_YEARLY=
 STRIPE_PRICE_SOLO_MONTHLY=
 STRIPE_PRICE_SOLO_YEARLY=
 STRIPE_PRICE_GROUP_MONTHLY=
@@ -245,9 +253,10 @@ Any ZIP
 
 ## Remaining Product Roadmap
 
-- Add Google sync issue dashboard and reconnect state.
+- Add Stripe subscription quantity reconciliation for failed/manual team changes.
+- Improve calendar availability editing/deleting for existing overrides.
+- Add filters/search polish for remaining dense clinical/admin tables where needed.
 - Add Dropbox OAuth/export support.
-- Define no-show/cancellation rules for package usage.
 - Complete production security, legal, HIPAA/BAA, retention, and incident-response review before clinical use.
 
 ## Security And Compliance Direction
