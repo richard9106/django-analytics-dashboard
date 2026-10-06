@@ -758,7 +758,7 @@ class AppointmentViewTests(TestCase):
         self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=practice).count(), 1)
         self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=other_practice).count(), 0)
 
-    def test_calendar_hides_date_specific_availability_override_inspector(self):
+    def test_calendar_shows_only_current_practice_and_period_availability_changes(self):
         user, practice, _therapist, _client = self.create_practice_user()
         target_date = timezone.localdate() + timedelta(days=1)
         PracticeAvailabilityOverride.objects.create(
@@ -769,14 +769,97 @@ class AppointmentViewTests(TestCase):
             is_available=True,
             note='School holiday hours',
         )
+        other_practice = Practice.objects.create(name='Other Practice')
+        PracticeAvailabilityOverride.objects.create(practice=other_practice, date=target_date, is_available=False, note='Other clinic hours')
+        PracticeAvailabilityOverride.objects.create(practice=practice, date=target_date + timedelta(days=60), is_available=False, note='Later holiday')
 
         self.client.force_login(user)
         response = self.client.get(reverse('appointments:list'), {'view': 'week', 'date': target_date.isoformat()})
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Date-specific changes')
-        self.assertNotContains(response, 'School holiday hours')
-        self.assertNotContains(response, 'Delete override')
+        self.assertContains(response, 'Review availability changes')
+        self.assertContains(response, 'School holiday hours')
+        self.assertContains(response, 'Remove change')
+        self.assertNotContains(response, 'Other clinic hours')
+        self.assertNotContains(response, 'Later holiday')
+
+    def test_edit_availability_changes_only_selected_record_and_preserves_calendar_return(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        target_date = timezone.localdate() + timedelta(days=1)
+        own = PracticeAvailabilityOverride.objects.create(practice=practice, date=target_date, starts_at=time(9), ends_at=time(12))
+        second = PracticeAvailabilityOverride.objects.create(practice=practice, date=target_date, starts_at=time(14), ends_at=time(17))
+        return_url = reverse('appointments:list') + '?view=week&date=' + target_date.isoformat() + '&q=Maya'
+        self.client.force_login(user)
+        page = self.client.get(reverse('appointments:availability_edit', args=[own.pk]), {'next': return_url})
+        self.assertContains(page, 'Edit this date')
+        response = self.client.post(reverse('appointments:availability_edit', args=[own.pk]), {
+            'date': (target_date + timedelta(days=5)).isoformat(), 'is_available': 'on',
+            'starts_at': '10:00', 'ends_at': '13:00', 'note': 'Adjusted hours', 'next': return_url,
+        })
+        self.assertRedirects(response, return_url)
+        own.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual(own.date, target_date)
+        self.assertEqual(own.starts_at, time(10))
+        self.assertEqual(second.starts_at, time(14))
+        self.assertEqual(PracticeAvailabilityOverride.objects.filter(practice=practice).count(), 2)
+        event = AuditLog.objects.get(action=AuditLog.Action.UPDATE, object_type='appointments.PracticeAvailabilityOverride')
+        self.assertEqual(event.object_id, str(own.pk))
+        self.assertNotIn('note', event.metadata)
+
+    def test_availability_edit_rejects_invalid_hours_and_other_practice(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        own = PracticeAvailabilityOverride.objects.create(practice=practice, date=timezone.localdate(), starts_at=time(9), ends_at=time(17))
+        other_practice = Practice.objects.create(name='Other Practice')
+        other = PracticeAvailabilityOverride.objects.create(practice=other_practice, date=timezone.localdate(), is_available=False)
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:availability_edit', args=[own.pk]), {'is_available': 'on', 'starts_at': '17:00', 'ends_at': '09:00'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Availability must end after it starts.')
+        own.refresh_from_db()
+        self.assertEqual(own.starts_at, time(9))
+        self.assertEqual(self.client.get(reverse('appointments:availability_edit', args=[other.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse('appointments:availability_edit', args=[other.pk]), {}).status_code, 404)
+
+    def test_availability_edit_supports_full_day_and_rejects_external_return_url(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        own = PracticeAvailabilityOverride.objects.create(practice=practice, date=timezone.localdate(), starts_at=time(9), ends_at=time(17))
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:availability_edit', args=[own.pk]), {
+            'starts_at': '', 'ends_at': '', 'note': 'Closed', 'next': 'https://example.org/',
+        })
+        self.assertRedirects(response, reverse('appointments:list'))
+        own.refresh_from_db()
+        self.assertTrue(own.is_full_day_unavailable)
+
+    def test_read_only_calendar_user_cannot_edit_or_remove_availability(self):
+        user, practice, _therapist, _client = self.create_practice_user()
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'appointments': {'view': True, 'edit': False, 'delete': False}}
+        profile.save()
+        own = PracticeAvailabilityOverride.objects.create(practice=practice, date=timezone.localdate(), is_available=False)
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:list'), {'view': 'day', 'date': own.date.isoformat()})
+        self.assertContains(response, 'Review availability changes')
+        self.assertNotContains(response, reverse('appointments:availability_edit', args=[own.pk]))
+        self.assertNotContains(response, reverse('appointments:availability_delete', args=[own.pk]))
+        self.assertRedirects(self.client.post(reverse('appointments:availability_edit', args=[own.pk]), {}), reverse('dashboard'))
+        self.assertRedirects(self.client.post(reverse('appointments:availability_delete', args=[own.pk]), {}), reverse('dashboard'))
+        self.assertTrue(PracticeAvailabilityOverride.objects.filter(pk=own.pk).exists())
+
+    def test_removing_availability_does_not_change_existing_appointment(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts = timezone.now() + timedelta(days=1)
+        appointment = Appointment.objects.create(practice=practice, therapist=therapist, client=client, starts_at=starts, ends_at=starts + timedelta(minutes=50))
+        own = PracticeAvailabilityOverride.objects.create(practice=practice, date=timezone.localdate(starts), is_available=False)
+        self.client.force_login(user)
+        self.assertEqual(self.client.get(reverse('appointments:availability_delete', args=[own.pk])).status_code, 405)
+        response = self.client.post(reverse('appointments:availability_delete', args=[own.pk]))
+        self.assertRedirects(response, reverse('appointments:list'))
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.starts_at, starts)
+        self.assertEqual(appointment.status, Appointment.Status.SCHEDULED)
 
     def test_calendar_availability_delete_is_scoped_to_user_practice(self):
         user, practice, _therapist, _client = self.create_practice_user()

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Edit availability | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="app-page"><div class="app-shell">
+  {% include 'partials/sidebar.html' with card_title='Your calendar' card_text='Manage availability without changing existing appointments.' %}
+  <main class="app-main">
+    <section class="panel form-panel">
+      <div class="panel-head"><div><p class="eyebrow">Availability</p><h1>Edit this date's availability</h1><p>This changes only the selected record. Other dates and existing appointments stay as they are.</p></div></div>
+      <form class="appointment-form" method="post">
+        {% csrf_token %}<input type="hidden" name="next" value="{{ calendar_return_url }}">
+        {{ form.non_field_errors }}
+        <div class="field-grid two">
+          {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+        </div>
+        <p class="empty-state">Uncheck availability and leave both times blank for a full unavailable day. Use both times to block a specific range.</p>
+        <div class="form-actions"><a class="btn btn-secondary" href="{{ calendar_return_url }}">Cancel</a><button class="btn btn-primary" type="submit">Save changes</button></div>
+      </form>
+    </section>
+  </main>
+</div></body></html>

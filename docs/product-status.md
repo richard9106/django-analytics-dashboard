@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Added Review availability to the calendar: a collapsible list of date-specific changes for the visible period, tenant-scoped single-record editing, and removal with confirmation. Edit/remove actions follow workspace permissions and preserve the calendar return URL. Other dates/ranges and existing appointments are not modified by single-record editing. No new services or additional list queries are needed.
+
 - Simplified first steps for solo therapists and clinics: client creation no longer requires Gmail or Stripe Connect. Connections remain optional for email delivery and online client payments; payment flows retain provider checks. Daily appointments/tasks appear before charts, with links to client records and session management. Existing lightweight server-rendered pages and permission checks are retained.
 
 - Converted major dense workspaces to calmer table/tree layouts with final action menus.
@@ -52,7 +54,7 @@ This document captures the current product state after the recent UX, billing, a
 ## Important Gaps
 
 - Stripe quantity reconciliation is best-effort only; add a management command or scheduled job to detect local/Stripe quantity drift.
-- Calendar availability overrides can be replaced by saving the same date/range, but there is no dedicated list/edit/delete UI for existing overrides yet.
+- Calendar availability changes can be reviewed for the visible period through Review availability. Users can edit a single record or remove it, retaining calendar filters; creating date/range changes still replaces existing changes for the affected dates.
 - Availability is practice-wide, not therapist-specific. If individual clinicians need different schedules, add therapist-scoped overrides later.
 - Public booking is validated against availability, but there is not yet a client-facing slot picker that only shows available times.
 - Insurance does not yet include claims submission, ERA/EOB import, eligibility checks, or denial management.
@@ -63,7 +65,7 @@ This document captures the current product state after the recent UX, billing, a
 The owner prioritizes workflow completeness and an intuitive interface during pre-client development, using the existing lightweight architecture on the VPS. Preserve current protections; defer additional security infrastructure until the usability work is resolved. Clinical-readiness criteria remain prerequisites for a real-patient pilot.
 
 1. Review the patient → appointment → session note → invoice → follow-up journey, preserving context and making the next action clear.
-2. Add a compact availability override inspector on the calendar so users can review and delete date-specific overrides.
+2. Availability review/edit/remove is implemented; continue simplifying calendar workflows and form feedback.
 3. Improve solo/team scheduling, including therapist-specific availability when required.
 4. Improve public booking with available-slot selection instead of free-form date/time entry.
 5. Add Stripe subscription quantity reconciliation and a warning for failed quantity sync.

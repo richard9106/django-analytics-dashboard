@@ -1,4 +1,5 @@
 from django.urls import path
+from .views import CalendarAvailabilityUpdateView
 
 from .views import AppointmentCreateView, AppointmentDeleteView, AppointmentGoogleSyncView, AppointmentListView, AppointmentRescheduleView, AppointmentSeriesCancelView, AppointmentSeriesUpdateView, AppointmentUpdateView, CalendarAvailabilityCreateView, CalendarAvailabilityDeleteView, CalendarSyncIssuesView
 
@@ -8,6 +9,7 @@ urlpatterns = [
     path('', AppointmentListView.as_view(), name='list'),
     path('sync-issues/', CalendarSyncIssuesView.as_view(), name='sync_issues'),
     path('availability/', CalendarAvailabilityCreateView.as_view(), name='availability_create'),
+    path('availability/<int:pk>/edit/', CalendarAvailabilityUpdateView.as_view(), name='availability_edit'),
     path('availability/<int:pk>/delete/', CalendarAvailabilityDeleteView.as_view(), name='availability_delete'),
     path('new/', AppointmentCreateView.as_view(), name='create'),
     path('<int:pk>/edit/', AppointmentUpdateView.as_view(), name='edit'),
