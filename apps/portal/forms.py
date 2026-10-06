@@ -320,6 +320,15 @@ class IntakePacketTemplateForm(forms.ModelForm):
         if self.instance.pk and not self.is_bound:
             self.fields['question_lines'].initial = '\n'.join(self.instance.questions)
 
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        duplicates = IntakePacketTemplate.objects.filter(practice=self.practice, name=name)
+        if self.instance.pk:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise forms.ValidationError('A template with this name already exists. Choose a different name.')
+        return name
+
     def clean_question_lines(self):
         questions = [line.strip() for line in self.cleaned_data['question_lines'].splitlines() if line.strip()]
         if not questions:
@@ -330,6 +339,12 @@ class IntakePacketTemplateForm(forms.ModelForm):
         if 'question_lines' in self.cleaned_data:
             self.instance.questions = self.cleaned_data['question_lines']
         super()._post_clean()
+
+    def _update_errors(self, errors):
+        # The editor exposes JSON questions through a multiline text field.
+        if hasattr(errors, 'error_dict') and 'questions' in errors.error_dict:
+            errors.error_dict['question_lines'] = errors.error_dict.pop('questions')
+        super()._update_errors(errors)
 
     def save(self, commit=True):
         template = super().save(commit=False)
@@ -375,17 +390,17 @@ class ClientIntakeResponseForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.assignment = assignment
         existing = assignment.answers if assignment else {}
-        for index, question in enumerate(assignment.template.questions):
+        for index, question in enumerate(assignment.packet_questions):
             key = f'question_{index}'
             self.fields[key] = forms.CharField(
                 label=question,
-                initial=existing.get(key, ''),
+                initial=existing.get(key, {}).get("answer", ""),
                 widget=forms.Textarea(attrs={'rows': 3}),
             )
 
     def save(self):
         answers = {}
-        for index, question in enumerate(self.assignment.template.questions):
+        for index, question in enumerate(self.assignment.packet_questions):
             key = f'question_{index}'
             answers[key] = {'question': question, 'answer': self.cleaned_data[key]}
         self.assignment.answers = answers

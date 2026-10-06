@@ -1,4 +1,5 @@
 import uuid
+from copy import deepcopy
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -207,6 +208,7 @@ class ClientIntakeAssignment(models.Model):
     template = models.ForeignKey(IntakePacketTemplate, on_delete=models.PROTECT, related_name="assignments")
     assigned_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_intakes")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ASSIGNED)
+    template_snapshot = models.JSONField(default=dict, blank=True)
     answers = models.JSONField(default=dict, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
@@ -216,6 +218,27 @@ class ClientIntakeAssignment(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and not self.template_snapshot:
+            self.template_snapshot = {
+                "name": self.template.name,
+                "description": self.template.description,
+                "questions": deepcopy(self.template.questions),
+            }
+        super().save(*args, **kwargs)
+
+    @property
+    def packet_name(self):
+        return self.template_snapshot.get("name", self.template.name)
+
+    @property
+    def packet_description(self):
+        return self.template_snapshot.get("description", self.template.description)
+
+    @property
+    def packet_questions(self):
+        return self.template_snapshot.get("questions", self.template.questions)
 
     def clean(self):
         errors = {}

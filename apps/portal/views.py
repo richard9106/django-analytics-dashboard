@@ -5,7 +5,9 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db.models import Count, Q, Sum, Value
+from django.db.models.functions import Concat
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse, reverse_lazy
@@ -813,62 +815,122 @@ class PracticeIntakeListView(PracticePermissionMixin, PracticeContextMixin, Temp
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
+        assignments = ClientIntakeAssignment.objects.filter(practice=practice)
+        counts = dict(assignments.values_list('status').annotate(count=Count('pk')))
+        context['intake_counts'] = {key: counts.get(key, 0) for key in ClientIntakeAssignment.Status.values}
+        context['intake_counts']['total'] = sum(counts.values())
+        query = self.request.GET.get('q', '').strip()[:160]
+        status = self.request.GET.get('status', '')
+        if status not in ClientIntakeAssignment.Status.values:
+            status = ''
+        if query:
+            assignments = assignments.annotate(client_name=Concat('client__first_name', Value(' '), 'client__last_name')).filter(
+                Q(client_name__icontains=query)
+                | Q(template_snapshot__name__icontains=query))
+        if status:
+            assignments = assignments.filter(status=status)
+        page = Paginator(assignments.select_related('client', 'template').defer('answers'), 20).get_page(self.request.GET.get('page'))
+        context.update(q=query, status=status, page_obj=page, assignments=page.object_list)
         context['templates'] = IntakePacketTemplate.objects.filter(practice=practice)
-        context['assignments'] = ClientIntakeAssignment.objects.filter(practice=practice).select_related('client', 'template')
-        context['template_form'] = IntakePacketTemplateForm(practice=practice)
-        context['assignment_form'] = ClientIntakeAssignmentForm(practice=practice, assigned_by=self.request.user)
+        context['can_create_intake'] = has_practice_permission(self.request.user, 'intake', 'create')
+        context['can_edit_intake'] = has_practice_permission(self.request.user, 'intake', 'edit')
+        context['template_form'] = IntakePacketTemplateForm(practice=practice, auto_id='intake-template-create-%s')
+        context['assignment_form'] = ClientIntakeAssignmentForm(practice=practice, assigned_by=self.request.user, auto_id='intake-assignment-%s')
         return context
 
 
 class IntakeTemplateCreateView(PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'intake'
     permission_action = 'create'
+
     def post(self, request):
         practice = self.get_practice()
         form = IntakePacketTemplateForm(request.POST, practice=practice)
-        if form.is_valid():
-            template = form.save()
-            log_audit_event(request, AuditLog.Action.CREATE, 'portal.IntakePacketTemplate', template.pk, practice=practice, metadata={'name': template.name})
+        if not form.is_valid():
+            return TemplateResponse(request, 'intake/template_form.html', {'form': form, 'intake_template': None})
+        template = form.save()
+        log_audit_event(request, AuditLog.Action.CREATE, 'portal.IntakePacketTemplate', template.pk, practice=practice, metadata={'name': template.name})
+        messages.success(request, 'Intake template created.')
         return redirect('intake:list')
+
+
+class IntakeTemplateUpdateView(PracticePermissionMixin, PracticeContextMixin, UpdateView):
+    permission_resource = 'intake'
+    permission_action = 'edit'
+    model = IntakePacketTemplate
+    form_class = IntakePacketTemplateForm
+    template_name = 'intake/template_form.html'
+    context_object_name = 'intake_template'
+    success_url = reverse_lazy('intake:list')
+
+    def get_queryset(self):
+        return super().get_queryset().filter(practice=self.get_practice())
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['practice'] = self.get_practice()
+        return kwargs
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(self.request, AuditLog.Action.UPDATE, 'portal.IntakePacketTemplate', self.object.pk, practice=self.get_practice(), metadata={'active': self.object.active})
+        messages.success(self.request, 'Template updated. Previously assigned packets keep their original questions.')
+        return response
 
 
 class ClientIntakeAssignView(PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'intake'
     permission_action = 'create'
+
     def post(self, request):
         practice = self.get_practice()
         form = ClientIntakeAssignmentForm(request.POST, practice=practice, assigned_by=request.user)
-        if form.is_valid():
-            assignment = form.save()
-            log_audit_event(
-                request,
-                AuditLog.Action.CREATE,
-                'portal.ClientIntakeAssignment',
-                assignment.pk,
-                practice=practice,
-                metadata={'client_id': assignment.client_id, 'template_id': assignment.template_id},
-            )
+        if not form.is_valid():
+            return TemplateResponse(request, 'intake/assignment_form.html', {'form': form})
+        assignment = form.save()
+        log_audit_event(request, AuditLog.Action.CREATE, 'portal.ClientIntakeAssignment', assignment.pk,
+                        practice=practice, metadata={'client_id': assignment.client_id, 'template_id': assignment.template_id})
+        messages.success(request, 'Intake packet assigned. The patient can complete it in their portal.')
         return redirect('intake:list')
+
+
+class ClientIntakeResponsesView(PracticePermissionMixin, PracticeContextMixin, TemplateView):
+    permission_resource = 'intake'
+    template_name = 'intake/responses.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        assignment = get_object_or_404(ClientIntakeAssignment.objects.select_related('client', 'template', 'reviewed_by'),
+                                       pk=self.kwargs['pk'], practice=self.get_practice())
+        items = []
+        for index, question in enumerate(assignment.packet_questions if assignment.answers else []):
+            stored = assignment.answers.get(f'question_{index}', {})
+            items.append({'question': stored.get('question', question), 'answer': stored.get('answer', '')})
+        can_edit = has_practice_permission(self.request.user, 'intake', 'edit')
+        context.update(assignment=assignment, response_items=items, can_edit_intake=can_edit,
+                       can_review=can_edit and assignment.status == ClientIntakeAssignment.Status.SUBMITTED)
+        return context
 
 
 class ClientIntakeReviewView(PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'intake'
     permission_action = 'edit'
+
     def post(self, request, pk):
         practice = self.get_practice()
-        assignment = get_object_or_404(ClientIntakeAssignment, pk=pk, practice=practice)
-        assignment.status = ClientIntakeAssignment.Status.REVIEWED
-        assignment.reviewed_at = timezone.now()
-        assignment.reviewed_by = request.user
-        assignment.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'updated_at'])
-        log_audit_event(
-            request,
-            AuditLog.Action.UPDATE,
-            'portal.ClientIntakeAssignment',
-            assignment.pk,
-            practice=practice,
-            metadata={'client_id': assignment.client_id, 'status': assignment.status},
-        )
+        with transaction.atomic():
+            assignment = get_object_or_404(ClientIntakeAssignment.objects.select_for_update(), pk=pk, practice=practice)
+            if assignment.status == ClientIntakeAssignment.Status.ASSIGNED:
+                messages.error(request, 'This packet has not been submitted yet.')
+                return redirect('intake:list')
+            if assignment.status == ClientIntakeAssignment.Status.SUBMITTED:
+                assignment.status = ClientIntakeAssignment.Status.REVIEWED
+                assignment.reviewed_at = timezone.now()
+                assignment.reviewed_by = request.user
+                assignment.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'updated_at'])
+                log_audit_event(request, AuditLog.Action.UPDATE, 'portal.ClientIntakeAssignment', assignment.pk,
+                                practice=practice, metadata={'client_id': assignment.client_id, 'status': assignment.status})
+                messages.success(request, 'Intake responses marked as reviewed.')
         return redirect('intake:list')
 
 

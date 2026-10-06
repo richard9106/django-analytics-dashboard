@@ -1026,3 +1026,50 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .field.checkbox-field.diagnosis-checkbox { flex-direction: column; align-items: flex-start; justify-content: flex-end; }
 .diagnosis-checkbox input[type="checkbox"] { flex: 0 0 16px; }
 .diagnosis-optional { font-weight: 500; }
+
+/* Intake: a compact work queue and readable, separate client responses. */
+.intake-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0 0 24px; }
+.intake-summary a { display: flex; align-items: center; gap: 14px; padding: 18px 20px; border: 1px solid var(--slate-200); border-radius: 16px; background: #fff; color: var(--slate-800); text-decoration: none; }
+.intake-summary strong { font-size: 28px; line-height: 1; color: var(--brand-600); }
+.intake-summary span { font-size: 13px; font-weight: 700; }
+.intake-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); align-items: start; gap: 20px; }
+.intake-filters { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.intake-filters .field:first-child { flex: 1 1 200px; }
+.intake-filters .field { min-width: 150px; }
+.intake-filters > .inline-link { min-height: 46px; display: inline-flex; align-items: center; }
+.intake-assignment h3 { margin: 12px 0 4px; font-size: 15px; }
+.intake-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 14px; }
+.intake-waiting { font-size: 13px; color: var(--slate-600); }
+.intake-hint { padding: 14px 16px; border-radius: 12px; background: var(--brand-50); color: var(--slate-700); line-height: 1.6; }
+.intake-question-preview { margin: 12px 0 16px; }
+.intake-question-preview summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; color: var(--brand-700); font-weight: 700; }
+.intake-question-preview ol { padding-left: 24px; margin: 8px 0; line-height: 1.7; }
+.intake-question-preview li { padding-left: 4px; margin-bottom: 8px; overflow-wrap: anywhere; }
+.intake-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+.intake-dialog { width: min(740px, calc(100% - 24px)); }
+.intake-checkbox { min-width: 0; }
+.intake-checkbox input[type="checkbox"] { flex: 0 0 16px; }
+.intake-optional { font-weight: 500; }
+.intake-form-panel, .intake-response-panel { max-width: 900px; margin: 0 auto; }
+.intake-response-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 12px 0; border-bottom: 1px solid var(--slate-200); }
+.intake-response-meta p { margin: 0; font-size: 13px; }
+.intake-response-meta strong { margin-right: 4px; }
+.intake-response-list { display: grid; gap: 20px; margin: 24px 0; }
+.intake-response { padding: 20px; border: 1px solid var(--slate-200); border-radius: 14px; background: #fff; }
+.intake-response h2 { display: flex; align-items: baseline; gap: 12px; margin: 0 0 14px; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.intake-question-number { display: inline-grid; place-items: center; flex: 0 0 28px; min-width: 28px; height: 28px; border-radius: 50%; background: var(--brand-50); color: var(--brand-700); font-size: 12px; font-weight: 800; }
+.intake-answer { padding-left: 40px; line-height: 1.8; color: var(--slate-800); overflow-wrap: anywhere; }
+.intake-review-action { border-top: 1px solid var(--slate-200); padding-top: 20px; }
+.intake-summary a:focus-visible, .intake-question-preview summary:focus-visible { outline: 3px solid var(--aqua-500, #14B8A6); outline-offset: 3px; }
+@media (max-width: 1000px) { .intake-layout { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .intake-summary { gap: 8px; }
+  .intake-summary a { flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 12px; }
+  .intake-summary strong { font-size: 24px; }
+  .intake-summary span { font-size: 11px; line-height: 1.5; }
+  .intake-filters .field { flex: 1 1 100%; }
+  .intake-card-actions .btn { width: 100%; }
+  .intake-response { padding: 16px; }
+  .intake-answer { padding-left: 0; }
+  .intake-response-panel .panel-head { align-items: flex-start; flex-direction: column; }
+}
