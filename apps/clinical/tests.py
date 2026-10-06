@@ -758,6 +758,37 @@ class SessionNoteViewTests(TestCase):
 
 @override_settings(MFA_REQUIRED=False)
 class TreatmentPlanViewTests(TestCase):
+    def test_patient_diagnosis_dialog_keeps_validation_errors_and_entered_data(self):
+        user, practice, therapist, client = self.create_practice_user()
+        self.client.force_login(user)
+        response = self.client.post(reverse('clinical:diagnosis_create') + f'?client={client.pk}',
+            self.diagnosis_payload(client, label='', notes='Keep these notes', return_to_patient='1'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'clients/detail.html')
+        self.assertEqual(response.context['diagnosis_modal_id'], 'diagnosis-create-modal')
+        self.assertTrue(response.context['diagnosis_create_form'].errors)
+        self.assertContains(response, 'Keep these notes')
+        self.assertContains(response, 'data-diagnosis-errors')
+        self.assertNotContains(response, 'name="client"')
+        self.assertEqual(Diagnosis.objects.count(), 0)
+
+    def test_patient_diagnosis_edit_dialog_keeps_errors_and_preserves_record(self):
+        user, practice, therapist, client = self.create_practice_user()
+        diagnosis = Diagnosis.objects.create(practice=practice, client=client, code='F41.1', label='Existing')
+        self.client.force_login(user)
+        response = self.client.post(reverse('clinical:diagnosis_edit', args=[diagnosis.pk]),
+            self.diagnosis_payload(client, label='', return_to_patient='1'))
+        self.assertTemplateUsed(response, 'clients/detail.html')
+        self.assertEqual(response.context['diagnosis_modal_id'], f'diagnosis-edit-{diagnosis.pk}')
+        self.assertContains(response, 'checkbox-field diagnosis-checkbox')
+        diagnosis.refresh_from_db()
+        self.assertEqual(diagnosis.label, 'Existing')
+        response = self.client.post(reverse('clinical:diagnosis_edit', args=[diagnosis.pk]),
+            self.diagnosis_payload(client, label='Updated', return_to_patient='1'))
+        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]))
+        diagnosis.refresh_from_db()
+        self.assertEqual(diagnosis.label, 'Updated')
+
     def test_patient_record_contains_diagnoses_without_treatment_management_duplicates(self):
         user, practice, therapist, client = self.create_practice_user()
         own = Diagnosis.objects.create(practice=practice, client=client, code='F41.1', label='Patient diagnosis')

@@ -11,8 +11,8 @@
          <header class="client-workspace-header"><span class="avatar avatar-lg" aria-hidden="true">{% if client.profile_photo %}<img src="{{ client.profile_photo.url }}" alt="">{% else %}{{ client.first_name|first }}{{ client.last_name|first }}{% endif %}</span><div class="client-identity"><p class="eyebrow">Client workspace</p><h1>{{ client }}</h1><p>{{ client.email|default:'No email on file' }} · {{ client.phone|default:'No phone on file' }}</p></div><span class="badge success">{{ client.get_status_display }}</span>{% with latest_session=recent_appointments|first %}<div class="client-header-session" aria-label="Latest session"> <strong>Latest session</strong>{% if latest_session %}<span>{{ latest_session.starts_at|date:'M j, Y' }} · {{ latest_session.starts_at|time:'g:i A' }} · {{ latest_session.get_appointment_type_display }}</span><span class="session-therapist">{{ latest_session.therapist.user.get_full_name|default:latest_session.therapist.user.username }}</span><span class="badge {% if latest_session.status == 'completed' %}success{% elif latest_session.status == 'cancelled' or latest_session.status == 'no_show' %}danger{% else %}brand{% endif %}">{{ latest_session.get_status_display }}</span>{% else %}<span class="empty-state">No sessions recorded yet</span>{% endif %}</div>{% endwith %}</header>
 
         {% if workspace_permissions.clinical.view %}<section class="panel" id="patient-diagnoses">
-          <div class="panel-head"><div><h2>Diagnoses</h2><p>This patient's diagnoses can be linked to treatment plans without creating copies.</p></div>{% if workspace_permissions.clinical.create %}<a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}?client={{ client.pk }}">Add diagnosis</a>{% endif %}</div>
-          <div class="package-list">{% for diagnosis in diagnoses %}<article class="package-card"><strong>{{ diagnosis.code }} · {{ diagnosis.label }}</strong><p>{{ diagnosis.diagnosed_at|date:"M j, Y" }} · {% if diagnosis.active %}Active{% else %}Inactive{% endif %}</p>{% if diagnosis.notes %}<p>{{ diagnosis.notes }}</p>{% endif %}{% if workspace_permissions.clinical.edit %}<a class="inline-link" href="{% url 'clinical:diagnosis_edit' diagnosis.pk %}">Edit diagnosis</a>{% endif %}</article>{% empty %}<p>No diagnoses recorded for this patient.</p>{% endfor %}</div>
+          <div class="panel-head"><div><h2>Diagnoses</h2><p>This patient's diagnoses can be linked to treatment plans without creating copies.</p></div>{% if workspace_permissions.clinical.create %}<a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}?client={{ client.pk }}" data-modal-target="diagnosis-create-modal">Add diagnosis</a>{% endif %}</div>
+          <div class="package-list">{% for diagnosis in diagnoses %}<article class="package-card"><strong>{{ diagnosis.code }} · {{ diagnosis.label }}</strong><p>{{ diagnosis.diagnosed_at|date:"M j, Y" }} · {% if diagnosis.active %}Active{% else %}Inactive{% endif %}</p>{% if diagnosis.notes %}<p>{{ diagnosis.notes }}</p>{% endif %}{% if workspace_permissions.clinical.edit %}<a class="inline-link" href="{% url 'clinical:diagnosis_edit' diagnosis.pk %}" data-modal-target="diagnosis-edit-{{ diagnosis.pk }}">Edit diagnosis</a>{% endif %}</article>{% empty %}<p>No diagnoses recorded for this patient.</p>{% endfor %}</div>
         </section>{% endif %}
         <section class="client-workspace-columns">
           <article class="panel client-information-panel"><div class="panel-head compact"><div><h2>Client information</h2><p>Practice-scoped demographics and contact details.</p></div></div><dl class="profile-detail-list"><div><dt>Primary therapist</dt><dd>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}Unassigned{% endif %}</dd></div><div><dt>Date of birth</dt><dd>{{ client.date_of_birth|date:'M j, Y'|default:'Not provided' }}</dd></div><div><dt>Insurance</dt><dd>{{ client.insurance_provider|default:'Not provided' }}{% if client.insurance_member_id %} · {{ client.insurance_member_id }}{% endif %}</dd></div><div><dt>Emergency contact</dt><dd>{{ client.emergency_contact_name|default:'Not provided' }}{% if client.emergency_contact_phone %} · {{ client.emergency_contact_phone }}{% endif %}</dd></div><div><dt>Address</dt><dd>{{ client.address_line1|default:'Not provided' }}{% if client.address_line2 %}, {{ client.address_line2 }}{% endif %}</dd></div></dl></article>
@@ -26,8 +26,27 @@
           <article class="panel"><div class="panel-head compact"><div><h2>Documents</h2><p>Client files and portal visibility.</p></div></div><div class="document-grid portal-documents">{% for document in documents %}<div class="document-card"><strong>{{ document.title }}</strong><p>{{ document.get_document_type_display }} · {{ document.created_at|date:'M j, Y' }}</p><span class="badge {% if document.visible_to_client %}success{% else %}brand{% endif %}">{% if document.visible_to_client %}Visible in portal{% else %}Internal{% endif %}</span></div>{% empty %}<p class="empty-state">No documents yet.</p>{% endfor %}</div></article></section>
       </div>
       {% include 'clients/partials/client_edit_modal.html' %}
+      {% if workspace_permissions.clinical.view %}
+        {% if workspace_permissions.clinical.create and diagnosis_create_form %}
+          {% include 'clinical/partials/diagnosis_modal.html' with diagnosis_form=diagnosis_create_form modal_id='diagnosis-create-modal' %}
+        {% endif %}
+        {% if workspace_permissions.clinical.edit %}
+          {% for diagnosis, diagnosis_form in diagnosis_edit_forms %}
+            {% with diagnosis_pk=diagnosis.pk|stringformat:'s' %}
+              {% with modal_id='diagnosis-edit-'|add:diagnosis_pk %}{% include 'clinical/partials/diagnosis_modal.html' %}{% endwith %}
+            {% endwith %}
+          {% endfor %}
+        {% endif %}
+      {% endif %}
     </main>
   </div>
-  <script>document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});</script>
+  <script>
+    (() => {
+      const dialog = document.querySelector('dialog[data-diagnosis-errors]');
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+      dialog.showModal();
+      dialog.querySelector('.form-error')?.focus();
+    })();
+  </script>
 </body>
 </html>

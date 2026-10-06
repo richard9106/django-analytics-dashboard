@@ -1,0 +1,21 @@
+<dialog class="modal-dialog diagnosis-dialog" id="{{ modal_id }}" aria-labelledby="{{ modal_id }}-title" aria-describedby="{{ modal_id }}-description" {% if diagnosis_modal_id == modal_id %}data-diagnosis-errors{% endif %}>
+  <div class="modal-card">
+    <div class="modal-head"><div><p class="eyebrow">{{ client }}</p><h2 id="{{ modal_id }}-title">{% if diagnosis %}Edit diagnosis{% else %}Add diagnosis{% endif %}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close diagnosis form">×</button></div>
+    <p id="{{ modal_id }}-description">Record this patient's diagnosis. You can select it in their treatment plans.</p>
+    <form class="appointment-form" method="post" action="{% if diagnosis %}{% url 'clinical:diagnosis_edit' diagnosis.pk %}{% else %}{% url 'clinical:diagnosis_create' %}?client={{ client.pk }}{% endif %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="return_to_patient" value="1">
+      {% if diagnosis_form.errors %}<div class="form-error" tabindex="-1" role="alert"><p>Please review the highlighted fields.</p>{{ diagnosis_form.non_field_errors }}{% if diagnosis_form.client.errors %}{{ diagnosis_form.client.errors }}{% endif %}</div>{% endif %}
+      <div class="field-grid two">
+        {% for field in diagnosis_form %}{% if field.name != 'client' %}
+          <div class="field {% if field.name == 'notes' %}full{% endif %}{% if field.field.widget.input_type == 'checkbox' %} checkbox-field diagnosis-checkbox{% endif %}">
+            {% if field.field.widget.input_type == 'checkbox' %}<label for="{{ field.id_for_label }}">{{ field }} <span>Active diagnosis</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span class="diagnosis-optional">(optional)</span>{% endif %}</label>{{ field }}{% endif %}
+            {% if field.help_text %}<p>{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}{{ field.errors }}{% endif %}
+          </div>
+        {% endif %}{% endfor %}
+      </div>
+      <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">{% if diagnosis %}Save diagnosis{% else %}Add diagnosis{% endif %}</button></div>
+    </form>
+  </div>
+</dialog>

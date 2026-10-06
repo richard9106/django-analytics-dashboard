@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Diagnosis creation/editing now opens native dialogs inside the patient record, reviewed by the specialized UX designer. Patient context stays fixed, the checkbox uses compact sizing with a large clickable label, and validation errors preserve entered values and reopen the dialog. Standalone fallback pages retain diagnosis-specific copy and corrected Boolean controls.
+
 - Moved diagnosis management into the patient workspace and removed the practice-wide diagnosis panel/create/edit dialogs from treatment plans. Plan diagnosis choices follow the selected patient in both browser and server validation. Existing linked inactive diagnoses remain selectable on edit. Options load only on opening a form and are reused within the page; a CI JavaScript check verifies switching patients, late responses, existing inactive links and caching.
 
 - Connected session → note → invoice through calendar session dialogs and edit pages. Tenant-checked session links prefill note client/therapist/appointment and invoice client/appointment; saving a linked record returns users with calendar edit permission to the session. Review notes/invoices links filter by session, and invoice review clearly shows the active filter. Existing create permissions and payment flows are retained; creating a draft does not collect a payment.
@@ -65,6 +67,8 @@ This document captures the current product state after the recent UX, billing, a
 - The goal is US clinical use with demonstrable HIPAA compliance. The first security delivery upgrades Django LTS, guards production startup, and strengthens CI/deployment. Staff MFA, recovery, shared rate limits, and session expiry/revocation are implemented with security boundary tests. BAA/vendor validation, protected audit trails, retention, incident response, and operating policies remain prerequisites for real patient data; see `clinical-readiness-us.md`.
 
 ## Recommended Next Work
+
+UX decisions and interface changes should be delegated to the specialized NuviaMy UX designer in `.opencode/agent/nuvia-ux-designer.md`, as requested by the owner. Include contextual placement, checkbox sizing, validation feedback, keyboard behavior and mobile layout in the review.
 
 The owner prioritizes workflow completeness and an intuitive interface during pre-client development, using the existing lightweight architecture on the VPS. Preserve current protections; defer additional security infrastructure until the usability work is resolved. Clinical-readiness criteria remain prerequisites for a real-patient pilot.
 
