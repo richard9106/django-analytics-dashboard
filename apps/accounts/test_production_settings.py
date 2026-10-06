@@ -5,7 +5,10 @@ import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from django.apps import apps
+from django.db import models
 from django.test import SimpleTestCase
+from django.urls import Resolver404, resolve
 
 from config.production import validate_production_settings
 
@@ -36,6 +39,14 @@ class ProductionConfigurationTests(SimpleTestCase):
 
     def test_secure_configuration_is_accepted(self):
         validate_production_settings(self.config)
+
+    def test_summernote_keeps_its_published_primary_key_type(self):
+        attachment = apps.get_model('django_summernote', 'Attachment')
+        self.assertIs(type(attachment._meta.pk), models.AutoField)
+
+    def test_unscoped_summernote_upload_endpoint_is_not_exposed(self):
+        with self.assertRaises(Resolver404):
+            resolve('/summernote/upload_attachment/')
 
     def test_insecure_configuration_is_rejected_without_disclosing_values(self):
         cases = [

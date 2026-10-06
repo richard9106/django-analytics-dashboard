@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # funtionalities
-    'django_summernote',
+    'config.apps.SummernoteConfig',
     # core apps
     'apps.dashboard',
     'apps.practices',
@@ -133,6 +133,12 @@ if DJANGO_STORAGE_BACKEND == 'r2':
     AWS_S3_FILE_OVERWRITE = False
     STORAGES['default'] = {'BACKEND': 'storages.backends.s3.S3Storage'}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Summernote attachments have no Practice/client authorization boundary.
+# Upload documents through the scoped Documents workspace instead.
+SUMMERNOTE_CONFIG = {
+    'disable_attachment': True,
+    'attachment_require_authentication': True,
+}
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'

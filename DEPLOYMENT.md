@@ -72,7 +72,8 @@ with DEBUG enabled, a weak Django secret, missing or placeholder database
 credentials, SQLite, missing/wildcard allowed hosts, HTTP CSRF origins,
 disabled HTTPS/cookie controls, no HSTS, or a missing/invalid Fernet key.
 Docker Compose always selects the production environment and requires the
-three secrets to be present. Local non-Docker development can use
+three secrets to be present. Summernote attachment uploads are disabled because
+they lack Practice/client authorization; use the Documents workspace for uploads. Local non-Docker development can use
 `DJANGO_ENVIRONMENT=development` and SQLite as described in `.env.example`.
 
 Generate a new Django secret and Fernet key with a secure password/secret

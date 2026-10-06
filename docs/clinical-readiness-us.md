@@ -56,11 +56,12 @@ Trabajo iniciado el 6 de octubre de 2026 para SEC-01, SEC-02 y parte de OPS-01:
 - Django 5.2.17 LTS, versión publicada disponible al preparar la entrega.
 - Validación obligatoria al arrancar en producción: DEBUG, secreto Django, PostgreSQL, hosts/CSRF, HTTPS/cookies/HSTS y clave Fernet; mensajes sin valores de secretos.
 - Compose exige secretos y fija el entorno de producción. Contexto Docker excluye archivos de entorno, configuración de agentes y media local.
-- Nueve pruebas adicionales de configuración y arranque, con escenarios seguros e inseguros.
+- Once pruebas adicionales de configuración, arranque y configuración de Summernote, con escenarios seguros e inseguros.
 - Workflow con PostgreSQL 16, checks de despliegue que fallan ante warnings, consistencia de migraciones/dependencias y despliegue del commit exacto probado. Comprobación del candidato antes de reemplazar el servicio.
+- Summernote conserva el tipo de clave primaria de sus migraciones publicadas; se desactiva su endpoint de adjuntos sin ámbito Practice. La subida de documentos sigue disponible en Documents.
 - README actualizado para reflejar el objetivo clínico real. Esta entrega no cierra MFA, políticas, contratos, auditoría, retención ni el resto de bloqueos.
 
-La inspección por SSH confirmó en el servicio previo: PostgreSQL, DEBUG desactivado, secreto Django que cumple los checks básicos, clave Fernet válida, R2 y controles HTTPS activos. Se detectó un origen CSRF HTTP a retirar antes del nuevo despliegue y permisos 664 del archivo de entorno a restringir a 600, conservando propietario. No se imprimieron secretos ni se consultaron expedientes de pacientes.
+La inspección por SSH confirmó en el servicio previo: PostgreSQL, DEBUG desactivado, secreto Django que cumple los checks básicos, clave Fernet válida, R2 y controles HTTPS activos. Se detectó un origen CSRF HTTP a retirar antes del nuevo despliegue y permisos 664 del archivo de entorno a restringir a 600, conservando propietario. Se retiró el origen HTTP y se restringió el archivo a 600 con copia protegida, sin cambiar claves. No se imprimieron secretos ni se consultaron expedientes de pacientes.
 
 ## Secuencia de ejecución
 
@@ -79,7 +80,7 @@ Todos los P0 cerrados con evidencia; análisis de riesgos aceptado; contratos ap
 
 check --deploy --fail-level WARNING pasó con DEBUG=false y secreto temporal de revisión, sin conectarse al VPS. Esto confirma únicamente los checks Django para ese entorno.
 
-Revisión inicial: 334 tests correctos con SQLite. Primera entrega: 343 tests correctos con Django 5.2.17 y PostgreSQL 16 aislado (242,702 segundos); nueve pruebas adicionales de arranque/configuración. También pasan checks de despliegue, consistencia de migraciones/dependencias, validación Compose y checks en la imagen Docker construida. No valida cumplimiento ni todos los controles de producción.
+Revisión inicial: 334 tests correctos con SQLite. Primera entrega: 345 tests correctos con Django 5.2.17 y PostgreSQL 16 aislado (238,375 segundos); once pruebas adicionales de arranque/configuración, también verificadas en un contenedor limpio. También pasan checks de despliegue, consistencia de migraciones/dependencias, validación Compose y checks en la imagen Docker construida. No valida cumplimiento ni todos los controles de producción.
 
 ## Fuentes primarias
 
@@ -93,3 +94,5 @@ Revisión inicial: 334 tests correctos con SQLite. Primera entrega: 343 tests co
 - Google: Workspace y BAA: https://knowledge.workspace.google.com/admin/compliance/hipaa-compliance-with-google-workspace-and-cloud-identity
 - Cloudflare: propiedades de seguridad R2, no prueba de contrato de este proyecto: https://developers.cloudflare.com/r2/reference/data-security/
 - Django: ramas y fechas de soporte: https://www.djangoproject.com/download/
+
+La primera ejecución de CI bloqueó la entrega por una discrepancia de clave primaria en Summernote, oculta por una migración generada localmente dentro de .venv. Se preservó esa migración local en /tmp y se fijó AutoField para Summernote, según su esquema publicado. La imagen limpia ya no genera migraciones pendientes; no se alteró la tabla de producción.
