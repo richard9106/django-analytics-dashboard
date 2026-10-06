@@ -16,7 +16,7 @@
     <main class="app-main">
       {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Profile actions">
-        <div class="quick-actions"><a class="btn btn-soft" href="{% url 'dashboard' %}">Back to dashboard</a></div>
+        <div class="quick-actions"><a class="btn btn-secondary" href="{% url 'security_settings' %}">Account security</a><a class="btn btn-soft" href="{% url 'dashboard' %}">Back to dashboard</a></div>
         <details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">

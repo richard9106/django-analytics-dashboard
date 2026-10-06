@@ -128,7 +128,7 @@
         </div>
       </dialog>
     {% endfor %}
-  {% if chat_enabled %}{% include 'partials/chat_drawer.html' %}{% endif %}</main>
+  {% if chat_enabled %}{% include 'partials/chat_drawer.html' %}{% endif %}<a class="btn btn-secondary" href="{% url 'security_settings' %}">Account security</a></main>
   <script>
     const labelPortalDialogs = () => {
       document.querySelectorAll('dialog.modal-dialog').forEach((dialog, index) => {
@@ -191,5 +191,5 @@
       if (message && !window.confirm(message)) event.preventDefault();
     });
   </script>
-</body>
+{% include 'partials/security_session.html' %}</body>
 </html>

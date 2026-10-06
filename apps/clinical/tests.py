@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -311,6 +311,7 @@ class TreatmentPlanModelTests(TestCase):
         self.assertFalse(plan.is_review_due)
 
 
+@override_settings(MFA_REQUIRED=False)
 class SessionNoteViewTests(TestCase):
     def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
         user = get_user_model().objects.create_user(
@@ -755,6 +756,7 @@ class SessionNoteViewTests(TestCase):
         self.assertEqual(SessionNote.objects.count(), 1)
 
 
+@override_settings(MFA_REQUIRED=False)
 class TreatmentPlanViewTests(TestCase):
     def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
         user = get_user_model().objects.create_user(

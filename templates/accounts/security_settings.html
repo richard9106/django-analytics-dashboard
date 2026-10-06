@@ -1,0 +1,9 @@
+{% extends 'accounts/security_base.html' %}
+{% block content %}<h2>Account security</h2>
+{% if mfa_required %}<p>Authenticator protection is active. {{ recovery_count }} recovery codes remain.</p><a class="btn btn-secondary" href="{% url 'mfa_setup' %}?replace=1">Replace authenticator</a>{% endif %}
+<p>Sessions expire after 15 minutes without activity and a maximum of 8 hours.</p>
+<h3>Confirm a security action</h3><form method="post" class="login-form">{% csrf_token %}{{ form.as_p }}
+{% if mfa_required %}<button type="submit" name="action" value="recovery_codes">Generate new recovery codes</button>{% endif %}
+<button type="submit" name="action" value="revoke_sessions">Sign out other sessions</button></form>
+<a class="btn btn-secondary" href="{% if mfa_required %}/accounts/profile/{% else %}/portal/{% endif %}">Back to account</a>
+{% endblock %}

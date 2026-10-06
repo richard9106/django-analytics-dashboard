@@ -47,6 +47,7 @@ class ClientDocumentModelTests(TestCase):
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+@override_settings(MFA_REQUIRED=False)
 class ClientDocumentViewTests(TestCase):
     def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
         user = get_user_model().objects.create_user(

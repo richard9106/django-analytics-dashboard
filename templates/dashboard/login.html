@@ -38,6 +38,7 @@
       <h2>Sign in to your dashboard</h2>
       <p class="login-copy">Access your protected NuviaMy practice workspace.</p>
 
+      {% if request.GET.session_expired %}<p class="form-error">Your session ended. Please sign in again.</p>{% endif %}
       {% if form.errors %}
         <p class="form-error">Your email and password did not match. Please try again.</p>
       {% endif %}
@@ -61,5 +62,5 @@
       </div>
     </section>
   </main>
-</body>
+{% include 'partials/security_session.html' %}</body>
 </html>

@@ -96,3 +96,38 @@ Revisión inicial: 334 tests correctos con SQLite. Primera entrega: 345 tests co
 - Django: ramas y fechas de soporte: https://www.djangoproject.com/download/
 
 La primera ejecución de CI bloqueó la entrega por una discrepancia de clave primaria en Summernote, oculta por una migración generada localmente dentro de .venv. Se preservó esa migración local en /tmp y se fijó AutoField para Summernote, según su esquema publicado. La imagen limpia ya no genera migraciones pendientes; no se alteró la tabla de producción.
+
+## Segunda entrega técnica: MFA y sesiones
+
+SEC-03 cuenta con controles implementados: MFA TOTP obligatorio para todo el personal
+(incluido Django admin), recuperación de un solo uso, cifrado obligatorio del secreto,
+revocación por versión de cuenta y al desactivar/reactivar, cierre tras 15 minutos de
+inactividad y máximo 8 horas, desafío pendiente de 10 minutos y reautenticación de 5
+minutos para exportación/cambios de equipo/perfil. El navegador oculta contenido al
+expirar y sincroniza actividad/cierre entre pestañas. Las sesiones anteriores a la
+entrega se invalidan; el personal debe iniciar sesión e inscribirse.
+
+SEC-04 tiene límites atómicos de IP en PostgreSQL para login, admin, recuperación y
+MFA, más bloqueo MFA por cuenta (5 fallos/15 minutos). Los secretos pendientes y
+códigos mostrados una vez también se cifran en la tabla de sesiones. La recuperación
+operativa exige verificación independiente y un ticket: consultar DEPLOYMENT.md.
+Los tests de dominio existentes aíslan MFA mediante override explícito; los nuevos
+tests de seguridad mantienen MFA obligatorio y prueban los límites de acceso.
+
+Pendiente para cerrar estos controles como parte del expediente: validación operativa
+con usuarios, procedimiento/registro de soporte, mantenimiento diario de sesiones y
+buckets, alertas de abuso y evaluación independiente. TOTP no ofrece resistencia al
+phishing. Admins sin práctica carecen de registro en la auditoría actual y necesitan
+registro operativo externo. Se desactiva la captura de variables locales en Sentry;
+esto no sustituye el filtrado integral de PHI pendiente en INT-02. Se mantienen abiertos
+los requisitos de contratos, conservación, auditoría y validación clínica.
+
+Validación de la segunda entrega: 38 pruebas nuevas de límites de autenticación,
+recuperación, cifrado, CSRF, inactividad, revocación y concurrencia real con PostgreSQL.
+Checks de despliegue en imagen Docker limpia y consistencia de migraciones correctos.
+La revisión visual en navegador local quedó pendiente por una denegación de acceso;
+los formularios y redirecciones sí se ejercitan mediante el cliente de pruebas Django.
+
+Suite completa final: 383 tests correctos con PostgreSQL 16 (110,707 segundos en
+cuatro procesos). Las 38 pruebas de seguridad pasan también dentro de una imagen
+Docker limpia con el manifiesto estático generado, sin depender de la .venv local.

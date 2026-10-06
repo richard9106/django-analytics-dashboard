@@ -8,5 +8,5 @@
       <section class="support-contact-card support-form-card"><div><p class="eyebrow">NuviaMy support</p><h1>How can we help?</h1><p>Describe the problem without including clinical or client-sensitive information.</p></div><form method="post" class="support-form">{% csrf_token %}{{ form.non_field_errors }}<div class="field-grid two"><div class="field"><label for="id_name">Name</label>{{ form.name }}{{ form.name.errors }}</div><div class="field"><label for="id_email">Email</label>{{ form.email }}{{ form.email.errors }}</div><div class="field"><label for="id_topic">Topic</label>{{ form.topic }}{{ form.topic.errors }}</div><div class="field full"><label for="id_message">Message</label>{{ form.message }}{{ form.message.errors }}</div></div>{{ form.website }}<button class="btn btn-primary" type="submit">Send support request</button></form></section>
     {% endif %}
   </main>
-</body>
+{% include 'partials/security_session.html' %}</body>
 </html>

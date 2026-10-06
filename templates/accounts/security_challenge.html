@@ -1,0 +1,6 @@
+{% extends 'accounts/security_base.html' %}
+{% block title %}Verify your sign-in{% endblock %}
+{% block content %}<h2>Verify your sign-in</h2><p>Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+<form method="post" class="login-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Verify and continue</button></form>
+<p>Codes can only be used once. After five failed attempts, wait 15 minutes before trying again.</p>
+{% endblock %}

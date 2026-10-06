@@ -292,3 +292,56 @@ python manage.py send_appointment_reminders
 ```
 
 Production can run it with a systemd timer every 15 minutes. Gmail must be connected for delivery.
+
+## Staff MFA and session operations
+
+Staff, practice owners/admins, and Django administrators must enroll an authenticator
+at their next sign-in. Existing unstamped sessions are revoked by this release.
+Use synthetic accounts in staging to rehearse enrollment before onboarding a clinic.
+Client portal accounts retain password-based sign-in. Every authenticated account
+has a 15-minute idle timeout and an 8-hour absolute limit; pending staff MFA expires
+10 minutes after password authentication. Export, team changes, and profile changes
+require authentication within the last 5 minutes.
+
+Enrollment and authenticator replacement require the current password and a fresh
+TOTP. Ten random recovery codes are displayed once; store them securely outside
+NuviaMy. Codes are stored hashed and consumed atomically. Secrets and temporarily
+displayed codes are Fernet-encrypted, including in development: configure a valid
+`FIELD_ENCRYPTION_KEY`. Preserve this key with encrypted database backups; losing
+it prevents MFA verification and encrypted integration-token recovery. Do not
+replace the key without a planned data/key migration.
+
+The Account security page permits new recovery codes, authenticator replacement,
+and revocation of other sessions. Both factors are required for staff security
+actions. Five invalid factor/password attempts lock that account's MFA for 15
+minutes. Public password/reset and MFA endpoints also have PostgreSQL-backed IP
+limits; the host proxy must append the real source IP to `X-Forwarded-For`, and
+port 8000 must remain restricted to localhost as configured in Compose.
+
+For a lost authenticator **and** lost recovery codes, independently verify identity
+through the clinic's approved support procedure and record a ticket reference.
+An authorized server operator may then run:
+
+```bash
+docker compose exec -T web python manage.py reset_staff_mfa USERNAME --reason VERIFIED_TICKET_REFERENCE
+```
+
+This removes enrollment and recovery codes, revokes every session, and writes a
+practice audit event when a practice is associated. It does not change the
+password. Password reset alone never removes MFA. Platform administrators without
+a practice currently require a separate operator incident/change record because
+the existing audit model requires a practice; do not treat this as a complete audit
+trail. No support reset is exposed through a public endpoint or Django admin.
+
+Include these maintenance commands in the approved daily server operations job:
+
+```bash
+docker compose exec -T web python manage.py clearsessions
+docker compose exec -T web python manage.py clear_security_rate_limits
+```
+
+Expired rate-limit buckets reset on use; deletion only removes expired buckets.
+The browser watchdog hides protected content on timeout and propagates logout
+across tabs. A browser may discard unsaved edits when a session expires. TOTP is
+not phishing-resistant; evaluate WebAuthn and stronger administrative access as
+part of the risk assessment. These controls do not establish clinical readiness.

@@ -43,3 +43,6 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.get_role_display()}"
+
+# Keep authentication state independent of practice roles (including superusers).
+from .security_models import AccountSecurity, RateLimitBucket  # noqa: E402,F401

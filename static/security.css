@@ -1,0 +1,9 @@
+.security-card { max-width: 620px; }
+.security-qr { display: block; width: 220px; max-width: 100%; height: auto; margin: 20px auto; }
+.security-key { display: block; overflow-wrap: anywhere; margin: 16px 0; }
+.security-card .errorlist { color: #9f2415; padding-left: 18px; }
+.security-card details { margin: 16px 0; }
+.security-card summary { cursor: pointer; }
+.recovery-codes { list-style: none; padding: 0; display: grid; gap: 12px; }
+.recovery-codes code { overflow-wrap: anywhere; font-size: 14px; }
+.security-card a, .security-card input, .security-card button { outline-offset: 4px; }

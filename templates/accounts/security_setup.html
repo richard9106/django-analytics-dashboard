@@ -1,0 +1,9 @@
+{% extends 'accounts/security_base.html' %}
+{% block title %}Set up authenticator{% endblock %}
+{% block content %}<h2>Set up your authenticator</h2>
+<p>Use an authenticator app such as Google Authenticator, Microsoft Authenticator, or 1Password. Scan this QR code, then enter the current code and your password.</p>
+<img class="security-qr" src="data:image/png;base64,{{ qr_image }}" alt="Authenticator setup QR code">
+<details><summary>Enter a setup key manually</summary><code class="security-key">{{ setup_key }}</code><p>Account: {{ request.user.email|default:request.user.username }}. Time-based, 6 digits, every 30 seconds.</p></details>
+<p>Keep this key private. Setup expires after 10 minutes.</p>
+<form method="post" class="login-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Confirm authenticator</button></form>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends 'accounts/security_base.html' %}
+{% block title %}Save recovery codes{% endblock %}
+{% block content %}<h2>Save your recovery codes</h2><p>Store these codes in a password manager or another safe place. Each code works once if you lose your authenticator. They are shown only on this page, once.</p>
+<ul class="recovery-codes">{% for code in codes %}<li><code>{{ code }}</code></li>{% endfor %}</ul>
+<p>Replacing these codes invalidates the old set.</p><a class="btn btn-primary" href="{{ continue_url }}">I have saved my codes — continue</a>
+{% endblock %}

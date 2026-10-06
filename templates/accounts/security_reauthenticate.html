@@ -1,0 +1,5 @@
+{% extends 'accounts/security_base.html' %}
+{% block title %}Confirm your identity{% endblock %}
+{% block content %}<h2>Confirm your identity</h2><p>Confirm your credentials to continue with this sensitive action. Then submit the action again.</p>
+<form method="post" class="login-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Confirm and continue</button></form>
+{% endblock %}

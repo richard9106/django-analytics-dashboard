@@ -1,0 +1,12 @@
+{% load static %}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Account security{% endblock %} | NuviaMy</title>
+<link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+<link rel="stylesheet" href="{% static 'dashboard.css' %}"><link rel="stylesheet" href="{% static 'security.css' %}"></head>
+<body class="login-page"><main class="login-shell"><section class="login-brand-panel">
+<a class="brand brand-large" href="/">NuviaMy</a><p class="eyebrow">Account security</p>
+<h1>Protect your practice.</h1><p>Keep your account secure with an authenticator app and private recovery codes.</p>
+<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit">Sign out</button></form>
+</section><section class="login-card security-card">
+{% block content %}{% endblock %}
+</section></main>{% include 'partials/security_session.html' %}</body></html>
