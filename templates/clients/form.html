@@ -14,6 +14,7 @@
     {% include 'partials/sidebar.html' with card_title='Client privacy' card_text='Only therapists from this practice can be assigned to this profile.' %}
 
     <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           <a class="btn btn-primary" href="{% url 'clients:create' %}">+ New client</a>

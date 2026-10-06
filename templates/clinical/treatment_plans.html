@@ -14,6 +14,7 @@
     {% include 'partials/sidebar.html' with card_title='Notes & treatment' card_text='Document sessions and connect progress to active care plans.' %}
 
     <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clinical.create %}<a class="btn btn-primary" href="{% url 'clinical:treatment_plan_create' %}" data-modal-target="plan-create-modal">+ New plan</a>

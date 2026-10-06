@@ -13,6 +13,7 @@
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='Insurance setup' card_text='Configure payers and reimbursement rates by state and service.' %}
     <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar">
         <div class="quick-actions">
            {% if workspace_permissions.billing.create %}<a class="btn btn-primary" href="{% url 'settings:insurance_rate_create' %}" data-modal-target="rate-create-modal">+ Rate</a>

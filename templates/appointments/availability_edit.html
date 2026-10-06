@@ -4,6 +4,7 @@
 <body class="app-page"><div class="app-shell">
   {% include 'partials/sidebar.html' with card_title='Your calendar' card_text='Manage availability without changing existing appointments.' %}
   <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
     <section class="panel form-panel">
       <div class="panel-head"><div><p class="eyebrow">Availability</p><h1>Edit this date's availability</h1><p>This changes only the selected record. Other dates and existing appointments stay as they are.</p></div></div>
       <form class="appointment-form" method="post">

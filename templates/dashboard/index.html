@@ -14,6 +14,7 @@
     {% include 'partials/sidebar.html' with card_title='Your daily workspace' card_text='Keep clients, sessions, notes, and billing together.' %}
 
     <main class="app-main" data-tour-target="workspace">
+      {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clients.create %}<a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>{% endif %}

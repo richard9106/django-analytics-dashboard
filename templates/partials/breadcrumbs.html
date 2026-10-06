@@ -1,1 +1,14 @@
-{% if breadcrumbs %}<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="{% url 'dashboard' %}">Overview</a>{% for crumb in breadcrumbs %}<span aria-hidden="true">›</span>{% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% else %}<span aria-current="page">{{ crumb.label }}</span>{% endif %}{% endfor %}</nav>{% endif %}
+{% load workspace_navigation %}
+{% workspace_breadcrumb_items as breadcrumbs %}
+{% if breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <ol>
+    {% for crumb in breadcrumbs %}
+    <li>
+      {% if not forloop.first %}<span class="breadcrumb-separator" aria-hidden="true">›</span>{% endif %}
+      {% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% else %}<span{% if forloop.last %} aria-current="page"{% endif %}>{{ crumb.label }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

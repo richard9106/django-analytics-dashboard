@@ -14,6 +14,7 @@
     {% include 'partials/sidebar.html' with card_title='Billing workspace' card_text='Track invoices, payments, and prepaid session packages.' %}
 
     <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.billing.create %}<a class="btn btn-primary" href="{% url 'billing:invoice_create' %}" data-modal-target="invoice-create-modal">+ New invoice</a>
@@ -64,7 +65,7 @@
 
       {% if workspace_permissions.billing.create %}<dialog class="modal-dialog" id="invoice-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Invoice</p><h2>Create invoice</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_create' submit_label='Create invoice' %}</div></dialog>
       <dialog class="modal-dialog" id="package-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">New Package</p><h2>Create prepaid package</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/package_form.html' with action_url='billing:package_create' submit_label='Create package' %}</div></dialog>{% endif %}
-      {% if workspace_permissions.billing.create %}<dialog class="modal-dialog" id="payment-create-modal" aria-labelledby="record-payment-heading"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Manual payment</p><h2 id="record-payment-heading">Record payment</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/payment_form.html' with form=payment_form %}</div></dialog>{% endif %}
+      {% if workspace_permissions.billing.create %}<dialog class="modal-dialog" id="payment-create-modal" aria-labelledby="record-payment-heading"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Manual payment</p><h2 id="record-payment-heading">Record payment</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/payment_form.html' with form=payment_form modal_form=True %}</div></dialog>{% endif %}
 
         {% for invoice in invoices %}{% if invoice.status == 'draft' and workspace_permissions.billing.edit %}
          <dialog class="modal-dialog" id="invoice-modal-{{ invoice.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Edit Invoice</p><h2>{{ invoice.invoice_number }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>{% include 'billing/partials/invoice_form.html' with action_url='billing:invoice_edit' object=invoice submit_label='Save changes' %}</div></dialog>

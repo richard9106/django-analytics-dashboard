@@ -13,6 +13,7 @@
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='Calendar sync' card_text='Review failed Google Calendar syncs without exposing provider details.' %}
     <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions"><a class="btn btn-soft" href="{% url 'appointments:list' %}">Back to appointments</a></div>
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
