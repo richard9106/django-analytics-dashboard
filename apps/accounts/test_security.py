@@ -11,11 +11,12 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
-from django.test import Client, TestCase, TransactionTestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.practices.models import Practice
+from apps.audit.testing import ProtectedRecordsTransactionTestCase
 from .models import AccountSecurity, RateLimitBucket, UserProfile
 from .security import (confirm_enrollment, decrypt_session_value, matching_counter,
                        new_recovery_codes, security_state, verify_factor)
@@ -327,7 +328,7 @@ class AccountSecurityTests(TestCase):
 
 @override_settings(MFA_REQUIRED=True, FIELD_ENCRYPTION_KEY=Fernet.generate_key().decode(),
                    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
-class ConcurrentFactorTests(TransactionTestCase):
+class ConcurrentFactorTests(ProtectedRecordsTransactionTestCase):
     def test_same_recovery_code_can_succeed_only_once_across_workers(self):
         if connection.vendor != 'postgresql':
             self.skipTest('Production row-lock concurrency requires PostgreSQL.')

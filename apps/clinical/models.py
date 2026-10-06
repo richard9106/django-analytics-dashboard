@@ -1,6 +1,23 @@
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
+
+
+class SessionNoteQuerySet(models.QuerySet):
+    def _protect_locked(self):
+        # Lock before checking to prevent concurrent finalization from racing a write.
+        if any(self.select_for_update().values_list('is_locked', flat=True)):
+            raise ValidationError('Locked clinical notes cannot be changed or deleted.')
+
+    @transaction.atomic
+    def update(self, **kwargs):
+        self._protect_locked()
+        return super().update(**kwargs)
+
+    @transaction.atomic
+    def delete(self):
+        self._protect_locked()
+        return super().delete()
 
 
 class SessionNote(models.Model):
@@ -14,17 +31,17 @@ class SessionNote(models.Model):
 
     practice = models.ForeignKey(
         "practices.Practice",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="session_notes",
     )
     client = models.ForeignKey(
         "clients.Client",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="session_notes",
     )
     therapist = models.ForeignKey(
         "practices.TherapistProfile",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="session_notes",
     )
     appointment = models.ForeignKey(
@@ -36,7 +53,7 @@ class SessionNote(models.Model):
     )
     treatment_plan = models.ForeignKey(
         "clinical.TreatmentPlan",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="session_notes",
@@ -52,6 +69,8 @@ class SessionNote(models.Model):
     locked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SessionNoteQuerySet.as_manager()
 
     class Meta:
         ordering = ["-created_at"]
@@ -102,18 +121,21 @@ class SessionNote(models.Model):
         self.is_locked = True
         self.locked_at = timezone.now()
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         """Keep finalized notes immutable through all normal model saves."""
         if self.pk:
-            previous = type(self).objects.filter(pk=self.pk).values("is_locked").first()
+            previous = type(self).objects.select_for_update().filter(pk=self.pk).values("is_locked").first()
             if previous and previous["is_locked"]:
                 raise ValidationError("Locked clinical notes cannot be edited or unlocked.")
         if self.is_locked and not self.locked_at:
             self.locked_at = timezone.now()
         super().save(*args, **kwargs)
 
+    @transaction.atomic
     def delete(self, *args, **kwargs):
-        if self.is_locked:
+        current = type(self).objects.select_for_update().filter(pk=self.pk).values_list("is_locked", flat=True).first()
+        if current:
             raise ValidationError("Locked clinical notes cannot be deleted.")
         return super().delete(*args, **kwargs)
 
@@ -122,8 +144,8 @@ class SessionNote(models.Model):
 
 
 class Diagnosis(models.Model):
-    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="diagnoses")
-    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="diagnoses")
+    practice = models.ForeignKey("practices.Practice", on_delete=models.PROTECT, related_name="diagnoses")
+    client = models.ForeignKey("clients.Client", on_delete=models.PROTECT, related_name="diagnoses")
     code = models.CharField(max_length=20)
     label = models.CharField(max_length=180)
     diagnosed_at = models.DateField(default=timezone.localdate)
@@ -153,9 +175,9 @@ class TreatmentPlan(models.Model):
         COMPLETED = "completed", "Completed"
         DISCONTINUED = "discontinued", "Discontinued"
 
-    practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="treatment_plans")
-    client = models.ForeignKey("clients.Client", on_delete=models.CASCADE, related_name="treatment_plans")
-    therapist = models.ForeignKey("practices.TherapistProfile", on_delete=models.CASCADE, related_name="treatment_plans")
+    practice = models.ForeignKey("practices.Practice", on_delete=models.PROTECT, related_name="treatment_plans")
+    client = models.ForeignKey("clients.Client", on_delete=models.PROTECT, related_name="treatment_plans")
+    therapist = models.ForeignKey("practices.TherapistProfile", on_delete=models.PROTECT, related_name="treatment_plans")
     diagnoses = models.ManyToManyField(Diagnosis, blank=True, related_name="treatment_plans")
     title = models.CharField(max_length=160)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)

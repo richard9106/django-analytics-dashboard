@@ -1,11 +1,15 @@
+import ipaddress
+
 from .models import AuditLog
 
 
 def get_request_ip(request):
-    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if forwarded_for:
-        return forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR')
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    candidate = forwarded.rsplit(',', 1)[-1].strip() if forwarded else request.META.get('REMOTE_ADDR', '')
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return None
 
 
 def get_audit_practice(user):
@@ -24,13 +28,10 @@ def get_audit_practice(user):
     return None
 
 
-def log_audit_event(request, action, object_type, object_id='', practice=None, metadata=None, actor=None):
+def log_audit_event(request, action, object_type, object_id='', practice=None, metadata=None, actor=None, platform=False):
     actor = actor if actor is not None else getattr(request, 'user', None)
-    if not practice and actor and getattr(actor, 'is_authenticated', False):
+    if not platform and not practice and actor and getattr(actor, 'is_authenticated', False):
         practice = get_audit_practice(actor)
-
-    if not practice:
-        return None
 
     return AuditLog.objects.create(
         practice=practice,
@@ -40,5 +41,5 @@ def log_audit_event(request, action, object_type, object_id='', practice=None, m
         object_id=str(object_id) if object_id else '',
         metadata=metadata or {},
         ip_address=get_request_ip(request),
-        user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:512],
     )

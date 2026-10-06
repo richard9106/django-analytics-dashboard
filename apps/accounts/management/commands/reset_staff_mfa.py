@@ -27,8 +27,7 @@ class Command(BaseCommand):
         AccountSecurity.objects.filter(user=user).update(secret='', confirmed=False, last_counter=-1,
             recovery_hashes=[], failed_attempts=0, blocked_until=None, session_version=uuid.uuid4())
         practice = get_audit_practice(user)
-        if practice:
-            AuditLog.objects.create(practice=practice, action=AuditLog.Action.UPDATE,
-                object_type='accounts.AccountSecurity', object_id=str(user.pk),
-                metadata={'event': 'mfa_support_reset', 'verification_reference': reason})
+        AuditLog.objects.create(practice=practice, action=AuditLog.Action.UPDATE,
+            object_type='accounts.AccountSecurity', object_id=str(user.pk),
+            metadata={'event': 'mfa_support_reset', 'verification_reference': reason})
         self.stdout.write('MFA reset completed; all existing sessions revoked. User must sign in and enroll again.')

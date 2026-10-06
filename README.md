@@ -1,6 +1,6 @@
 # NuviaMy
 
-NuviaMy is a Django-based therapy practice management SaaS for solo therapists, psychologists, and multi-provider clinics. The project is built as a realistic portfolio application focused on secure client management, scheduling, clinical workflows, billing, subscriptions, document storage, Google integrations, and a client portal.
+NuviaMy is a Django-based therapy practice management SaaS for solo therapists, psychologists, and multi-provider clinics. The project targets clinical use in the United States and focuses on secure client management, scheduling, clinical workflows, billing, subscriptions, document storage, Google integrations, and a client portal.
 
 ## Product Vision
 
@@ -9,7 +9,7 @@ NuviaMy helps mental health professionals manage their practice from one calm, s
 - Manage solo practices and multi-therapist clinics.
 - Track clients, appointments, sessions, notes, treatment plans, invoices, subscriptions, documents, and client requests.
 - Provide clients with a portal for appointments, documents, intake, and practice communication.
-- Model HIPAA-aware architecture and security practices for a realistic healthcare SaaS portfolio project.
+- Implement and validate the technical and operational controls required for a clinical healthcare SaaS.
 
 The product goal is real clinical use in the United States with demonstrable HIPAA compliance. The current implementation is not yet approved for real patient data: technical controls, contracts, operating policies, and independent validation remain to be completed. HHS does not certify software as HIPAA compliant. See `docs/clinical-readiness-us.md` for the readiness assessment and release criteria.
 
@@ -28,7 +28,7 @@ The current version includes these working modules:
 - `intake`: practice intake templates, client packet assignment, client portal submission workflow.
 - `requests`: practice-side inbox for client portal requests and appointment change requests.
 - `notifications`: appointment reminder model and Gmail-based reminder delivery command.
-- `audit`: audit logging for sensitive workflows such as auth, documents, clinical notes, billing, portal, intake, and integrations.
+- `audit`: protected append-only events, actor snapshots, sensitive-module reads and access denials, alongside auth, documents, clinical, billing, portal, intake, and integration events. PostgreSQL guards protect audit events and finalized notes; privileged database administration and complete retention policies remain separate readiness work.
 - `dashboard`: operational practice dashboard with today appointments, automatic alerts, assignable team tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a Gmail + Stripe setup gate, and a contextual guided onboarding tour.
 - `settings`: session package templates, insurance settings, portal access, Google integrations, Google workspace, and legacy weekly availability baseline management.
 - `telehealth`: telehealth room model reserved for future provider integration.

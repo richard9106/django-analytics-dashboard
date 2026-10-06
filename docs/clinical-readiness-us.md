@@ -138,3 +138,14 @@ recuperaron los archivos en el contenedor activo y se corrigió Dockerfile para
 incluirlos en la imagen. CI comprueba los assets con DEBUG=false en un contenedor
 nuevo, sin collectstatic adicional, y el despliegue comprueba el JavaScript de
 sesiones además de /health/. La salud HTTP por sí sola no detectaba este fallo.
+
+## Tercera entrega técnica: auditoría y protección del historial
+
+- AuditLog solo admite nuevas entradas en el modelo, operaciones masivas y admin. PostgreSQL rechaza UPDATE, DELETE y TRUNCATE mediante triggers. Se conserva una instantánea del identificador/nombre del actor y se admiten eventos globales sin Practice, incluidos accesos de administradores. La migración histórica captura el nombre actual del usuario; no reconstruye nombres anteriores.
+- Las notas finalizadas quedan protegidas también frente a SQL directo, operaciones masivas y objetos desactualizados. Las relaciones de notas, planes y diagnósticos impiden borrar en cascada pacientes, terapeutas o prácticas con historial. Al intentar borrar un paciente con historial se indica archivar; un plan referido por notas tampoco puede borrarse.
+- Se registran lecturas y denegaciones en módulos sensibles, accesos del admin y rechazos de credenciales. La metadata usa nombres de vistas e identificadores, sin URL, búsqueda, cuerpo de petición ni contenido clínico. Algunos contextos incluyen identificadores de recursos, con límite de 200 y marca de truncamiento. Esta cobertura no equivale a identificar todos los recursos consultados en todas las rutas; faltan inventario completo, alertas y validación independiente.
+- Los triggers se instalan exclusivamente en PostgreSQL. El propietario/superusuario de la base puede deshabilitarlos: no constituyen almacenamiento WORM ni protección contra un administrador comprometido. Quedan pendientes rol de aplicación con privilegios mínimos, copia independiente protegida, detección de manipulación y política de conservación de auditoría.
+- Los borradores y otros tipos de registros conservan rutas de eliminación directa; esta entrega no implementa retención legal completa, legal hold, firma ni adendas. CLIN-01, AUD-01 y AUD-02 avanzan parcialmente y siguen abiertos por sus criterios restantes.
+- Se propone Pennsylvania para el primer piloto y Massachusetts/California como candidatos posteriores, con métricas y límites documentados en [mercados iniciales](us-launch-markets.md). No se activan plazos ni borrado automático hasta validar las reglas aplicables a estado, profesión, menores y documento.
+
+Las pruebas de transacciones deshabilitan solo los triggers de TRUNCATE durante limpieza de bases cuyo nombre empieza por `test_`, y los restauran después. El código de producción no utiliza esa excepción. La verificación de integridad se realiza con datos ficticios; no se ejecutan intentos de modificación sobre expedientes reales.

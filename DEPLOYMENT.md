@@ -354,3 +354,11 @@ deployment checks both application health and the session JavaScript. For an
 operational repair of an already running image, collectstatic must run through
 `docker compose exec -T web`, followed by a restart; the committed image build is
 the durable deployment mechanism.
+
+### Protected clinical records and audit events
+
+The audit 0003 and clinical 0005 migrations install PostgreSQL triggers rejecting audit updates/deletes/truncation and finalized-note updates/deletes (all note truncation is rejected). Apply these migrations through the tested release workflow. Do not disable these controls to work around application errors. Accounts with evidence must be deactivated rather than deleted; patients with history can be archived.
+
+Database owners can alter triggers. Separate application and migration/owner privileges and independently protected audit storage remain required operational work. These protections do not establish legal retention periods or WORM storage. Historical actor snapshots use the username present at migration time.
+
+`manage.py flush` on an existing production schema is intentionally blocked. Restore backups into a fresh isolated database, verify the restored schema includes enabled guards, and validate recovery before switching traffic. Do not truncate evidence to make a restore pass. See `docs/clinical-readiness-us.md` for remaining clinical launch gates.
