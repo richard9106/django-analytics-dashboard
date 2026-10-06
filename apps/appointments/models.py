@@ -235,6 +235,10 @@ class Appointment(models.Model):
         if errors:
             raise ValidationError(errors)
 
+    @property
+    def duration_minutes(self):
+        return int((self.ends_at - self.starts_at).total_seconds() // 60)
+
     def __str__(self):
         return f"{self.client} with {self.therapist} at {self.starts_at:%Y-%m-%d %H:%M}"
 import uuid

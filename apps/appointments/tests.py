@@ -323,6 +323,117 @@ class AppointmentViewTests(TestCase):
         self.assertTrue(AuditLog.objects.filter(practice=practice, object_id=str(appointment.pk),
             metadata__calendar_sync_retry=True).exists())
 
+    def test_recurring_conflict_rolls_back_every_session_and_preserves_form(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        existing = Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+            starts_at=starts + timedelta(weeks=2), ends_at=starts + timedelta(weeks=2, minutes=50))
+        self.client.force_login(user)
+        with patch('apps.appointments.views.sync_appointment_to_google') as sync:
+            response = self.client.post(reverse('appointments:create'), {
+                'client': client.pk, 'therapist': therapist.pk, 'starts_at': starts.strftime('%Y-%m-%dT%H:%M'),
+                'ends_at': (starts + timedelta(minutes=50)).strftime('%Y-%m-%dT%H:%M'),
+                'appointment_type': 'video', 'status': 'scheduled', 'notes': 'Retain entered details',
+                'repeat_weekly_count': 3, 'next': '/appointments/?view=agenda&status=scheduled',
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'overlapping')
+        self.assertContains(response, 'Retain entered details')
+        self.assertEqual(list(Appointment.objects.values_list('pk', flat=True)), [existing.pk])
+        self.assertFalse(sync.called)
+
+    def test_create_and_edit_preserve_calendar_context_and_reject_external_return(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        data = {'client': client.pk, 'therapist': therapist.pk, 'starts_at': starts.strftime('%Y-%m-%dT%H:%M'),
+                'ends_at': (starts + timedelta(minutes=50)).strftime('%Y-%m-%dT%H:%M'),
+                'appointment_type': 'video', 'status': 'scheduled', 'next': '/appointments/?view=agenda&date=2026-10-06&q=Ana'}
+        self.client.force_login(user)
+        response = self.client.post(reverse('appointments:create'), data)
+        self.assertEqual(response.url, data['next'])
+        session = Appointment.objects.get(practice=practice)
+        response = self.client.post(reverse('appointments:edit', args=[session.pk]), data)
+        self.assertEqual(response.url, data['next'])
+        for value in ['https://evil.example/appointments/', '//evil.example/appointments/', '/clients/', '/appointments/../clients/']:
+            response = self.client.get(reverse('appointments:edit', args=[session.pk]), {'next': value})
+            self.assertEqual(response.context['calendar_return_url'], reverse('appointments:list'))
+
+    def test_cancel_is_post_only_scoped_and_preserves_record_even_when_hours_change(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        session = Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+            starts_at=starts, ends_at=starts + timedelta(minutes=80))
+        PracticeAvailabilityOverride.objects.create(practice=practice, date=starts.date(), is_available=False)
+        self.client.force_login(user)
+        url = reverse('appointments:cancel', args=[session.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        with patch('apps.appointments.views.delete_google_event_for_appointment') as sync:
+            response = self.client.post(url, {'next': '/appointments/?view=agenda'})
+            sync.assert_called_once()
+        self.assertEqual(response.url, '/appointments/?view=agenda')
+        session.refresh_from_db()
+        self.assertEqual(session.status, Appointment.Status.CANCELLED)
+        self.assertEqual(session.duration_minutes, 80)
+        self.client.post(url)
+        self.assertEqual(Appointment.objects.count(), 1)
+        other_user, _, _, _ = self.create_practice_user(username='different-cancel')
+        self.client.force_login(other_user)
+        self.assertEqual(self.client.post(url).status_code, 404)
+
+    def test_agenda_uses_visible_week_and_keeps_navigation_filters(self):
+        user, practice, therapist, client = self.create_practice_user()
+        starts = timezone.localtime().replace(hour=10, minute=0, second=0, microsecond=0)
+        session = Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+            starts_at=starts, ends_at=starts + timedelta(minutes=50))
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:list'), {'view': 'agenda', 'date': starts.date().isoformat(), 'status': 'scheduled'})
+        self.assertEqual(response.status_code, 200)
+        days = response.context['calendar_agenda_days']
+        self.assertEqual(len(days), 7)
+        self.assertEqual(days[0]['date'].weekday(), 0)
+        self.assertIn(session, [a for day in days for a in day['appointments']])
+        self.assertIn('view=agenda', response.context['next_period_url'])
+        self.assertIn('status=scheduled', response.context['next_period_url'])
+
+    def test_read_only_calendar_hides_mutating_controls(self):
+        user, practice, therapist, client = self.create_practice_user()
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'appointments': {'view': True}, 'clients': {'view': True}}
+        profile.save()
+        starts = timezone.now()
+        session = Appointment.objects.create(practice=practice, therapist=therapist, client=client,
+            starts_at=starts, ends_at=starts + timedelta(minutes=50))
+        self.client.force_login(user)
+        response = self.client.get(reverse('appointments:list'), {'view': 'agenda'})
+        self.assertContains(response, reverse('clients:detail', args=[client.pk]))
+        self.assertNotContains(response, 'data-draggable-appointment')
+        self.assertNotContains(response, 'id="appointment-create-modal"')
+        self.assertNotContains(response, f'id="appointment-modal-{session.pk}"')
+        response = self.client.post(reverse('appointments:cancel', args=[session.pk]))
+        session.refresh_from_db()
+        self.assertEqual(session.status, Appointment.Status.SCHEDULED)
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_agenda_markup_is_outside_navigation_and_google_is_optional(self):
+        from html.parser import HTMLParser
+        class Parser(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                for _, value in attrs:
+                    if value:
+                        assert '<' not in value, 'Markup leaked into an HTML attribute'
+        user, _, _, _ = self.create_practice_user()
+        self.client.force_login(user)
+        for view in ['day', 'week', 'month', 'agenda']:
+            response = self.client.get(reverse('appointments:list'), {'view': view})
+            html = response.content.decode()
+            Parser().feed(html)
+            tabs = html.split('aria-label="Calendar views"', 1)[1].split('</nav>', 1)[0]
+            self.assertEqual(tabs.count('class="active"'), 1)
+            self.assertNotIn('calendar-agenda', tabs)
+            self.assertEqual('class="calendar-agenda"' in html, view == 'agenda')
+            self.assertNotIn('Sync to Google', html)
+
     def test_appointment_create_requires_login(self):
         response = self.client.get(reverse('appointments:create'))
 
@@ -397,8 +508,12 @@ class AppointmentViewTests(TestCase):
         self.assertContains(response, f"{reverse('appointments:create')}?date={starts_at.date().isoformat()}")
         self.assertContains(response, 'aria-label="Add appointment on')
         self.assertNotContains(response, 'Upcoming appointments')
-        self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
+        self.assertNotContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
         self.assertContains(response, f'?view=week&amp;date={timezone.localdate().isoformat()}')
+        ExternalIntegration.objects.create(practice=practice, provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED, calendar_enabled=True)
+        response = self.client.get(reverse('appointments:list'))
+        self.assertContains(response, reverse('appointments:google_sync', args=[appointment.pk]))
 
     def test_calendar_can_search_by_client_and_filter_status(self):
         user, practice, therapist, client = self.create_practice_user()

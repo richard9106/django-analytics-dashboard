@@ -110,6 +110,9 @@ def workspace_breadcrumb_items(context):
             elif name == 'detail' and client:
                 add(str(client))
         elif namespace == 'appointments':
+            calendar_url = _safe_existing_url(context, context.get('calendar_return_url'))
+            if calendar_url and resolve(urlsplit(calendar_url).path).view_name == 'appointments:list':
+                crumbs[-1]['url'] = calendar_url
             if name == 'edit' and obj:
                 add(f'Session #{obj.pk}')
             elif name == 'availability_edit':

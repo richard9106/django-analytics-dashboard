@@ -43,6 +43,10 @@ class AppointmentForm(forms.ModelForm):
         if practice:
             self.fields['client'].queryset = practice.clients.all()
             self.fields['therapist'].queryset = practice.therapists.select_related('user')
+            if not self.is_bound and not self.instance.pk and not self.initial.get('therapist'):
+                candidates = list(self.fields['therapist'].queryset[:2])
+                if len(candidates) == 1:
+                    self.initial['therapist'] = candidates[0].pk
         else:
             self.fields['client'].queryset = self.fields['client'].queryset.none()
             self.fields['therapist'].queryset = self.fields['therapist'].queryset.none()

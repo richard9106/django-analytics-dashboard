@@ -1,5 +1,6 @@
 import calendar
 import uuid
+from urllib.parse import urlsplit
 from datetime import date, datetime, time, timedelta
 
 from django.contrib import messages
@@ -8,13 +9,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
+from apps.practices.models import ExternalIntegration
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
@@ -39,6 +41,10 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
         practice = self.get_practice()
         context['practice'] = practice
         context['client_therapists'] = practice.therapists.select_related('user') if practice else []
+        context['google_calendar_connected'] = bool(practice and ExternalIntegration.objects.filter(
+            practice=practice, provider=ExternalIntegration.Provider.GOOGLE,
+            status=ExternalIntegration.Status.CONNECTED, calendar_enabled=True,
+        ).exists())
         return context
 
 
@@ -47,7 +53,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
     model = Appointment
     template_name = 'appointments/list.html'
     context_object_name = 'appointments'
-    calendar_views = {'day', 'week', 'month'}
+    calendar_views = {'day', 'week', 'month', 'agenda'}
     calendar_start_hour = 7
     calendar_end_hour = 20
     calendar_hour_height = 72
@@ -111,7 +117,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         return view if view in self.calendar_views else 'week'
 
     def get_anchor_date(self):
-        date_value = self.request.GET.get('date')
+        date_value = self.request.GET.get('date') or timezone.localdate().isoformat()
         if date_value:
             try:
                 return date.fromisoformat(date_value)
@@ -124,9 +130,9 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             previous_value = (anchor - timedelta(days=1)).isoformat()
             next_value = (anchor + timedelta(days=1)).isoformat()
             return self.calendar_url(view='day', date=previous_value), self.calendar_url(view='day', date=next_value)
-        if view == 'week':
+        if view in {'week', 'agenda'}:
             week_start = anchor - timedelta(days=anchor.weekday())
-            return self.calendar_url(view='week', date=(week_start - timedelta(days=7)).isoformat()), self.calendar_url(view='week', date=(week_start + timedelta(days=7)).isoformat())
+            return self.calendar_url(view=view, date=(week_start - timedelta(days=7)).isoformat()), self.calendar_url(view=view, date=(week_start + timedelta(days=7)).isoformat())
         month_start = anchor.replace(day=1)
         previous_month = (month_start - timedelta(days=1)).replace(day=1)
         next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
@@ -155,8 +161,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         today = timezone.localdate()
         practice = self.get_practice()
         configured_hours = list(practice.working_hours.filter(active=True)) if practice else []
-        period_start = month_dates[0][0] if selected_view == 'month' else (anchor - timedelta(days=anchor.weekday()) if selected_view == 'week' else anchor)
-        period_end = month_dates[-1][-1] if selected_view == 'month' else (period_start + timedelta(days=6) if selected_view == 'week' else anchor)
+        period_start = month_dates[0][0] if selected_view == 'month' else (anchor - timedelta(days=anchor.weekday()) if selected_view in {'week', 'agenda'} else anchor)
+        period_end = month_dates[-1][-1] if selected_view == 'month' else (period_start + timedelta(days=6) if selected_view in {'week', 'agenda'} else anchor)
         availability_overrides = list(practice.availability_overrides.filter(date__gte=period_start, date__lte=period_end)) if practice else []
         overrides_by_date = {}
         for override in availability_overrides:
@@ -208,12 +214,12 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                 end_minutes = min(end_of_grid, end)
                 if start_minutes > cursor:
                     blocks.append({
-                        'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(start_minutes - cursor) * (self.calendar_hour_height / 60)}px;',
+                        'style': f'top: {64 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(start_minutes - cursor) * (self.calendar_hour_height / 60)}px;',
                     })
                 cursor = max(cursor, end_minutes)
             if cursor < end_of_grid:
                 blocks.append({
-                    'style': f'top: {54 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(end_of_grid - cursor) * (self.calendar_hour_height / 60)}px;',
+                    'style': f'top: {64 + (cursor - self.calendar_start_hour * 60) * (self.calendar_hour_height / 60)}px; height: {(end_of_grid - cursor) * (self.calendar_hour_height / 60)}px;',
                 })
             ranges = ';'.join(f'{start}-{end}' for start, end in sorted(available_intervals))
             return {'configured': True, 'blocks': blocks, 'ranges': ranges}
@@ -274,11 +280,12 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'day': anchor.strftime('%A, %B %-d'),
             'week': f"{week_start.strftime('%b %-d')} - {(week_start + timedelta(days=6)).strftime('%b %-d, %Y')}",
             'month': month_start.strftime('%B %Y'),
+            'agenda': f"{week_start.strftime('%b %-d')} - {(week_start + timedelta(days=6)).strftime('%b %-d, %Y')}",
             'year': str(anchor.year),
         }
         now = timezone.localtime()
         current_minutes = (now.hour - self.calendar_start_hour) * 60 + now.minute
-        current_time_top = int(current_minutes * (self.calendar_hour_height / 60)) + 54
+        current_time_top = int(current_minutes * (self.calendar_hour_height / 60))
         show_current_time = self.calendar_start_hour <= now.hour <= self.calendar_end_hour
         view_switch_date = today if selected_view == 'month' and month_start.year == today.year and month_start.month == today.month else anchor
 
@@ -289,6 +296,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'calendar_period_label': period_labels[selected_view],
             'calendar_anchor_date': anchor,
             'calendar_week_days': week_days,
+            'calendar_agenda_days': week_days,
             'calendar_day_appointments': appointments_by_date.get(anchor, []),
             'calendar_day_timed_events': day_timed_events,
             'calendar_day_availability_blocks': day_availability['blocks'],
@@ -312,6 +320,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'today_period_url': self.calendar_url(view='day', date=today.isoformat()),
             'month_view_url': self.calendar_url(view='month', month=f'{month_start:%Y-%m}', date=None),
             'week_view_url': self.calendar_url(view='week', date=view_switch_date.isoformat(), month=None),
+            'agenda_view_url': self.calendar_url(view='agenda', date=view_switch_date.isoformat(), month=None),
             'day_view_url': self.calendar_url(view='day', date=view_switch_date.isoformat(), month=None),
             'calendar_filters': self.get_calendar_filters(),
             'appointment_status_choices': Appointment.Status.choices,
@@ -330,7 +339,24 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         return context
 
 
-class AppointmentCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+class CalendarReturnMixin:
+    """Keep scheduling actions in the selected calendar, without arbitrary redirects."""
+
+    def get_success_url(self):
+        value = self.request.POST.get('next') or self.request.GET.get('next') or ''
+        if value.startswith('/') and not value.startswith('//') and not any(char in value for char in ('\r', '\n', '\\')):
+            parsed = urlsplit(value)
+            if not parsed.netloc and parsed.path == reverse('appointments:list'):
+                return value
+        return reverse('appointments:list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['calendar_return_url'] = self.get_success_url()
+        return context
+
+
+class AppointmentCreateView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
     permission_resource = 'appointments'
     permission_action = 'create'
     model = Appointment
@@ -364,35 +390,40 @@ class AppointmentCreateView(LoginRequiredMixin, PracticePermissionMixin, Practic
         return context
 
     def form_valid(self, form):
-        response = super().form_valid(form)
         repeat_count = form.cleaned_data.get('repeat_weekly_count') or 1
-        if repeat_count > 1:
-            self.object.series_id = uuid.uuid4()
-            self.object.save(update_fields=['series_id', 'updated_at'])
-        sync_appointment_to_google(self.object)
-        if repeat_count > 1:
-            delta = self.object.ends_at - self.object.starts_at
-            for index in range(1, repeat_count):
-                appointment = Appointment(
-                    practice=self.object.practice,
-                    client=self.object.client,
-                    therapist=self.object.therapist,
-                    starts_at=self.object.starts_at + timedelta(weeks=index),
-                    ends_at=self.object.starts_at + timedelta(weeks=index) + delta,
-                    status=self.object.status,
-                    appointment_type=self.object.appointment_type,
-                    location=self.object.location,
-                    meeting_url=self.object.meeting_url,
-                    notes=self.object.notes,
-                    series_id=self.object.series_id,
-                )
-                appointment.full_clean()
-                appointment.save()
-                sync_appointment_to_google(appointment)
-        return response
+        series_id = uuid.uuid4() if repeat_count > 1 else None
+        first = form.save(commit=False)
+        first.series_id = series_id
+        occurrences = [first]
+        fields = ('practice', 'client', 'therapist', 'status', 'appointment_type',
+                  'location', 'meeting_url', 'notes', 'series_id')
+        for index in range(1, repeat_count):
+            occurrences.append(Appointment(
+                **{field: getattr(first, field) for field in fields},
+                starts_at=first.starts_at + timedelta(weeks=index),
+                ends_at=first.ends_at + timedelta(weeks=index),
+            ))
+        try:
+            with transaction.atomic():
+                for occurrence in occurrences:
+                    occurrence.full_clean()
+                    occurrence.save()
+        except ValidationError as exc:
+            # A later conflict rolls back every occurrence and never syncs a partial series.
+            first.pk = None
+            first._state.adding = True
+            label = timezone.localtime(occurrence.starts_at).strftime('%b %d, %Y at %H:%M')
+            form.add_error(None, f'Session on {label} could not be scheduled. '
+                                + ' '.join(exc.messages))
+            return self.form_invalid(form)
+        self.object = first
+        for occurrence in occurrences:
+            sync_appointment_to_google(occurrence)
+        messages.success(self.request, f'Scheduled {repeat_count} session(s).')
+        return redirect(self.get_success_url())
 
 
-class AppointmentUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, UpdateView):
+class AppointmentUpdateView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, UpdateView):
     permission_resource = 'appointments'
     permission_action = 'edit'
     model = Appointment
@@ -429,7 +460,7 @@ class AppointmentUpdateView(LoginRequiredMixin, PracticePermissionMixin, Practic
         return response
 
 
-class AppointmentDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
+class AppointmentDeleteView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, DeleteView):
     permission_resource = 'appointments'
     permission_action = 'delete'
     model = Appointment
@@ -450,7 +481,26 @@ class AppointmentDeleteView(LoginRequiredMixin, PracticePermissionMixin, Practic
         return super().form_valid(form)
 
 
-class AppointmentSeriesUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+class AppointmentCancelView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
+
+    def post(self, request, pk):
+        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        if appointment.status != Appointment.Status.SCHEDULED:
+            messages.info(request, 'Only scheduled sessions can be cancelled.')
+            return redirect(self.get_success_url())
+        appointment.status = Appointment.Status.CANCELLED
+        appointment.save(update_fields=['status', 'updated_at'])
+        try:
+            delete_google_event_for_appointment(appointment)
+        except Exception:
+            messages.warning(request, 'Session cancelled. Its external calendar event could not be removed.')
+        messages.success(request, 'Session cancelled. Its record and linked notes or invoices are retained.')
+        return redirect(self.get_success_url())
+
+
+class AppointmentSeriesUpdateView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'appointments'
     permission_action = 'edit'
 
@@ -487,15 +537,15 @@ class AppointmentSeriesUpdateView(LoginRequiredMixin, PracticePermissionMixin, P
                     occurrence.full_clean()
                     occurrence.save()
         except ValidationError as exc:
-            messages.error(request, f'Series could not be updated: {exc}')
+            messages.error(request, 'Series could not be updated: ' + ' '.join(exc.messages))
             return redirect('appointments:edit', pk=appointment.pk)
         for occurrence in future:
             sync_appointment_to_google(occurrence)
         messages.success(request, f'Updated {len(future)} upcoming appointments in this series.')
-        return redirect('appointments:list')
+        return redirect(self.get_success_url())
 
 
-class AppointmentSeriesCancelView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+class AppointmentSeriesCancelView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'appointments'
     permission_action = 'edit'
 
@@ -516,7 +566,7 @@ class AppointmentSeriesCancelView(LoginRequiredMixin, PracticePermissionMixin, P
             except Exception:
                 pass
         messages.success(request, f'Cancelled {len(future)} upcoming appointments in this series.')
-        return redirect('appointments:list')
+        return redirect(self.get_success_url())
 
 
 class AppointmentGoogleSyncView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
@@ -563,15 +613,9 @@ class CalendarSyncIssuesView(LoginRequiredMixin, PracticePermissionMixin, Practi
         )
 
 
-class AppointmentRescheduleView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+class AppointmentRescheduleView(CalendarReturnMixin, LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'appointments'
     permission_action = 'edit'
-    def get_success_url(self):
-        next_url = self.request.POST.get('next') or self.request.GET.get('next')
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={self.request.get_host()}):
-            return next_url
-        return reverse_lazy('appointments:list')
-
     def post(self, request, pk):
         appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
         date_value = request.POST.get('date', '')
@@ -589,7 +633,7 @@ class AppointmentRescheduleView(LoginRequiredMixin, PracticePermissionMixin, Pra
         try:
             appointment.full_clean()
         except ValidationError as exc:
-            messages.error(request, f'Appointment could not be moved: {exc}')
+            messages.error(request, 'Appointment could not be moved: ' + ' '.join(exc.messages))
             return redirect(self.get_success_url())
         appointment.save()
         sync_appointment_to_google(appointment)
