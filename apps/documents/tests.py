@@ -11,11 +11,21 @@ from apps.accounts.models import UserProfile
 from apps.audit.models import AuditLog
 from apps.clients.models import Client
 from apps.documents.models import ClientDocument
+from apps.documents.models import client_document_upload_path
 from apps.portal.models import ClientPortalAccess
 from apps.practices.models import ExternalIntegration, Practice, TherapistProfile
 
 
 class ClientDocumentModelTests(TestCase):
+    def test_storage_key_is_unique_and_omits_supplied_filename(self):
+        document = ClientDocument(practice_id=1, client_id=2)
+        filename = 'Maya Johnson diagnosis.pdf'
+        first = client_document_upload_path(document, filename)
+        second = client_document_upload_path(document, filename)
+        self.assertNotEqual(first, second)
+        self.assertNotIn(filename, first)
+        self.assertRegex(first, r'^practices/1/clients/2/documents/[a-f0-9]{32}$')
+
     def test_document_rejects_client_from_other_practice(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
         other_practice = Practice.objects.create(name="Other Clinic")
@@ -134,6 +144,9 @@ class ClientDocumentViewTests(TestCase):
         self.assertEqual(document.content_type, "text/plain")
         self.assertEqual(document.file_size, 6)
         self.assertTrue(document.visible_to_client)
+        self.assertNotIn('consent.txt', document.file.name)
+        event = AuditLog.objects.get(action=AuditLog.Action.CREATE, object_type='documents.ClientDocument')
+        self.assertEqual(event.metadata, {'client_id': client.pk})
 
     def test_document_download_is_scoped_to_user_practice(self):
         user, _practice, _therapist, _client = self.create_practice_user()
@@ -169,6 +182,12 @@ class ClientDocumentViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/plain")
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertIn('private', response['Cache-Control'])
+        self.assertIn('filename="consent.txt"', response['Content-Disposition'])
+        self.assertEqual(b''.join(response.streaming_content), b'signed')
+        event = AuditLog.objects.get(action=AuditLog.Action.EXPORT, object_type='documents.ClientDocument')
+        self.assertEqual(event.metadata, {'client_id': client.pk})
 
     def test_portal_client_can_download_visible_document(self):
         _user, practice, _therapist, client = self.create_practice_user()
@@ -189,6 +208,8 @@ class ClientDocumentViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        self.assertIn('no-store', response['Cache-Control'])
+
     def test_portal_client_cannot_download_hidden_document(self):
         _user, practice, _therapist, client = self.create_practice_user()
         portal_user = get_user_model().objects.create_user(username="portal", password="StrongPass123!")
@@ -205,6 +226,34 @@ class ClientDocumentViewTests(TestCase):
         response = self.client.get(reverse("documents:download", args=[document.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_portal_client_cannot_download_another_clients_shared_document(self):
+        _user, practice, _therapist, client = self.create_practice_user()
+        other_client = Client.objects.create(practice=practice, first_name='Other', last_name='Patient')
+        portal_user = get_user_model().objects.create_user(username='portal')
+        ClientPortalAccess.objects.create(user=portal_user, practice=practice, client=client, is_active=True)
+        document = ClientDocument.objects.create(
+            practice=practice, client=other_client, title='Shared with another patient',
+            visible_to_client=True, file=SimpleUploadedFile('private.txt', b'private'),
+        )
+        self.client.force_login(portal_user)
+        response = self.client.get(reverse('documents:download', args=[document.pk]))
+        self.assertEqual(response.status_code, 404)
+        self.assertIn('no-store', response['Cache-Control'])
+
+    def test_document_deletion_audit_omits_filename(self):
+        user, practice, _therapist, client = self.create_practice_user()
+        document = ClientDocument.objects.create(
+            practice=practice, client=client, title='Consent', original_filename='patient-diagnosis.txt',
+            file=SimpleUploadedFile('patient-diagnosis.txt', b'signed'),
+        )
+        storage, name, pk = document.file.storage, document.file.name, document.pk
+        self.client.force_login(user)
+        response = self.client.post(reverse('documents:delete', args=[pk]))
+        self.assertRedirects(response, reverse('documents:list'))
+        self.assertFalse(storage.exists(name))
+        event = AuditLog.objects.get(action=AuditLog.Action.DELETE, object_type='documents.ClientDocument')
+        self.assertEqual(event.metadata, {'client_id': client.pk})
 
     def test_google_drive_export_uploads_document_and_saves_metadata(self):
         user, practice, _therapist, client = self.create_practice_user()

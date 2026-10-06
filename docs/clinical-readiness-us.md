@@ -161,3 +161,9 @@ La política de referrer autenticada pasa a `same-origin` para permitir la valid
 La aplicación pasa a un rol sin privilegios administrativos ni propiedad del esquema. Auditoría solo admite SELECT/INSERT y el rol no puede desactivar triggers, alterar funciones, crear objetos/roles, cambiar al rol de migraciones ni truncar tablas. Migraciones utilizan un rol propietario separado y no superusuario; backups/restauración mantienen la cuenta administrativa existente. El workflow aplica y verifica permisos después de migrar. CI valida accesos reales bajo el rol limitado y restauración en una base ficticia.
 
 Esta entrega reduce el riesgo de manipulación por compromiso de la credencial DB del servidor web. El administrador del host, la cuenta de migraciones y la cuenta bootstrap conservan capacidad administrativa; copia independiente protegida, auditoría operativa y los otros requisitos clínicos siguen pendientes. MFA permanece diferido por decisión del propietario.
+
+## Privacidad de nombres y descargas de documentos
+
+Las nuevas cargas utilizan claves aleatorias, conservando el nombre original solo en la metadata del documento y la descarga autorizada. Las claves siguen agrupadas por identificadores de clínica/paciente; no son enlaces públicos ni sustituyen los permisos. Los archivos existentes conservan su ubicación. Los nuevos eventos de creación, descarga y borrado no incluyen el nombre del archivo; la auditoría histórica permanece inmutable. Las respuestas de descarga, incluidos rechazos, llevan `Cache-Control: private, no-store` para evitar almacenamiento en caché. Se mantienen los filtros por clínica, paciente y visibilidad del portal.
+
+DOC-01 sigue abierto: faltan límites de tamaño, validación de contenido real, cuarentena y análisis de malware. Esta entrega no declara los archivos seguros ni completa los requisitos para uso clínico.

@@ -4,6 +4,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user, must_change_password, permission_redirect
 from apps.audit.models import AuditLog
@@ -60,7 +62,7 @@ class DocumentCreateView(LoginRequiredMixin, PracticePermissionMixin, ClientPort
             'documents.ClientDocument',
             self.object.pk,
             practice=self.object.practice,
-            metadata={'client_id': self.object.client_id, 'filename': self.object.original_filename},
+            metadata={'client_id': self.object.client_id},
         )
         return response
 
@@ -82,7 +84,7 @@ class DocumentDeleteView(LoginRequiredMixin, PracticePermissionMixin, ClientPort
         name = self.object.file.name
         document_id = self.object.pk
         practice = self.object.practice
-        metadata = {'client_id': self.object.client_id, 'filename': self.object.original_filename}
+        metadata = {'client_id': self.object.client_id}
         response = super().form_valid(form)
         if name:
             storage.delete(name)
@@ -97,6 +99,7 @@ class DocumentDeleteView(LoginRequiredMixin, PracticePermissionMixin, ClientPort
         return response
 
 
+@method_decorator(never_cache, name='dispatch')
 class DocumentDownloadView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'documents'
     def get(self, request, pk):
@@ -122,7 +125,7 @@ class DocumentDownloadView(LoginRequiredMixin, PracticePermissionMixin, Practice
             'documents.ClientDocument',
             document.pk,
             practice=document.practice,
-            metadata={'client_id': document.client_id, 'filename': document.original_filename},
+            metadata={'client_id': document.client_id},
         )
         return FileResponse(
             document.file.open('rb'),
