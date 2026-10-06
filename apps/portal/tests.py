@@ -743,6 +743,40 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(len(response.context["response_items"]), 2)
         self.assertContains(response, "Second original?")
 
+    def test_intake_legacy_named_answers_survive_backfill_and_review(self):
+        from importlib import import_module
+        from django.apps import apps
+        from django.db import connection
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        answers = {"goals": "Feel better", "history": {"question": "Previous care?", "answer": "Past therapy"}}
+        pending = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template,
+                     answers={"question_0": "Saved partial answer"})
+        ClientIntakeAssignment.objects.filter(pk=pending.pk).update(template_snapshot={})
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template,
+                      status=ClientIntakeAssignment.Status.SUBMITTED, answers=answers)
+        ClientIntakeAssignment.objects.filter(pk=assignment.pk).update(template_snapshot={})
+        migration = import_module('apps.portal.migrations.0012_clientintakeassignment_template_snapshot')
+        migration.snapshot_existing_packets(apps, SimpleNamespace(connection=connection))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.answers, answers)
+        self.assertEqual(assignment.template_snapshot['answer_keys'], ['goals', 'history'])
+        pending.refresh_from_db()
+        self.assertEqual(pending.packet_questions, template.questions)
+        self.client.force_login(portal_user)
+        pending_form = self.client.get(reverse("portal:intake_complete", args=[pending.pk]))
+        self.assertContains(pending_form, "Saved partial answer")
+        self.assertContains(pending_form, "Original question?")
+        self.client.force_login(owner)
+        response = self.client.get(reverse("intake:responses", args=[assignment.pk]))
+        self.assertContains(response, "Goals")
+        self.assertContains(response, "Feel better")
+        self.assertContains(response, "Previous care?")
+        self.assertContains(response, "Past therapy")
+        self.client.post(reverse("intake:review", args=[assignment.pk]))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.answers, answers)
+        self.assertEqual(assignment.status, ClientIntakeAssignment.Status.REVIEWED)
+
     def test_intake_inactive_template_cannot_be_assigned_and_errors_visible(self):
         portal_user, owner, practice, client, template = self.intake_owner_fixture()
         template.active = False

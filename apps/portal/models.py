@@ -240,6 +240,29 @@ class ClientIntakeAssignment(models.Model):
     def packet_questions(self):
         return self.template_snapshot.get("questions", self.template.questions)
 
+    @property
+    def response_items(self):
+        keys = self.template_snapshot.get('answer_keys') or list(self.answers)
+        if keys and all(key.startswith('question_') and key[9:].isdigit() for key in keys):
+            keys = sorted(keys, key=lambda key: int(key[9:]))
+        # Include every stored answer, including legacy named fields.
+        keys = list(dict.fromkeys([*keys, *self.answers]))
+        items = []
+        for key in keys:
+            if key not in self.answers:
+                continue
+            value = self.answers[key]
+            label = key.replace('_', ' ').capitalize()
+            if key.startswith('question_') and key[9:].isdigit():
+                index = int(key[9:])
+                if index < len(self.packet_questions):
+                    label = self.packet_questions[index]
+            if isinstance(value, dict):
+                items.append({'question': value.get('question', label), 'answer': value.get('answer', value)})
+            else:
+                items.append({'question': label, 'answer': value})
+        return items
+
     def clean(self):
         errors = {}
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
