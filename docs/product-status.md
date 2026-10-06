@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Connected session → note → invoice through calendar session dialogs and edit pages. Tenant-checked session links prefill note client/therapist/appointment and invoice client/appointment; saving a linked record returns users with calendar edit permission to the session. Review notes/invoices links filter by session, and invoice review clearly shows the active filter. Existing create permissions and payment flows are retained; creating a draft does not collect a payment.
+
 - Added Review availability to the calendar: a collapsible list of date-specific changes for the visible period, tenant-scoped single-record editing, and removal with confirmation. Edit/remove actions follow workspace permissions and preserve the calendar return URL. Other dates/ranges and existing appointments are not modified by single-record editing. No new services or additional list queries are needed.
 
 - Simplified first steps for solo therapists and clinics: client creation no longer requires Gmail or Stripe Connect. Connections remain optional for email delivery and online client payments; payment flows retain provider checks. Daily appointments/tasks appear before charts, with links to client records and session management. Existing lightweight server-rendered pages and permission checks are retained.

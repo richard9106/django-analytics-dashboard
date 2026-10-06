@@ -206,6 +206,57 @@ class AppointmentModelTests(TestCase):
 
 @override_settings(MFA_REQUIRED=False)
 class AppointmentViewTests(TestCase):
+    def test_session_links_prefill_note_and_invoice_and_return_after_saving(self):
+        from apps.billing.models import Invoice
+        from apps.clinical.models import SessionNote
+        user, practice, therapist, client = self.create_practice_user()
+        start = timezone.now() + timedelta(days=1)
+        appointment = Appointment.objects.create(practice=practice, client=client, therapist=therapist, starts_at=start, ends_at=start + timedelta(minutes=50))
+        self.client.force_login(user)
+        session_url = reverse('appointments:edit', args=[appointment.pk])
+        page = self.client.get(session_url)
+        self.assertContains(page, 'Create note')
+        self.assertContains(page, 'Create invoice')
+        note_url = reverse('clinical:create') + f'?appointment={appointment.pk}'
+        invoice_url = reverse('billing:invoice_create') + f'?appointment={appointment.pk}'
+        for url in (note_url, invoice_url):
+            page = self.client.get(url)
+            self.assertEqual(page.context['form'].initial['client'], client.pk)
+            self.assertEqual(page.context['form'].initial['appointment'], appointment.pk)
+        response = self.client.post(note_url, {'client': client.pk, 'therapist': therapist.pk, 'appointment': appointment.pk, 'note_type': SessionNote.NoteType.PROGRESS_NOTE, 'content': 'Session follow-up.'})
+        self.assertRedirects(response, session_url)
+        self.assertEqual(SessionNote.objects.get().appointment, appointment)
+        response = self.client.post(invoice_url, {'client': client.pk, 'appointment': appointment.pk, 'amount': '150.00', 'status': Invoice.Status.DRAFT})
+        self.assertRedirects(response, session_url)
+        invoice = Invoice.objects.get()
+        self.assertEqual(invoice.appointment, appointment)
+        self.assertEqual(invoice.status, Invoice.Status.DRAFT)
+        self.assertIsNone(invoice.paid_at)
+
+    def test_workflow_prefill_rejects_foreign_or_invalid_session(self):
+        user, practice, therapist, client = self.create_practice_user()
+        other_user, other, other_therapist, other_client = self.create_practice_user(username='otherdoc')
+        start = timezone.now()
+        foreign = Appointment.objects.create(practice=other, client=other_client, therapist=other_therapist, starts_at=start, ends_at=start + timedelta(minutes=50))
+        self.client.force_login(user)
+        for name in ('clinical:create', 'billing:invoice_create'):
+            for value in (str(foreign.pk), 'invalid', '9' * 50):
+                self.assertEqual(self.client.get(reverse(name), {'appointment': value}).status_code, 404)
+            self.assertEqual(self.client.get(reverse(name)).status_code, 200)
+
+    def test_session_invoice_review_filters_records(self):
+        from apps.billing.models import Invoice
+        user, practice, therapist, client = self.create_practice_user()
+        start = timezone.now()
+        appointment = Appointment.objects.create(practice=practice, client=client, therapist=therapist, starts_at=start, ends_at=start + timedelta(minutes=50))
+        linked = Invoice.objects.create(practice=practice, client=client, appointment=appointment, invoice_number='SESSION-1', amount=150)
+        Invoice.objects.create(practice=practice, client=client, invoice_number='UNRELATED-1', amount=150)
+        self.client.force_login(user)
+        response = self.client.get(reverse('billing:list'), {'appointment': appointment.pk})
+        self.assertEqual(list(response.context['invoices']), [linked])
+        response = self.client.get(reverse('billing:list'), {'appointment': 'invalid'})
+        self.assertEqual(list(response.context['invoices']), [])
+
     def create_practice_user(self, username='drsmith', practice_name='Nuvia Wellness'):
         user = get_user_model().objects.create_user(
             username=username,

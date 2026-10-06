@@ -16,6 +16,7 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
+from apps.appointments.workflow import SessionWorkflowMixin
 from .forms import DiagnosisForm, SessionNoteForm, TreatmentPlanForm
 from .models import Diagnosis, SessionNote, TreatmentPlan
 
@@ -133,7 +134,7 @@ class SessionNoteListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         return context
 
 
-class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, SessionWorkflowMixin, PracticeContextMixin, CreateView):
     permission_resource = 'clinical'
     permission_action = 'create'
     model = SessionNote
