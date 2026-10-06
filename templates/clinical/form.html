@@ -20,6 +20,7 @@
       </section>
       <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Notes</p><h1>{{ form_title }}</h1></div></header>
 
+      {% if workflow_appointment %}<p>Documenting {{ workflow_appointment.client }} · {{ workflow_appointment.starts_at|date:"M j, Y, g:i A" }}.{% if workspace_permissions.appointments.edit %} After saving, return to the session to continue with billing.{% endif %}</p>{% endif %}
       <section class="panel form-panel notes-panel">
         <div class="panel-head"><div><h2>{{ form_heading }}</h2><p>Keep documentation concise, scoped, and ready to lock when complete.</p></div></div>
         <form id="note-form" class="appointment-form" method="post" novalidate>
@@ -37,7 +38,7 @@
         </form>
         <div class="form-actions split-actions">
           {% if show_delete_action %}<form method="post" action="{% url 'clinical:delete' object.pk %}" data-confirm-message="Delete this clinical note? Deleted notes cannot be restored.">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete note</button></form>{% endif %}
-          <div class="form-actions"><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Cancel</a><button class="btn btn-primary" type="submit" form="note-form">{{ submit_label }}</button></div>
+          <div class="form-actions"><a class="btn btn-secondary" href="{% if workflow_appointment and workspace_permissions.appointments.edit %}{% url 'appointments:edit' workflow_appointment.pk %}{% else %}{% url 'clinical:list' %}{% endif %}">Cancel</a><button class="btn btn-primary" type="submit" form="note-form">{{ submit_label }}</button></div>
         </div>
       </section>
     </main>

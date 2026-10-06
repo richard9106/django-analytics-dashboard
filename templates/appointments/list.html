@@ -327,6 +327,7 @@
               <button class="modal-close" type="button" data-modal-close aria-label="Close">×</button>
             </div>
 
+            {% include 'appointments/partials/session_workflow.html' with session=appointment %}
             <form class="appointment-form" method="post" action="{% url 'appointments:edit' appointment.pk %}">
               {% csrf_token %}
               <div class="field-grid two">

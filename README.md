@@ -91,6 +91,7 @@ The current version includes these working modules:
 
 - Notes workspace with list and popups.
 - Notes link to client, therapist, and optional appointment.
+- Calendar sessions offer Create note / Review notes / Create invoice / Review invoices according to permissions. Session-linked create forms preselect the patient and appointment; notes also preselect the therapist. Saving returns calendar editors to the session to continue the workflow, while invoice amounts remain manually reviewed.
 - Notes can link to treatment plans and include treatment progress.
 - `Lock note` marks a note as final and sets `locked_at`.
 - Diagnosis and treatment plan records are practice-scoped.

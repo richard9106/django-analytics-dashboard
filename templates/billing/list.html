@@ -28,6 +28,7 @@
       <section class="billing-grid">
         <article class="panel billing-panel">
           <div class="panel-head"><div><h2 id="billing-invoices-heading">Invoices</h2><p>Bill individual sessions or prepaid packages.</p></div><div class="inline-actions"><span class="badge brand">{{ invoices|length }} invoices</span>{% if workspace_permissions.billing.create %}<button class="btn btn-secondary" type="button" data-modal-target="payment-create-modal">Record payment</button>{% endif %}</div></div>
+          {% if request.GET.appointment %}<p role="status">Showing invoices linked to the selected session. <a class="inline-link" href="{% url 'billing:list' %}">Show all invoices</a></p>{% endif %}
           <div class="table-wrap" role="region" aria-labelledby="billing-invoices-heading" aria-describedby="billing-invoices-scroll-help" tabindex="0">
             <p class="sr-only" id="billing-invoices-scroll-help">Scroll horizontally to view all invoice columns.</p>
             <table>

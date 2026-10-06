@@ -16,6 +16,7 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
+from apps.appointments.workflow import SessionWorkflowMixin
 from .forms import InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, PaymentForm, ServicePackageForm, SessionPackageTemplateForm
 from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, PracticeSubscription, ServicePackage, SessionPackageTemplate
 
@@ -125,7 +126,13 @@ class BillingListView(LoginRequiredMixin, PracticePermissionMixin, PracticeConte
         practice = self.get_practice()
         if not practice:
             return Invoice.objects.none()
-        return Invoice.objects.filter(practice=practice).select_related('client', 'appointment', 'package')
+        invoices = Invoice.objects.filter(practice=practice).select_related('client', 'appointment', 'package')
+        appointment = self.request.GET.get('appointment')
+        if appointment:
+            if not appointment.isascii() or not appointment.isdigit() or len(appointment) > 18:
+                return invoices.none()
+            invoices = invoices.filter(appointment_id=appointment)
+        return invoices
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -171,7 +178,7 @@ class PaymentCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeCon
         return response
 
 
-class InvoiceCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
+class InvoiceCreateView(LoginRequiredMixin, PracticePermissionMixin, SessionWorkflowMixin, PracticeContextMixin, CreateView):
     permission_resource = 'billing'
     permission_action = 'create'
     model = Invoice
