@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Simplified first steps for solo therapists and clinics: client creation no longer requires Gmail or Stripe Connect. Connections remain optional for email delivery and online client payments; payment flows retain provider checks. Daily appointments/tasks appear before charts, with links to client records and session management. Existing lightweight server-rendered pages and permission checks are retained.
+
 - Converted major dense workspaces to calmer table/tree layouts with final action menus.
 - Added reusable row-action and modal behavior in the shared sidebar partial.
 - Hardened clinical note locking so locked notes remain immutable.
@@ -58,12 +60,14 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recommended Next Work
 
-1. Complete the P0 clinical-readiness controls and operating evidence in `clinical-readiness-us.md` before a pilot with real patient data.
+The owner prioritizes workflow completeness and an intuitive interface during pre-client development, using the existing lightweight architecture on the VPS. Preserve current protections; defer additional security infrastructure until the usability work is resolved. Clinical-readiness criteria remain prerequisites for a real-patient pilot.
+
+1. Review the patient → appointment → session note → invoice → follow-up journey, preserving context and making the next action clear.
 2. Add a compact availability override inspector on the calendar so users can review and delete date-specific overrides.
-3. Add Stripe subscription quantity reconciliation and an admin/monitoring warning for failed quantity sync.
+3. Improve solo/team scheduling, including therapist-specific availability when required.
 4. Improve public booking with available-slot selection instead of free-form date/time entry.
-5. Add therapist-specific availability if multi-provider scheduling becomes important.
-6. Expand insurance from payer/rate settings into claim lifecycle tracking.
+5. Add Stripe subscription quantity reconciliation and a warning for failed quantity sync.
+6. Complete the clinical-readiness controls and operating evidence in `clinical-readiness-us.md` before a real-patient pilot; expand insurance workflows as a separate product scope.
 
 ## Clinical readiness: protected evidence
 

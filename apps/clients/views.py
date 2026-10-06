@@ -7,7 +7,6 @@ from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
-from apps.practices.models import ExternalIntegration
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice, ServicePackage
 from apps.clinical.models import SessionNote, TreatmentPlan
@@ -95,19 +94,6 @@ class ClientCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
     form_class = ClientForm
     template_name = 'clients/form.html'
     success_url = reverse_lazy('clients:list')
-
-    def dispatch(self, request, *args, **kwargs):
-        practice = self.get_practice()
-        gmail_ready = ExternalIntegration.objects.filter(
-            practice=practice,
-            provider=ExternalIntegration.Provider.GOOGLE,
-            status=ExternalIntegration.Status.CONNECTED,
-            send_email_enabled=True,
-        ).exists() if practice else False
-        if request.user.is_authenticated and practice and not (practice.can_receive_client_payments and gmail_ready):
-            messages.warning(request, 'Complete Gmail and Stripe Connect setup before adding clients.')
-            return redirect('dashboard')
-        return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

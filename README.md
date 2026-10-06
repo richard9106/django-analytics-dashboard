@@ -33,7 +33,7 @@ The current version includes these working modules:
 - `requests`: practice-side inbox for client portal requests and appointment change requests.
 - `notifications`: appointment reminder model and Gmail-based reminder delivery command.
 - `audit`: protected append-only events, actor snapshots, sensitive-module reads and access denials, alongside auth, documents, clinical, billing, portal, intake, and integration events. PostgreSQL guards protect audit events and finalized notes; privileged database administration and complete retention policies remain separate readiness work.
-- `dashboard`: operational practice dashboard with today appointments, automatic alerts, assignable team tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a Gmail + Stripe setup gate, and a contextual guided onboarding tour.
+- `dashboard`: operational practice dashboard with today appointments, automatic alerts, assignable team tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a clients-first setup guide, and a contextual guided onboarding tour.
 - `settings`: session package templates, insurance settings, portal access, Google integrations, Google workspace, and legacy weekly availability baseline management.
 - `telehealth`: telehealth room model reserved for future provider integration.
 - `admin`: Django admin registration for core domain models, including subscriptions.
@@ -47,8 +47,8 @@ The current version includes these working modules:
 - Today appointments panel.
 - Tasks panel from notes, invoices, notifications, portal requests, and treatment plan reviews.
 - Recent billing activity.
-- First-steps setup panel: connect Gmail, configure Stripe Connect, then add clients and availability.
-- New client creation is blocked until Gmail sending and Stripe Connect payouts are ready.
+- First-steps setup panel: add a client, open calendar availability, schedule a session, and invite a team when needed.
+- Client creation and scheduling work without Gmail or Stripe Connect. Connect these services when email delivery or online client payments are needed; payment-provider checks remain in payment flows.
 - Six-month revenue trend and appointment volume charts.
 - Contextual guided tour moves through Overview, Appointments, Clients, Notes, Billing, Documents, Intake, Requests, Settings, and setup.
 - Tour completion is stored in browser local storage and hides the launch button.
