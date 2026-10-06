@@ -11,7 +11,7 @@ NuviaMy helps mental health professionals manage their practice from one calm, s
 - Provide clients with a portal for appointments, documents, intake, and practice communication.
 - Model HIPAA-aware architecture and security practices for a realistic healthcare SaaS portfolio project.
 
-This project is educational and portfolio-focused. It is designed with HIPAA-aware principles, but it is not certified for real clinical use.
+The product goal is real clinical use in the United States with demonstrable HIPAA compliance. The current implementation is not yet approved for real patient data: technical controls, contracts, operating policies, and independent validation remain to be completed. HHS does not certify software as HIPAA compliant. See `docs/clinical-readiness-us.md` for the readiness assessment and release criteria.
 
 ## Implemented Product Areas
 
