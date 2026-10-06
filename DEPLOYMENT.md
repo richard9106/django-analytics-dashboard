@@ -345,3 +345,12 @@ The browser watchdog hides protected content on timeout and propagates logout
 across tabs. A browser may discard unsaved edits when a session expires. TOTP is
 not phishing-resistant; evaluate WebAuthn and stronger administrative access as
 part of the risk assessment. These controls do not establish clinical readiness.
+
+Static files and their manifest are generated during the Docker build and packaged
+in the image. The Compose web service has no staticfiles volume: running
+collectstatic in a disposable container does not update the running service.
+CI verifies hashed assets and the login page in a fresh container with DEBUG=false;
+deployment checks both application health and the session JavaScript. For an
+operational repair of an already running image, collectstatic must run through
+`docker compose exec -T web`, followed by a restart; the committed image build is
+the durable deployment mechanism.

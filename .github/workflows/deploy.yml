@@ -65,6 +65,15 @@ jobs:
         run: python -m pip check
       - name: Build static asset manifest
         run: python manage.py collectstatic --noinput
+      - name: Build deployment image
+        run: docker build --tag nuviamy-ci .
+      - name: Verify packaged static assets
+        run: >-
+          docker run --rm
+          -e DJANGO_ENVIRONMENT=test
+          -e DJANGO_DEBUG=false
+          -e DJANGO_ALLOWED_HOSTS=testserver
+          nuviamy-ci python -m ops.check_packaged_assets
       - name: Run test suite
         run: python manage.py test --noinput
 
@@ -94,13 +103,14 @@ jobs:
             # before replacing the running service or modifying the database.
             docker compose run --rm --no-deps web python manage.py check --deploy --fail-level WARNING
             docker compose run --rm --no-deps web python manage.py migrate --noinput
-            docker compose run --rm --no-deps web python manage.py collectstatic --noinput
             docker compose up -d --no-build
             docker compose restart web
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
               if curl --fail --silent --show-error \
                 -H 'X-Forwarded-Proto: https' \
-                http://127.0.0.1:8000/health/; then
+                http://127.0.0.1:8000/health/ && curl --fail --silent --show-error \
+                -H 'X-Forwarded-Proto: https' \
+                --output /dev/null http://127.0.0.1:8000/static/security-session.js; then
                 exit 0
               fi
               sleep 2
