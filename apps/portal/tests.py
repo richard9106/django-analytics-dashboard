@@ -376,10 +376,16 @@ class ClientPortalViewTests(TestCase):
         )
         self.client.force_login(owner)
 
-        response = self.client.get(reverse("portal_requests:conversations"))
+        response = self.client.get(reverse("portal_requests:list"))
 
         self.assertContains(response, "Secure messages, 1 unread")
-        self.assertContains(response, ">1</strong>")
+        self.assertContains(response, "Messages <strong>1</strong>")
+        action_bar = response.content.decode().split('class="action-bar"', 1)[1].split("</section>", 1)[0]
+        self.assertNotIn("&#128276;", action_bar)
+        response = self.client.get(reverse("portal_requests:conversations"))
+        action_bar = response.content.decode().split('class="action-bar"', 1)[1].split("</section>", 1)[0]
+        self.assertNotIn("&#128276;", action_bar)
+        self.assertContains(response, reverse("portal_requests:list"))
 
     def test_portal_client_can_request_appointment_change(self):
         user, practice, therapist, client, _access = self.create_portal_user()
