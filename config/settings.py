@@ -2,12 +2,20 @@ from pathlib import Path
 import os
 
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+
+from .production import validate_production_settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-only-secret-key')
-DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() == 'true'
+DJANGO_ENVIRONMENT = os.getenv('DJANGO_ENVIRONMENT', '').strip().lower()
+if DJANGO_ENVIRONMENT not in {'', 'development', 'test', 'production'}:
+    raise ImproperlyConfigured('DJANGO_ENVIRONMENT must be development, test, or production')
+DEBUG = os.getenv('DJANGO_DEBUG', 'false' if DJANGO_ENVIRONMENT == 'production' else 'true').lower() == 'true'
+if not DJANGO_ENVIRONMENT:
+    DJANGO_ENVIRONMENT = 'development' if DEBUG else 'production'
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',') if host.strip()]
 
 SENTRY_DSN = os.getenv('SENTRY_DSN', '')
@@ -33,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # funtionalities
-    'django_summernote',
+    'config.apps.SummernoteConfig',
     # core apps
     'apps.dashboard',
     'apps.practices',
@@ -125,6 +133,12 @@ if DJANGO_STORAGE_BACKEND == 'r2':
     AWS_S3_FILE_OVERWRITE = False
     STORAGES['default'] = {'BACKEND': 'storages.backends.s3.S3Storage'}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Summernote attachments have no Practice/client authorization boundary.
+# Upload documents through the scoped Documents workspace instead.
+SUMMERNOTE_CONFIG = {
+    'disable_attachment': True,
+    'attachment_require_authentication': True,
+}
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
@@ -181,3 +195,6 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'false').lower() == 'true'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'false').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'NuviaMy <noreply@nuviamy.com>')
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@nuviamy.com')
+
+if DJANGO_ENVIRONMENT == 'production':
+    validate_production_settings(globals())

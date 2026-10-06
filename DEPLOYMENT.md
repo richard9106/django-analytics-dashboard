@@ -9,10 +9,11 @@ Production domain: `nuviamy.com`.
 Clone the repository on the VPS and create a production `.env` file in the project root:
 
 ```env
-DJANGO_SECRET_KEY=change-me-to-a-long-random-secret
+DJANGO_ENVIRONMENT=production
+DJANGO_SECRET_KEY=REPLACE_WITH_A_RANDOM_SECRET_OF_AT_LEAST_50_CHARACTERS
 DJANGO_DEBUG=false
 DJANGO_ALLOWED_HOSTS=nuviamy.com,www.nuviamy.com,YOUR_SERVER_IP
-DJANGO_CSRF_TRUSTED_ORIGINS=https://nuviamy.com,https://www.nuviamy.com,http://YOUR_SERVER_IP
+DJANGO_CSRF_TRUSTED_ORIGINS=https://nuviamy.com,https://www.nuviamy.com
 SENTRY_DSN=
 SENTRY_ENVIRONMENT=production
 SENTRY_TRACES_SAMPLE_RATE=0.05
@@ -23,7 +24,7 @@ POSTGRES_PASSWORD=change-me-to-a-strong-password
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 
-FIELD_ENCRYPTION_KEY=
+FIELD_ENCRYPTION_KEY=REPLACE_WITH_A_FERNET_KEY
 
 SECURE_SSL_REDIRECT=true
 SESSION_COOKIE_SECURE=true
@@ -66,14 +67,42 @@ STRIPE_PRICE_CLINIC_MONTHLY=
 STRIPE_PRICE_CLINIC_YEARLY=
 ```
 
-Start the app:
+Replace the secret placeholders before starting. Production refuses to start
+with DEBUG enabled, a weak Django secret, missing or placeholder database
+credentials, SQLite, missing/wildcard allowed hosts, HTTP CSRF origins,
+disabled HTTPS/cookie controls, no HSTS, or a missing/invalid Fernet key.
+Docker Compose always selects the production environment and requires the
+three secrets to be present. Summernote attachment uploads are disabled because
+they lack Practice/client authorization; use the Documents workspace for uploads. Local non-Docker development can use
+`DJANGO_ENVIRONMENT=development` and SQLite as described in `.env.example`.
+
+Generate a new Django secret and Fernet key with a secure password/secret
+manager. Preserve the existing `FIELD_ENCRYPTION_KEY` on an existing deployment:
+replacing it without a token migration makes stored OAuth tokens unreadable.
+Store production secrets outside Git and never copy the public CI fixtures.
+
+For a new installation, build and validate before starting the app:
 
 ```bash
-docker compose up -d --build
-docker compose exec web python manage.py migrate --noinput
+docker compose build web
+docker compose up -d db
+docker compose run --rm --no-deps web python manage.py check --deploy --fail-level WARNING
+docker compose run --rm --no-deps web python manage.py migrate --noinput
+docker compose up -d --no-build
 docker compose exec web python manage.py collectstatic --noinput
 docker compose exec web python manage.py createsuperuser
 ```
+
+Routine releases use `.github/workflows/deploy.yml`. Pull requests run the full
+suite against an isolated PostgreSQL 16 database, dependency consistency checks,
+migration consistency checks, and production checks that fail on warnings.
+Deployment runs only after the test job succeeds on `main`. The VPS checks out
+the exact tested commit, builds the candidate, and validates the real production
+configuration before migrations and service replacement. Running workflows are
+not canceled midway through deployment. A failed candidate preflight leaves the
+existing service running, but its working checkout/build tag may already have
+advanced; review the failed run before retrying. This is not automatic rollback
+for a failed migration or service replacement.
 
 ## Nginx
 

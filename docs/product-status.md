@@ -54,12 +54,13 @@ This document captures the current product state after the recent UX, billing, a
 - Availability is practice-wide, not therapist-specific. If individual clinicians need different schedules, add therapist-scoped overrides later.
 - Public booking is validated against availability, but there is not yet a client-facing slot picker that only shows available times.
 - Insurance does not yet include claims submission, ERA/EOB import, eligibility checks, or denial management.
-- Compliance remains HIPAA-aware, not certified. BAA/vendor, retention, incident response, and production policy work are still required before real clinical use.
+- The goal is US clinical use with demonstrable HIPAA compliance. The first security delivery upgrades Django LTS, guards production startup, and strengthens CI/deployment. MFA, BAA/vendor validation, protected audit trails, retention, incident response, and operating policies remain prerequisites for real patient data; see `clinical-readiness-us.md`.
 
 ## Recommended Next Work
 
-1. Add a compact availability override inspector on the calendar so users can review and delete date-specific overrides.
-2. Add Stripe subscription quantity reconciliation and an admin/monitoring warning for failed quantity sync.
-3. Improve public booking with available-slot selection instead of free-form date/time entry.
-4. Add therapist-specific availability if multi-provider scheduling becomes important.
-5. Expand insurance from payer/rate settings into claim lifecycle tracking.
+1. Complete the P0 clinical-readiness controls and operating evidence in `clinical-readiness-us.md` before a pilot with real patient data.
+2. Add a compact availability override inspector on the calendar so users can review and delete date-specific overrides.
+3. Add Stripe subscription quantity reconciliation and an admin/monitoring warning for failed quantity sync.
+4. Improve public booking with available-slot selection instead of free-form date/time entry.
+5. Add therapist-specific availability if multi-provider scheduling becomes important.
+6. Expand insurance from payer/rate settings into claim lifecycle tracking.

@@ -8,12 +8,39 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nuviamy_ci
+          POSTGRES_USER: nuviamy_ci
+          POSTGRES_PASSWORD: ci-only-database-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nuviamy_ci -d nuviamy_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_ENVIRONMENT: test
+      DJANGO_DEBUG: "true"
+      POSTGRES_DB: nuviamy_ci
+      POSTGRES_USER: nuviamy_ci
+      POSTGRES_PASSWORD: ci-only-database-password
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
 
     steps:
       - uses: actions/checkout@v4
@@ -24,20 +51,24 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --requirement requirements.txt
       - name: Run deployment checks
-        run: python manage.py check --deploy
+        run: python manage.py check --deploy --fail-level WARNING
         env:
+          DJANGO_ENVIRONMENT: production
           DJANGO_DEBUG: "false"
           DJANGO_SECRET_KEY: ci-only-secret-key-that-is-long-enough-for-django-checks
           DJANGO_ALLOWED_HOSTS: localhost,testserver
           DJANGO_CSRF_TRUSTED_ORIGINS: https://localhost
+          FIELD_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      - name: Check migration consistency
+        run: python manage.py makemigrations --check --dry-run
+      - name: Check installed dependencies
+        run: python -m pip check
       - name: Run test suite
-        run: python manage.py test
-        env:
-          DJANGO_DEBUG: "true"
+        run: python manage.py test --noinput
 
   deploy:
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -52,9 +83,16 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.VPS_APP_DIR }}"
-            git pull --ff-only origin main
-            docker compose up -d --build
-            docker compose exec -T web python manage.py migrate --noinput
+            test -z "$(git status --porcelain)"
+            git fetch origin main
+            git merge --ff-only '${{ github.sha }}'
+            test "$(git rev-parse HEAD)" = '${{ github.sha }}'
+            docker compose build web
+            # Validate the candidate with the actual production environment
+            # before replacing the running service or modifying the database.
+            docker compose run --rm --no-deps web python manage.py check --deploy --fail-level WARNING
+            docker compose run --rm --no-deps web python manage.py migrate --noinput
+            docker compose up -d --no-build
             docker compose exec -T web python manage.py collectstatic --noinput
             docker compose restart web
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
