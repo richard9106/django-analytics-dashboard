@@ -61,7 +61,7 @@ class MFASetupView(LoginRequiredMixin, PostRateLimitMixin, FormView):
         if request.user.is_authenticated:
             state = security_state(request.user)
             if not requires_mfa(request.user):
-                return redirect('security_settings')
+                return redirect(safe_next(request))
             if state.confirmed:
                 if not verified(request, state):
                     return redirect('mfa_challenge')

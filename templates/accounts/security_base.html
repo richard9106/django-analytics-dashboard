@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{% static 'dashboard.css' %}"><link rel="stylesheet" href="{% static 'security.css' %}"></head>
 <body class="login-page"><main class="login-shell"><section class="login-brand-panel">
 <a class="brand brand-large" href="/">NuviaMy</a><p class="eyebrow">Account security</p>
-<h1>Protect your practice.</h1><p>Keep your account secure with an authenticator app and private recovery codes.</p>
+<h1>Protect your practice.</h1><p>Manage your sign-in and account sessions.</p>
 <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit">Sign out</button></form>
 </section><section class="login-card security-card">
 {% block content %}{% endblock %}

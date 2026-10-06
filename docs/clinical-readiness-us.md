@@ -149,3 +149,9 @@ sesiones además de /health/. La salud HTTP por sí sola no detectaba este fallo
 - Se propone Pennsylvania para el primer piloto y Massachusetts/California como candidatos posteriores, con métricas y límites documentados en [mercados iniciales](us-launch-markets.md). No se activan plazos ni borrado automático hasta validar las reglas aplicables a estado, profesión, menores y documento.
 
 Las pruebas de transacciones deshabilitan solo los triggers de TRUNCATE durante limpieza de bases cuyo nombre empieza por `test_`, y los restauran después. El código de producción no utiliza esa excepción. La verificación de integridad se realiza con datos ficticios; no se ejecutan intentos de modificación sobre expedientes reales.
+
+## Ajuste temporal de acceso antes de incorporar clientes
+
+Por solicitud del propietario, MFA queda diferido: `DJANGO_MFA_REQUIRED=false` es el valor predeterminado y el inicio de sesión utiliza credenciales. El código y sus pruebas de MFA se conservan para reactivarlo mediante `true`. SEC-03 permanece abierto antes del piloto clínico; no se declara MFA activo en producción. Se mantienen límites de intentos, vencimiento/revocación de sesiones, auditoría y CSRF.
+
+La política de referrer autenticada pasa a `same-origin` para permitir la validación CSRF en HTTPS sin enviar referrers a otros orígenes. GET `/logout/` muestra confirmación con token actualizado; POST con CSRF válido termina la sesión.
