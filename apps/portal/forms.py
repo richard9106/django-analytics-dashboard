@@ -9,7 +9,7 @@ from django.utils.text import slugify
 
 from apps.accounts.models import UserProfile
 from apps.appointments.models import Appointment
-from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
+from .models import intake_question_label, ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
 
 
 def suggest_portal_username(client):
@@ -318,7 +318,7 @@ class IntakePacketTemplateForm(forms.ModelForm):
         self.practice = practice
         self.instance.practice = practice
         if self.instance.pk and not self.is_bound:
-            self.fields['question_lines'].initial = '\n'.join(self.instance.questions)
+            self.fields['question_lines'].initial = '\n'.join(self.instance.question_labels)
 
     def clean_name(self):
         name = self.cleaned_data['name']
@@ -333,7 +333,25 @@ class IntakePacketTemplateForm(forms.ModelForm):
         questions = [line.strip() for line in self.cleaned_data['question_lines'].splitlines() if line.strip()]
         if not questions:
             raise forms.ValidationError('Add at least one intake question.')
-        return questions
+        # Preserve legacy question metadata by label, including reordering.
+        original = self.instance.questions or []
+        used = set()
+        matches = {}
+        for index, label in enumerate(questions):
+            match = next((old_index for old_index, old in enumerate(original)
+                          if old_index not in used and intake_question_label(old) == label), None)
+            if match is not None:
+                matches[index] = match
+                used.add(match)
+        unmatched_new = [index for index in range(len(questions)) if index not in matches]
+        unmatched_old = [index for index in range(len(original)) if index not in used]
+        if len(unmatched_new) == len(unmatched_old) == 1:
+            matches[unmatched_new[0]] = unmatched_old[0]
+        records = []
+        for index, label in enumerate(questions):
+            old = original[matches[index]] if index in matches else None
+            records.append({**old, 'label': label} if isinstance(old, dict) else label)
+        return records
 
     def _post_clean(self):
         if 'question_lines' in self.cleaned_data:
@@ -392,9 +410,10 @@ class ClientIntakeResponseForm(forms.Form):
         existing = assignment.answers if assignment else {}
         for index, question in enumerate(assignment.packet_questions):
             key = f'question_{index}'
-            stored = existing.get(key, '')
+            legacy_key = question.get('id') if isinstance(question, dict) else None
+            stored = existing.get(key, existing.get(legacy_key, ''))
             self.fields[key] = forms.CharField(
-                label=question,
+                label=intake_question_label(question),
                 initial=stored.get('answer', '') if isinstance(stored, dict) else stored,
                 widget=forms.Textarea(attrs={'rows': 3}),
             )
@@ -403,7 +422,7 @@ class ClientIntakeResponseForm(forms.Form):
         answers = {}
         for index, question in enumerate(self.assignment.packet_questions):
             key = f'question_{index}'
-            answers[key] = {'question': question, 'answer': self.cleaned_data[key]}
+            answers[key] = {'question': intake_question_label(question), 'answer': self.cleaned_data[key]}
         self.assignment.answers = answers
         self.assignment.status = ClientIntakeAssignment.Status.SUBMITTED
         self.assignment.submitted_at = timezone.now()
