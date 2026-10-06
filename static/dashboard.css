@@ -79,11 +79,12 @@ h1, h2, h3, p { margin-top: 0; }
 .nav-item-with-badge { justify-content: flex-start; }
 .nav-badge { margin-left: auto; min-width: 22px; min-height: 22px; display: inline-grid; place-items: center; padding: 0 7px; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 12px; font-weight: 900; }
 .nav-item.active, .nav-item:hover { background: var(--brand-50); color: var(--brand-700); }
-.nav-item span { min-width: 18px; text-align: center; }
+.nav-icon { display: block; width: 24px; height: 24px; flex: 0 0 24px; }
+.nav-item:focus-visible, .support-nav-link:focus-visible { outline: 3px solid var(--brand-700); outline-offset: 2px; }
 .sidebar-settings { display: grid; gap: 3px; }
 .sidebar-settings summary { cursor: pointer; list-style: none; }
 .sidebar-settings summary::-webkit-details-marker { display: none; }
-.sidebar-settings .subitem { margin-left: 28px; min-height: 38px; font-size: 13px; }
+.sidebar-settings .subitem { margin-left: 34px; min-height: 38px; font-size: 13px; }
 .mobile-account-menu { display: none; }
 .sidebar-card { margin-top: auto; padding: 16px; background: linear-gradient(180deg, #fff, var(--brand-50)); border: 1px solid rgba(112, 82, 217, .16); border-radius: 16px; box-shadow: var(--shadow-1); }
 .sidebar-card strong { display: block; margin-bottom: 6px; }
@@ -451,7 +452,7 @@ h1, h2, h3, p { margin-top: 0; }
 .setup-reminder strong { color: var(--slate-900); font-size: 13px; }
 .setup-reminder p { margin: 5px 0 8px; color: var(--slate-600); font-size: 12px; line-height: 1.45; }
 .setup-reminder a { color: var(--coral-500); font-size: 12px; font-weight: 900; }
-.support-nav-link { margin: 12px 14px 0; padding: 10px 12px; display: block; border: 1px solid rgba(243, 111, 86, .24); border-radius: 12px; color: var(--coral-500); font-size: 13px; font-weight: 900; text-decoration: none; }
+.support-nav-link { margin: 12px 14px 0; padding: 10px 12px; display: flex; align-items: center; gap: 10px; min-height: 44px; border: 1px solid rgba(243, 111, 86, .24); border-radius: 12px; color: var(--coral-500); font-size: 13px; font-weight: 900; text-decoration: none; }
 .monitoring-health-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; }
 .health-list { display: grid; gap: 10px; }
 .health-row { min-height: 52px; padding: 10px 12px; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--slate-100); border-radius: 12px; }
@@ -797,8 +798,10 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .sidebar .brand span:not(.logo-mark), .nav-item { justify-content: center; }
   .nav-item { padding: 0; }
   .nav-item:not(.active) { color: var(--slate-500); }
-  .nav-item span + text, .nav-item { font-size: 0; }
-  .nav-item span { font-size: 16px; }
+  .nav-item { font-size: 0; gap: 0; }
+  .nav-item-with-badge { position: relative; }
+  .nav-item-with-badge .nav-badge { position: absolute; top: 0; right: -2px; min-width: 18px; min-height: 18px; padding: 0 4px; font-size: 10px; }
+  .support-nav-link { margin: 12px 0 0; padding: 0; justify-content: center; gap: 0; font-size: 0; }
   .sidebar-card { display: none; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .content-grid, .calendar-layout, .billing-grid, .login-shell { grid-template-columns: 1fr; }
@@ -849,8 +852,10 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .nav-list { max-height: 0; overflow: hidden; grid-template-columns: 1fr; gap: 4px; opacity: 0; transform: translateY(-4px); transition: max-height .24s ease, opacity .2s ease, transform .2s ease, padding .2s ease; }
   .mobile-nav-check:checked ~ .nav-list { max-height: min(72vh, 680px); overflow-y: auto; padding-top: 12px; opacity: 1; transform: translateY(0); }
   .nav-item { min-height: 46px; padding: 0 12px; justify-content: flex-start; border-radius: 14px; font-size: 14px; }
-  .nav-item span { font-size: 16px; }
-  .sidebar-settings .subitem { margin-left: 0; padding-left: 40px; min-height: 40px; font-size: 13px; }
+  .nav-item { gap: 10px; }
+  .nav-item-with-badge .nav-badge { position: static; margin-left: auto; min-width: 22px; min-height: 22px; padding: 0 7px; font-size: 12px; }
+  .support-nav-link { margin: 12px 14px 0; padding: 10px 12px; justify-content: flex-start; gap: 10px; font-size: 13px; }
+  .sidebar-settings .subitem { margin-left: 0; padding-left: 46px; min-height: 40px; font-size: 13px; }
   .mobile-account-menu { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--slate-200); display: grid; gap: 4px; }
   .mobile-account-name { padding: 0 12px 4px; color: var(--slate-500); font-size: 12px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
   .mobile-account-menu form { margin: 0; }
