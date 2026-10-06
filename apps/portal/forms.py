@@ -392,9 +392,10 @@ class ClientIntakeResponseForm(forms.Form):
         existing = assignment.answers if assignment else {}
         for index, question in enumerate(assignment.packet_questions):
             key = f'question_{index}'
+            stored = existing.get(key, '')
             self.fields[key] = forms.CharField(
                 label=question,
-                initial=existing.get(key, {}).get("answer", ""),
+                initial=stored.get('answer', '') if isinstance(stored, dict) else stored,
                 widget=forms.Textarea(attrs={'rows': 3}),
             )
 

@@ -7,11 +7,18 @@ def snapshot_existing_packets(apps, schema_editor):
     Assignment = apps.get_model('portal', 'ClientIntakeAssignment')
     for assignment in Assignment.objects.using(schema_editor.connection.alias).select_related('template').iterator(chunk_size=500):
         questions = assignment.template.questions
-        if assignment.answers:
-            ordered = sorted(assignment.answers.items(), key=lambda item: int(item[0].split('_')[-1]))
-            questions = [item['question'] for key, item in ordered]
+        keys = list(assignment.answers)
+        if keys and all(key.startswith('question_') and key[9:].isdigit() for key in keys):
+            keys.sort(key=lambda key: int(key[9:]))
+        if keys and assignment.status != 'assigned':
+            questions = []
+            for key in keys:
+                item = assignment.answers[key]
+                label = key.replace('_', ' ').capitalize()
+                questions.append(item.get('question', label) if isinstance(item, dict) else label)
         Assignment.objects.using(schema_editor.connection.alias).filter(pk=assignment.pk).update(template_snapshot={
             'name': assignment.template.name, 'description': assignment.template.description, 'questions': questions,
+            'answer_keys': keys,
         })
 
 

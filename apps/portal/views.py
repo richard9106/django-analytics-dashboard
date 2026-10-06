@@ -902,10 +902,7 @@ class ClientIntakeResponsesView(PracticePermissionMixin, PracticeContextMixin, T
         context = super().get_context_data(**kwargs)
         assignment = get_object_or_404(ClientIntakeAssignment.objects.select_related('client', 'template', 'reviewed_by'),
                                        pk=self.kwargs['pk'], practice=self.get_practice())
-        items = []
-        for index, question in enumerate(assignment.packet_questions if assignment.answers else []):
-            stored = assignment.answers.get(f'question_{index}', {})
-            items.append({'question': stored.get('question', question), 'answer': stored.get('answer', '')})
+        items = assignment.response_items
         can_edit = has_practice_permission(self.request.user, 'intake', 'edit')
         context.update(assignment=assignment, response_items=items, can_edit_intake=can_edit,
                        can_review=can_edit and assignment.status == ClientIntakeAssignment.Status.SUBMITTED)
