@@ -11,7 +11,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.test import Client
 
 client = Client()
-for asset in ('security-session.js', 'security.css', 'dashboard.css', 'favicon.svg'):
+for asset in ('security-session.js', 'security.css', 'dashboard.css', 'favicon.svg', 'diagnosis-picker.js'):
     url = staticfiles_storage.url(asset)
     response = client.get(url, secure=True)
     if response.status_code != 200:

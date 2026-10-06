@@ -758,6 +758,60 @@ class SessionNoteViewTests(TestCase):
 
 @override_settings(MFA_REQUIRED=False)
 class TreatmentPlanViewTests(TestCase):
+    def test_patient_record_contains_diagnoses_without_treatment_management_duplicates(self):
+        user, practice, therapist, client = self.create_practice_user()
+        own = Diagnosis.objects.create(practice=practice, client=client, code='F41.1', label='Patient diagnosis')
+        other_client = Client.objects.create(practice=practice, first_name='Other', last_name='Patient')
+        Diagnosis.objects.create(practice=practice, client=other_client, code='F32.1', label='Unrelated diagnosis')
+        self.client.force_login(user)
+        response = self.client.get(reverse('clients:detail', args=[client.pk]))
+        self.assertContains(response, 'Patient diagnosis')
+        self.assertNotContains(response, 'Unrelated diagnosis')
+        self.assertContains(response, reverse('clinical:diagnosis_create') + f'?client={client.pk}')
+        response = self.client.get(reverse('clinical:treatment_plans'))
+        self.assertNotContains(response, 'diagnosis-create-modal')
+        self.assertNotContains(response, 'Edit diagnosis')
+
+    def test_patient_diagnosis_create_locks_client_and_returns_to_record(self):
+        user, practice, therapist, client = self.create_practice_user()
+        other = Client.objects.create(practice=practice, first_name='Other', last_name='Patient')
+        self.client.force_login(user)
+        url = reverse('clinical:diagnosis_create') + f'?client={client.pk}'
+        page = self.client.get(url)
+        self.assertTrue(page.context['form'].fields['client'].disabled)
+        response = self.client.post(url, self.diagnosis_payload(other))
+        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]))
+        self.assertEqual(Diagnosis.objects.get().client, client)
+
+    def test_diagnosis_options_are_patient_and_practice_scoped(self):
+        user, practice, therapist, client = self.create_practice_user()
+        own = Diagnosis.objects.create(practice=practice, client=client, code='F41.1', label='Patient diagnosis')
+        other = Client.objects.create(practice=practice, first_name='Other', last_name='Patient')
+        Diagnosis.objects.create(practice=practice, client=other, code='F32.1', label='Other diagnosis')
+        foreign_practice = Practice.objects.create(name='Foreign')
+        foreign = Client.objects.create(practice=foreign_practice, first_name='Foreign', last_name='Patient')
+        self.client.force_login(user)
+        response = self.client.get(reverse('clinical:diagnosis_options', args=[client.pk]))
+        self.assertEqual([row['id'] for row in response.json()['diagnoses']], [own.pk])
+        self.assertEqual(self.client.get(reverse('clinical:diagnosis_options', args=[foreign.pk])).status_code, 404)
+        self.assertEqual(self.client.get(reverse('clinical:diagnosis_create'), {'client': foreign.pk}).status_code, 404)
+
+    def test_plan_choices_preserve_linked_inactive_diagnosis_and_exclude_other_patients(self):
+        from apps.clinical.forms import TreatmentPlanForm
+        user, practice, therapist, client = self.create_practice_user()
+        diagnosis = Diagnosis.objects.create(practice=practice, client=client, code='F41.1', label='Previous diagnosis', active=False)
+        other = Client.objects.create(practice=practice, first_name='Other', last_name='Patient')
+        foreign = Diagnosis.objects.create(practice=practice, client=other, code='F32.1', label='Other diagnosis')
+        plan = TreatmentPlan.objects.create(practice=practice, client=client, therapist=therapist, title='Care', goals='Goals')
+        plan.diagnoses.add(diagnosis)
+        form = TreatmentPlanForm(instance=plan, practice=practice)
+        self.assertEqual(list(form.fields['diagnoses'].queryset), [diagnosis])
+        data = self.plan_payload(therapist, client, [diagnosis])
+        form = TreatmentPlanForm(data, instance=plan, practice=practice)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.assertEqual(list(plan.diagnoses.all()), [diagnosis])
+
     def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
         user = get_user_model().objects.create_user(
             username=username,
@@ -844,7 +898,7 @@ class TreatmentPlanViewTests(TestCase):
         self.assertContains(response, "Visible care plan")
         self.assertNotContains(response, "Hidden care plan")
         self.assertContains(response, 'id="plan-create-modal"')
-        self.assertContains(response, 'id="diagnosis-create-modal"')
+        self.assertNotContains(response, 'id="diagnosis-create-modal"')
         self.assertContains(response, 'aria-label="Treatment plans grouped by client"')
         self.assertContains(response, 'class="client-note-group"')
         self.assertContains(response, 'id="plan-detail-modal-')
@@ -963,7 +1017,7 @@ class TreatmentPlanViewTests(TestCase):
         diagnosis_response = self.client.get(reverse("clinical:treatment_plans"), {"q": "F43.10"})
         self.assertIn(diagnosis_plan, diagnosis_response.context["plans"])
         self.assertNotIn(hidden_plan, diagnosis_response.context["plans"])
-        self.assertContains(diagnosis_response, 'value="F43.10"')
+        self.assertContains(diagnosis_response, 'F43.10')
 
         objective_response = self.client.get(reverse("clinical:treatment_plans"), {"q": "rescripting"})
         self.assertIn(objectives_plan, objective_response.context["plans"])
@@ -975,7 +1029,7 @@ class TreatmentPlanViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.post(reverse("clinical:diagnosis_create"), self.diagnosis_payload(client))
 
-        self.assertRedirects(response, reverse("clinical:treatment_plans"))
+        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]))
         diagnosis = Diagnosis.objects.get()
         self.assertEqual(diagnosis.practice, practice)
         self.assertEqual(diagnosis.client, client)
@@ -1033,7 +1087,7 @@ class TreatmentPlanViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Selected diagnoses must belong")
+        self.assertContains(response, "Select a valid choice")
         self.assertEqual(TreatmentPlan.objects.count(), 0)
 
     def test_treatment_plan_update_is_scoped_to_user_practice(self):

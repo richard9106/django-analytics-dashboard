@@ -1,5 +1,6 @@
 from django import forms
 from django.utils import timezone
+from django.db.models import Q
 
 from .models import Diagnosis, SessionNote, TreatmentPlan
 
@@ -74,10 +75,14 @@ class DiagnosisForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 4}),
         }
 
-    def __init__(self, *args, practice=None, **kwargs):
+    def __init__(self, *args, practice=None, patient=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
+        if patient:
+            self.fields['client'].initial = patient.pk
+            self.initial['client'] = patient.pk
+            self.fields['client'].disabled = True
         if practice:
             self.fields['client'].queryset = practice.clients.all()
         else:
@@ -129,7 +134,16 @@ class TreatmentPlanForm(forms.ModelForm):
         if practice:
             self.fields['client'].queryset = practice.clients.all()
             self.fields['therapist'].queryset = practice.therapists.select_related('user')
-            self.fields['diagnoses'].queryset = practice.diagnoses.select_related('client').filter(active=True)
+            client_id = self.data.get('client') if self.is_bound else (self.initial.get('client') or self.instance.client_id)
+            allowed = Q(active=True)
+            if self.instance.pk:
+                allowed |= Q(treatment_plans=self.instance)
+            diagnoses = practice.diagnoses.filter(allowed).distinct()
+            if str(client_id or '').isascii() and str(client_id or '').isdigit() and len(str(client_id)) <= 18:
+                diagnoses = diagnoses.filter(client_id=client_id)
+            else:
+                diagnoses = diagnoses.none()
+            self.fields['diagnoses'].queryset = diagnoses
         else:
             self.fields['client'].queryset = self.fields['client'].queryset.none()
             self.fields['therapist'].queryset = self.fields['therapist'].queryset.none()

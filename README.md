@@ -95,6 +95,7 @@ The current version includes these working modules:
 - Notes can link to treatment plans and include treatment progress.
 - `Lock note` marks a note as final and sets `locked_at`.
 - Diagnosis and treatment plan records are practice-scoped.
+- Manage diagnoses from the patient workspace. Treatment plans select only that patient's diagnoses, reusing records instead of creating copies; linked inactive diagnoses are preserved when editing.
 - Treatment plans support review dates and review completion.
 
 ### Billing And Packages

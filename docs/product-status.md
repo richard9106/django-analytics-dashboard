@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Moved diagnosis management into the patient workspace and removed the practice-wide diagnosis panel/create/edit dialogs from treatment plans. Plan diagnosis choices follow the selected patient in both browser and server validation. Existing linked inactive diagnoses remain selectable on edit. Options load only on opening a form and are reused within the page; a CI JavaScript check verifies switching patients, late responses, existing inactive links and caching.
+
 - Connected session → note → invoice through calendar session dialogs and edit pages. Tenant-checked session links prefill note client/therapist/appointment and invoice client/appointment; saving a linked record returns users with calendar edit permission to the session. Review notes/invoices links filter by session, and invoice review clearly shows the active filter. Existing create permissions and payment flows are retained; creating a draft does not collect a payment.
 
 - Added Review availability to the calendar: a collapsible list of date-specific changes for the visible period, tenant-scoped single-record editing, and removal with confirmation. Edit/remove actions follow workspace permissions and preserve the calendar return URL. Other dates/ranges and existing appointments are not modified by single-record editing. No new services or additional list queries are needed.
