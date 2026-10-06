@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -162,3 +163,11 @@ class ClientDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
             return Client.objects.none()
 
         return Client.objects.filter(practice=practice)
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            self.request._audit_denied_reason = 'clinical_record_retained'
+            messages.error(self.request, 'This client has clinical records and must be retained. Archive the client instead.')
+            return redirect('clients:detail', pk=self.object.pk)

@@ -1,6 +1,9 @@
 from collections import OrderedDict
 from datetime import date, timedelta
 
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
@@ -198,7 +201,12 @@ class SessionNoteUpdateView(LoginRequiredMixin, PracticePermissionMixin, Practic
         return context
 
     def form_valid(self, form):
-        response = super().form_valid(form)
+        try:
+            response = super().form_valid(form)
+        except ValidationError:
+            self.request._audit_denied_reason = 'finalized_note_immutable'
+            form.add_error(None, 'This note has been finalized and can no longer be edited.')
+            return self.form_invalid(form)
         log_audit_event(
             self.request,
             AuditLog.Action.UPDATE,
@@ -236,7 +244,12 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticePermissionMixin, Practic
             'appointment_id': self.object.appointment_id,
             'treatment_plan_id': self.object.treatment_plan_id,
         }
-        response = super().form_valid(form)
+        try:
+            response = super().form_valid(form)
+        except ValidationError:
+            self.request._audit_denied_reason = 'clinical_note_finalized'
+            messages.error(self.request, 'This note was finalized and cannot be deleted.')
+            return redirect('clinical:list')
         log_audit_event(
             self.request,
             AuditLog.Action.DELETE,
@@ -410,7 +423,12 @@ class TreatmentPlanDeleteView(LoginRequiredMixin, PracticePermissionMixin, Treat
         plan_id = self.object.pk
         practice = self.object.practice
         metadata = {'client_id': self.object.client_id, 'status': self.object.status}
-        response = super().form_valid(form)
+        try:
+            response = super().form_valid(form)
+        except ProtectedError:
+            self.request._audit_denied_reason = 'clinical_record_retained'
+            messages.error(self.request, 'This plan is referenced by clinical notes and must be retained. Update its status instead.')
+            return redirect('clinical:treatment_plans')
         log_audit_event(
             self.request,
             AuditLog.Action.DELETE,

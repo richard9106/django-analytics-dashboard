@@ -23,6 +23,7 @@ class SecuritySessionMiddleware(MiddlewareMixin):
             limiter.rate_limit_count = 10
             limiter.rate_limit_seconds = 900
             if limiter.is_rate_limited():
+                request._audit_denied_reason = 'rate_limited'
                 response = HttpResponse('Too many requests. Please try again later.', status=429)
                 response['Retry-After'] = '900'
                 return response
@@ -38,6 +39,7 @@ class SecuritySessionMiddleware(MiddlewareMixin):
         if (session.get('security_version') != str(state.session_version)
                 or now - started >= settings.SECURITY_ABSOLUTE_TIMEOUT
                 or now - last >= settings.SECURITY_IDLE_TIMEOUT):
+            request._audit_denied_reason = 'session_expired_or_revoked'
             logout(request)
             if request.resolver_match.view_name == 'security_session':
                 return JsonResponse({'authenticated': False}, status=401)
@@ -48,15 +50,18 @@ class SecuritySessionMiddleware(MiddlewareMixin):
             return None
         pending_mfa = requires_mfa(request.user) and not verified(request, state)
         if pending_mfa and now - session.get('security_password_at', 0) >= settings.SECURITY_CHALLENGE_TIMEOUT:
+            request._audit_denied_reason = 'session_expired_or_revoked'
             logout(request)
             return redirect(reverse('login') + '?session_expired=1')
         if must_change_password(request.user):
             if name == 'force_password_change' or (name == 'security_session' and not requires_mfa(request.user)):
                 return None
+            request._audit_denied_reason = 'password_change_required'
             return redirect('force_password_change')
         if pending_mfa:
             target = 'mfa_challenge' if state.confirmed else 'mfa_setup'
             if name != target:
+                request._audit_denied_reason = 'mfa_required'
                 if not request.path.startswith('/accounts/security/'):
                     session['security_next'] = request.path
                 if name == 'security_session':
@@ -66,6 +71,7 @@ class SecuritySessionMiddleware(MiddlewareMixin):
         sensitive = name == 'practice_data_export' or (
             request.method == 'POST' and name in {'team_management', 'team_member_action', 'profile_settings'})
         if settings.MFA_REQUIRED and sensitive and now - session.get('security_auth_at', 0) >= settings.SECURITY_REAUTH_TIMEOUT:
+            request._audit_denied_reason = 'fresh_authentication_required'
             return redirect(reverse('security_reauthenticate') + '?' + urlencode({'next': request.path}))
         return None
 

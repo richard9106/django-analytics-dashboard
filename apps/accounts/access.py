@@ -65,6 +65,7 @@ def get_practice_for_user(user):
 class ClientPortalRedirectMixin:
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and is_client_user(request.user):
+            request._audit_denied_reason = 'staff_workspace_required'
             return redirect('portal:dashboard')
         return super().dispatch(request, *args, **kwargs)
 
@@ -81,6 +82,7 @@ def has_practice_permission(user, resource, action):
 
 def permission_redirect(request, message='That area is not available with your current workspace permissions.'):
     """Return a safe, friendly response without weakening the server-side check."""
+    request._audit_denied_reason = 'permission_denied'
     messages.warning(request, message)
     referer = request.META.get('HTTP_REFERER', '')
     current = request.build_absolute_uri()

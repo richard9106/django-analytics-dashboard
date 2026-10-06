@@ -64,3 +64,7 @@ This document captures the current product state after the recent UX, billing, a
 4. Improve public booking with available-slot selection instead of free-form date/time entry.
 5. Add therapist-specific availability if multi-provider scheduling becomes important.
 6. Expand insurance from payer/rate settings into claim lifecycle tracking.
+
+## Clinical readiness: protected evidence
+
+Audit events are append-only through Django/admin and protected by PostgreSQL triggers. Finalized notes reject bulk and direct SQL mutations; clinical parent relationships prevent cascading removal of history. Sensitive-module reads and denied access now have metadata-only access events. See [clinical readiness](clinical-readiness-us.md) for coverage limits, privileged-database risks, outstanding retention/contractual work, and [proposed launch markets](us-launch-markets.md). These controls do not mean the product is cleared for clinical use.

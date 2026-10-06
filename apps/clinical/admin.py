@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 
 from .models import Diagnosis, SessionNote, TreatmentPlan
 
@@ -25,6 +26,22 @@ class SessionNoteAdmin(admin.ModelAdmin):
         "practice__name",
     )
     readonly_fields = ("created_at", "updated_at", "locked_at")
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.is_locked:
+            return tuple(field.name for field in self.model._meta.fields)
+        return super().get_readonly_fields(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        return not (obj and obj.is_locked) and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return not (obj and obj.is_locked) and super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        if queryset.filter(is_locked=True).exists():
+            raise PermissionDenied('Locked clinical notes cannot be deleted.')
+        super().delete_queryset(request, queryset)
 
 
 @admin.register(Diagnosis)
