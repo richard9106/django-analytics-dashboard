@@ -1,9 +1,11 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from uuid import uuid4
 
 
 def client_document_upload_path(instance, filename):
-    return f"practices/{instance.practice_id}/clients/{instance.client_id}/documents/{filename}"
+    # Keep patient names and other user-supplied text out of storage keys.
+    return f"practices/{instance.practice_id}/clients/{instance.client_id}/documents/{uuid4().hex}"
 
 
 class ClientDocument(models.Model):
