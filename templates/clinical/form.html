@@ -28,9 +28,9 @@
           {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
           <div class="field-grid two">
             {% for field in form %}
-              <div class="field {% if field.name == 'content' or field.name == 'treatment_progress' %}full{% endif %}{% if field.name == 'is_locked' %} checkbox-field{% endif %}">
+              <div {% if field.name == 'diagnoses' %}data-diagnosis-picker data-options-url="{% url 'clinical:diagnosis_options' 0 %}"{% endif %} class="field {% if field.name == 'content' or field.name == 'treatment_progress' %}full{% endif %}{% if field.name == 'is_locked' %} checkbox-field{% endif %}">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
+                {% if field.name == 'diagnoses' %}<div data-diagnosis-choices>{{ field }}</div><p data-diagnosis-status role="status">Select diagnoses for this patient.</p><button class="inline-link" type="button" data-diagnosis-reload>Reload diagnoses</button>{% else %}{{ field }}{% endif %}
                 {% if field.errors %}{{ field.errors }}{% endif %}
               </div>
             {% endfor %}
@@ -38,10 +38,11 @@
         </form>
         <div class="form-actions split-actions">
           {% if show_delete_action %}<form method="post" action="{% url 'clinical:delete' object.pk %}" data-confirm-message="Delete this clinical note? Deleted notes cannot be restored.">{% csrf_token %}<button class="btn btn-danger" type="submit">Delete note</button></form>{% endif %}
-          <div class="form-actions"><a class="btn btn-secondary" href="{% if workflow_appointment and workspace_permissions.appointments.edit %}{% url 'appointments:edit' workflow_appointment.pk %}{% else %}{% url 'clinical:list' %}{% endif %}">Cancel</a><button class="btn btn-primary" type="submit" form="note-form">{{ submit_label }}</button></div>
+          <div class="form-actions"><a class="btn btn-secondary" href="{% if diagnosis_patient %}{% url 'clients:detail' diagnosis_patient.pk %}{% elif workflow_appointment and workspace_permissions.appointments.edit %}{% url 'appointments:edit' workflow_appointment.pk %}{% else %}{% url 'clinical:list' %}{% endif %}">Cancel</a><button class="btn btn-primary" type="submit" form="note-form">{{ submit_label }}</button></div>
         </div>
       </section>
     </main>
   </div>
+<script src="/static/diagnosis-picker.js" defer></script>
 </body>
 </html>

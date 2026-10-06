@@ -5,6 +5,9 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models.deletion import ProtectedError
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse, Http404
+from django.urls import reverse
+from apps.clients.models import Client
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -13,7 +16,7 @@ from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user, has_practice_permission
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.appointments.workflow import SessionWorkflowMixin
@@ -330,10 +333,10 @@ class TreatmentPlanListView(LoginRequiredMixin, PracticePermissionMixin, Treatme
             group['plans'].append(plan)
         context['plans'] = plans
         context['plan_groups'] = list(groups.values())
-        context['diagnoses'] = (
-            practice.diagnoses.select_related('client').all() if practice else Diagnosis.objects.none()
-        )
         context['plan_filters'] = self.get_plan_filters()
+        client_filter = context['plan_filters']['client']
+        if practice and client_filter.isascii() and client_filter.isdigit() and len(client_filter) <= 18:
+            context['diagnosis_options'] = context['diagnosis_options'].filter(client_id=client_filter)
         context['plan_status_choices'] = TreatmentPlan.Status.choices
         context['default_next_review_date'] = timezone.localdate() + timedelta(days=90)
         return context
@@ -472,7 +475,51 @@ class TreatmentPlanCompleteReviewView(LoginRequiredMixin, PracticePermissionMixi
         return redirect('clinical:treatment_plans')
 
 
-class DiagnosisCreateView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, CreateView):
+class DiagnosisOptionsView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'clinical'
+
+    def get(self, request, client_pk):
+        if not 0 < client_pk <= 9223372036854775807:
+            raise Http404
+        client = get_object_or_404(Client, pk=client_pk, practice=self.get_practice())
+        diagnoses = Diagnosis.objects.filter(client=client, practice=client.practice)
+        return JsonResponse({'diagnoses': list(diagnoses.values('id', 'code', 'label', 'active'))})
+
+
+class PatientDiagnosisMixin:
+    def get_patient(self):
+        if getattr(self, 'object', None):
+            return self.object.client
+        value = self.request.GET.get('client')
+        if value:
+            if not value.isascii() or not value.isdigit() or len(value) > 18:
+                raise Http404
+            return get_object_or_404(Client, pk=value, practice=self.get_practice())
+
+    def get_initial(self):
+        initial = super().get_initial()
+        patient = self.get_patient()
+        if patient:
+            initial['client'] = patient.pk
+        return initial
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['patient'] = self.get_patient()
+        return kwargs
+
+    def get_success_url(self):
+        if has_practice_permission(self.request.user, 'clients', 'view'):
+            return reverse('clients:detail', args=[self.object.client_id])
+        return super().get_success_url()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['diagnosis_patient'] = self.get_patient()
+        return context
+
+
+class DiagnosisCreateView(LoginRequiredMixin, PracticePermissionMixin, PatientDiagnosisMixin, TreatmentPlanContextMixin, CreateView):
     permission_resource = 'clinical'
     permission_action = 'create'
     model = Diagnosis
@@ -504,7 +551,7 @@ class DiagnosisCreateView(LoginRequiredMixin, PracticePermissionMixin, Treatment
         return response
 
 
-class DiagnosisUpdateView(LoginRequiredMixin, PracticePermissionMixin, TreatmentPlanContextMixin, UpdateView):
+class DiagnosisUpdateView(LoginRequiredMixin, PracticePermissionMixin, PatientDiagnosisMixin, TreatmentPlanContextMixin, UpdateView):
     permission_resource = 'clinical'
     permission_action = 'edit'
     model = Diagnosis

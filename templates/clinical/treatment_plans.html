@@ -17,7 +17,7 @@
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clinical.create %}<a class="btn btn-primary" href="{% url 'clinical:treatment_plan_create' %}" data-modal-target="plan-create-modal">+ New plan</a>
-          <a class="btn btn-secondary" href="{% url 'clinical:diagnosis_create' %}" data-modal-target="diagnosis-create-modal">+ Diagnosis</a>{% endif %}
+          {% endif %}
           <a class="btn btn-soft" href="{% url 'clinical:list' %}">Notes</a>
         </div>
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
@@ -69,25 +69,6 @@
           </div>
         </div>
 
-        <aside class="panel">
-          <div class="panel-head compact">
-            <div><h2>Diagnoses</h2><p>Practice-scoped client diagnoses available for treatment plans.</p></div>
-          </div>
-          <div class="package-list">
-            {% for diagnosis in diagnoses %}
-              <article class="package-card">
-                <div class="client-card-head">
-                  <div><strong>{{ diagnosis.code }} · {{ diagnosis.label }}</strong><p>{{ diagnosis.client }} · {{ diagnosis.diagnosed_at|date:"M j, Y" }}</p></div>
-                  <span class="badge {% if diagnosis.active %}success{% else %}danger{% endif %}">{% if diagnosis.active %}Active{% else %}Inactive{% endif %}</span>
-                </div>
-                {% if diagnosis.notes %}<p>{{ diagnosis.notes|truncatechars:120 }}</p>{% endif %}
-                {% if workspace_permissions.clinical.edit %}<a class="inline-link" href="{% url 'clinical:diagnosis_edit' diagnosis.pk %}" data-modal-target="diagnosis-modal-{{ diagnosis.pk }}">Edit diagnosis</a>{% endif %}
-              </article>
-            {% empty %}
-              <p class="empty-state">No diagnoses have been added yet.</p>
-            {% endfor %}
-          </div>
-        </aside>
       </section>
 
       {% if workspace_permissions.clinical.create %}<dialog class="modal-dialog" id="plan-create-modal">
@@ -132,22 +113,8 @@
         </dialog>
       {% endif %}{% endfor %}
 
-      {% if workspace_permissions.clinical.create %}<dialog class="modal-dialog" id="diagnosis-create-modal">
-        <div class="modal-card">
-          <div class="modal-head"><div><p class="eyebrow">New Diagnosis</p><h2>Add client diagnosis</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
-          <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_create' %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix='diagnosis-create' %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Add diagnosis</button></div></form>
-        </div>
-      </dialog>{% endif %}
-
-      {% for diagnosis in diagnoses %}{% if workspace_permissions.clinical.edit %}
-        <dialog class="modal-dialog" id="diagnosis-modal-{{ diagnosis.pk }}">
-          <div class="modal-card">
-            <div class="modal-head"><div><p class="eyebrow">Edit Diagnosis</p><h2>{{ diagnosis.client }}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>
-            <form class="appointment-form" method="post" action="{% url 'clinical:diagnosis_edit' diagnosis.pk %}">{% csrf_token %}{% include 'clinical/diagnosis_fields.html' with prefix=diagnosis.pk diagnosis=diagnosis %}<div class="form-actions split-actions"><button class="btn btn-danger" type="submit" formaction="{% url 'clinical:diagnosis_delete' diagnosis.pk %}" data-confirm-message="Delete this diagnosis? This cannot be undone.">Delete diagnosis</button><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div></form>
-          </div>
-        </dialog>
-      {% endif %}{% endfor %}
     </main>
   </div>
+<script src="/static/diagnosis-picker.js" defer></script>
 </body>
 </html>

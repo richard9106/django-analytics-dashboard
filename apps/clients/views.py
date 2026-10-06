@@ -9,7 +9,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice, ServicePackage
-from apps.clinical.models import SessionNote, TreatmentPlan
+from apps.clinical.models import Diagnosis, SessionNote, TreatmentPlan
 from apps.documents.models import ClientDocument
 from apps.portal.models import ClientPortalAccess
 from .forms import ClientForm
@@ -81,6 +81,7 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
             'packages': ServicePackage.objects.filter(client=client).order_by('-created_at')[:8],
             'notes': SessionNote.objects.filter(client=client).select_related('therapist__user', 'treatment_plan')[:8],
             'treatment_plans': TreatmentPlan.objects.filter(client=client).prefetch_related('diagnoses')[:8],
+            'diagnoses': Diagnosis.objects.filter(client=client, practice=client.practice),
             'documents': ClientDocument.objects.filter(client=client).order_by('-created_at')[:8],
             'portal_access': ClientPortalAccess.objects.filter(client=client).first(),
         })

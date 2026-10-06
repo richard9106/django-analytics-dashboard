@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     DiagnosisCreateView,
+    DiagnosisOptionsView,
     DiagnosisDeleteView,
     DiagnosisUpdateView,
     SessionNoteCreateView,
@@ -18,6 +19,7 @@ from .views import (
 app_name = 'clinical'
 
 urlpatterns = [
+    path('diagnosis-options/<int:client_pk>/', DiagnosisOptionsView.as_view(), name='diagnosis_options'),
     path('', SessionNoteListView.as_view(), name='list'),
     path('treatment-plans/', TreatmentPlanListView.as_view(), name='treatment_plans'),
     path('treatment-plans/new/', TreatmentPlanCreateView.as_view(), name='treatment_plan_create'),
