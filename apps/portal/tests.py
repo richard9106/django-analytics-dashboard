@@ -652,6 +652,47 @@ class ClientPortalViewTests(TestCase):
         template.refresh_from_db()
         self.assertEqual(template.name, "Initial questionnaire")
 
+    def test_intake_editor_and_portal_support_structured_legacy_questions(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        original = [{"id": "goals", "type": "textarea", "label": "What are your goals?"},
+                    {"id": "history", "type": "text", "label": "Previous care?"}]
+        template.questions = original
+        template.save(update_fields=["questions"])
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template)
+        edit_url = reverse("intake:template_edit", args=[template.pk])
+        response = self.client.get(edit_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"]["question_lines"].value(), "What are your goals?\nPrevious care?")
+        response = self.client.post(edit_url, {"name": template.name, "active": "on",
+                                   "question_lines": "Your goals?\nPrevious care?"})
+        self.assertRedirects(response, reverse("intake:list"))
+        template.refresh_from_db()
+        self.assertEqual(template.questions[0], {"id": "goals", "type": "textarea", "label": "Your goals?"})
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.packet_questions, original)
+        self.client.force_login(portal_user)
+        response = self.client.get(reverse("portal:intake_complete", args=[assignment.pk]))
+        self.assertEqual(response.context["form"].fields["question_0"].label, "What are your goals?")
+        self.client.post(reverse("portal:intake_complete", args=[assignment.pk]),
+                         {"question_0": "Less stress", "question_1": "None"})
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.answers["question_0"]["question"], "What are your goals?")
+        assignment.answers["question_0"]["question"] = original[0]
+        self.assertEqual(assignment.response_items[0]["question"], "What are your goals?")
+
+    def test_intake_question_reordering_preserves_metadata_by_label(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        original = [{"id": "first", "type": "text", "label": "First question?"},
+                    {"id": "second", "type": "text", "label": "Second question?"},
+                    {"id": "third", "type": "text", "label": "Third question?"}]
+        template.questions = original
+        template.save(update_fields=["questions"])
+        response = self.client.post(reverse("intake:template_edit", args=[template.pk]), {
+            "name": template.name, "active": "on", "question_lines": "Third question?\nFirst question?"})
+        self.assertRedirects(response, reverse("intake:list"))
+        template.refresh_from_db()
+        self.assertEqual(template.questions, [original[2], original[0]])
+
     def test_intake_duplicate_template_names_show_field_errors(self):
         portal_user, owner, practice, client, template = self.intake_owner_fixture()
         other = IntakePacketTemplate.objects.create(practice=practice, name="Another template", questions=["Question?"])

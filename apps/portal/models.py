@@ -174,6 +174,12 @@ class PublicBookingRequest(models.Model):
         return f"Booking request from {self.first_name} {self.last_name}"
 
 
+def intake_question_label(question):
+    if isinstance(question, dict):
+        return str(question.get('label') or question.get('question') or question.get('id') or 'Question')
+    return str(question)
+
+
 class IntakePacketTemplate(models.Model):
     practice = models.ForeignKey("practices.Practice", on_delete=models.CASCADE, related_name="intake_templates")
     name = models.CharField(max_length=160)
@@ -192,6 +198,10 @@ class IntakePacketTemplate(models.Model):
     def clean(self):
         if not self.questions:
             raise ValidationError({"questions": "Add at least one intake question."})
+
+    @property
+    def question_labels(self):
+        return [intake_question_label(question) for question in self.questions]
 
     def __str__(self):
         return self.name
@@ -256,9 +266,9 @@ class ClientIntakeAssignment(models.Model):
             if key.startswith('question_') and key[9:].isdigit():
                 index = int(key[9:])
                 if index < len(self.packet_questions):
-                    label = self.packet_questions[index]
+                    label = intake_question_label(self.packet_questions[index])
             if isinstance(value, dict):
-                items.append({'question': value.get('question', label), 'answer': value.get('answer', value)})
+                items.append({'question': intake_question_label(value.get('question', label)), 'answer': value.get('answer', value)})
             else:
                 items.append({'question': label, 'answer': value})
         return items
