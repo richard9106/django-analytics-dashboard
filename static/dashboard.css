@@ -1020,3 +1020,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .chat-drawer-list { order: 1; max-height: 132px; border-right: 0; border-bottom: 1px solid var(--slate-100); }
   .chat-drawer-threads { order: 2; }
 }
+
+/* Compact diagnosis toggles retain a generous clickable label. */
+.diagnosis-dialog { width: min(640px, calc(100% - 24px)); }
+.field.checkbox-field.diagnosis-checkbox { flex-direction: column; align-items: flex-start; justify-content: flex-end; }
+.diagnosis-checkbox input[type="checkbox"] { flex: 0 0 16px; }
+.diagnosis-optional { font-weight: 500; }

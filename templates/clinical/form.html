@@ -18,19 +18,21 @@
         <div class="quick-actions"><a class="btn btn-primary" href="{% url 'clinical:create' %}">+ New note</a><a class="btn btn-secondary" href="{% url 'clients:list' %}">Client directory</a><a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a></div>
         <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
-      <header class="topbar compact-topbar"><div><p class="eyebrow">Clinical Notes</p><h1>{{ form_title }}</h1></div></header>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">{% if is_diagnosis_form %}Patient diagnoses{% else %}Clinical Notes{% endif %}</p><h1>{{ form_title }}</h1></div></header>
 
       {% if workflow_appointment %}<p>Documenting {{ workflow_appointment.client }} · {{ workflow_appointment.starts_at|date:"M j, Y, g:i A" }}.{% if workspace_permissions.appointments.edit %} After saving, return to the session to continue with billing.{% endif %}</p>{% endif %}
       <section class="panel form-panel notes-panel">
-        <div class="panel-head"><div><h2>{{ form_heading }}</h2><p>Keep documentation concise, scoped, and ready to lock when complete.</p></div></div>
+        <div class="panel-head"><div><h2>{{ form_heading }}</h2><p>{% if is_diagnosis_form %}Record this patient's diagnosis and select it in their treatment plans.{% else %}Keep documentation concise, scoped, and ready to lock when complete.{% endif %}</p></div></div>
         <form id="note-form" class="appointment-form" method="post" novalidate>
           {% csrf_token %}
           {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
           <div class="field-grid two">
             {% for field in form %}
-              <div {% if field.name == 'diagnoses' %}data-diagnosis-picker data-options-url="{% url 'clinical:diagnosis_options' 0 %}"{% endif %} class="field {% if field.name == 'content' or field.name == 'treatment_progress' %}full{% endif %}{% if field.name == 'is_locked' %} checkbox-field{% endif %}">
+              <div {% if field.name == 'diagnoses' %}data-diagnosis-picker data-options-url="{% url 'clinical:diagnosis_options' 0 %}"{% endif %} class="field {% if field.name == 'content' or field.name == 'treatment_progress' or field.name == 'notes' %}full{% endif %}{% if field.field.widget.input_type == 'checkbox' and field.name != 'diagnoses' %} checkbox-field diagnosis-checkbox{% endif %}">
+                {% if field.field.widget.input_type == 'checkbox' and field.name != 'diagnoses' %}<label for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}</span></label>{% else %}
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {% if field.name == 'diagnoses' %}<div data-diagnosis-choices>{{ field }}</div><p data-diagnosis-status role="status">Select diagnoses for this patient.</p><button class="inline-link" type="button" data-diagnosis-reload>Reload diagnoses</button>{% else %}{{ field }}{% endif %}
+                {% endif %}
                 {% if field.errors %}{{ field.errors }}{% endif %}
               </div>
             {% endfor %}

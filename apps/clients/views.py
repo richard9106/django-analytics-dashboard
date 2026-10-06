@@ -6,7 +6,8 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
-from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
+from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user, has_practice_permission
+from apps.clinical.forms import DiagnosisForm
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice, ServicePackage
 from apps.clinical.models import Diagnosis, SessionNote, TreatmentPlan
@@ -85,6 +86,19 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
             'documents': ClientDocument.objects.filter(client=client).order_by('-created_at')[:8],
             'portal_access': ClientPortalAccess.objects.filter(client=client).first(),
         })
+        if has_practice_permission(self.request.user, 'clinical', 'view'):
+            diagnoses = list(context['diagnoses'])
+            context['diagnoses'] = diagnoses
+            if has_practice_permission(self.request.user, 'clinical', 'create'):
+                context['diagnosis_create_form'] = DiagnosisForm(
+                    practice=client.practice, patient=client, auto_id='diagnosis-create-%s',
+                )
+            if has_practice_permission(self.request.user, 'clinical', 'edit'):
+                context['diagnosis_edit_forms'] = [
+                    (diagnosis, DiagnosisForm(instance=diagnosis, practice=client.practice,
+                        patient=client, auto_id=f'diagnosis-edit-{diagnosis.pk}-%s'))
+                    for diagnosis in diagnoses
+                ]
         return context
 
 

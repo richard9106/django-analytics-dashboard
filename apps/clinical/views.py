@@ -9,7 +9,7 @@ from django.http import JsonResponse, Http404
 from django.urls import reverse
 from apps.clients.models import Client
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -487,6 +487,35 @@ class DiagnosisOptionsView(LoginRequiredMixin, PracticePermissionMixin, Practice
 
 
 class PatientDiagnosisMixin:
+    def form_invalid(self, form):
+        patient = self.get_patient()
+        if (self.request.POST.get('return_to_patient') == '1' and patient
+                and has_practice_permission(self.request.user, 'clients', 'view')
+                and has_practice_permission(self.request.user, 'clinical', 'view')):
+            from apps.clients.views import ClientDetailView
+            view = ClientDetailView()
+            view.setup(self.request, pk=patient.pk)
+            view.object = view.get_object()
+            context = view.get_context_data()
+            if getattr(self, 'object', None):
+                form.auto_id = f'diagnosis-edit-{self.object.pk}-%s'
+                context['diagnosis_edit_forms'] = [
+                    (diagnosis, form if diagnosis.pk == self.object.pk else existing)
+                    for diagnosis, existing in context.get('diagnosis_edit_forms', [])
+                ]
+                context['diagnosis_modal_id'] = f'diagnosis-edit-{self.object.pk}'
+            else:
+                form.auto_id = 'diagnosis-create-%s'
+                context['diagnosis_create_form'] = form
+                context['diagnosis_modal_id'] = 'diagnosis-create-modal'
+            return render(self.request, 'clients/detail.html', context)
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Diagnosis saved to the patient record.')
+        return response
+
     def get_patient(self):
         if getattr(self, 'object', None):
             return self.object.client
@@ -516,6 +545,7 @@ class PatientDiagnosisMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['diagnosis_patient'] = self.get_patient()
+        context['is_diagnosis_form'] = True
         return context
 
 
