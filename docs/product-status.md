@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Added a shared, route-based breadcrumb hierarchy across all workspace modules, profile/security and authenticated help pages. Patient records, intake templates, invoice edits and session-linked forms retain their validated parent context. Ancestor links follow workspace permissions, only the final item is current, labels are escaped, and the mobile trail scrolls horizontally. The template tag uses already-scoped view objects without additional record queries or stored browsing history. Specialized UX review guided layout and keyboard targets.
+
 - Intake now has a paginated assignment queue with patient/form search, status totals and filters, a template library with question previews and permission-aware editing, and a separate numbered response review page. Template changes apply only to future assignments: packet content is snapshotted on assignment and existing responses are preserved by a data migration. Invalid create/edit/assign forms retain entered values and field errors; pending packets cannot be marked reviewed and repeat review actions preserve the original reviewer/date. Specialized UX review retained native dialogs, compact checkboxes and mobile layouts.
 
 - Diagnosis creation/editing now opens native dialogs inside the patient record, reviewed by the specialized UX designer. Patient context stays fixed, the checkbox uses compact sizing with a large clickable label, and validation errors preserve entered values and reopen the dialog. Standalone fallback pages retain diagnosis-specific copy and corrected Boolean controls.

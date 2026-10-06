@@ -4,6 +4,7 @@
 <body class="marketing-page support-page">
   {% include 'marketing/partials/nav.html' %}
   <main class="support-shell">
+    {% include 'partials/breadcrumbs.html' %}
     <header class="support-hero"><p class="eyebrow">NuviaMy Help Center</p><h1>Find your answer quickly.</h1><p>Practical guidance for setting up and running your therapy practice workspace.</p><form method="get" class="support-search"><label class="sr-only" for="support-q">Search help</label><input id="support-q" name="q" value="{{ query }}" placeholder="Search setup, billing, Gmail, Stripe..." type="search"><button class="btn btn-primary" type="submit">Search</button></form></header>
     <section class="support-grid" aria-label="Frequently asked questions">
       {% for faq in faqs %}<details class="support-faq"{% if query %} open{% endif %}><summary>{{ faq.question }}</summary><p>{{ faq.answer }}</p></details>{% empty %}<p class="empty-state">No matching help articles. Try another search or contact support.</p>{% endfor %}

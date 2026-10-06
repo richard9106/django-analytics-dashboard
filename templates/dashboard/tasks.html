@@ -10,6 +10,7 @@
 <body class="app-page"><div class="app-shell">
   {% include 'partials/sidebar.html' with card_title='Team follow-through' card_text='Keep small practice commitments visible without mixing them into clinical notes.' %}
   <main class="app-main">
+      {% include 'partials/breadcrumbs.html' %}
     <section class="topbar"><div><p class="eyebrow">Practice workspace</p><h1>Tasks</h1></div><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back to dashboard</a></section>
     {% if messages %}{% for message in messages %}<p class="form-message" role="status">{{ message }}</p>{% endfor %}{% endif %}
     <section class="tasks-layout">

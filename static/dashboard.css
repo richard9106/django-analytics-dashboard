@@ -466,10 +466,17 @@ h1, h2, h3, p { margin-top: 0; }
 .monitoring-note { margin-top: 18px; }
 .monitoring-note h2 { margin: 0; color: var(--slate-900); }
 .monitoring-note p:not(.eyebrow) { color: var(--slate-600); line-height: 1.6; }
-.breadcrumbs { min-height: 24px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: var(--slate-500); font-size: 12px; font-weight: 800; }
-.breadcrumbs a { color: var(--brand-700); text-decoration: none; }
+/* Keep the complete workspace hierarchy readable and scrollable on small screens. */
+.breadcrumbs { min-width: 0; max-width: 100%; overflow-x: auto; color: var(--slate-500); font-size: 13px; font-weight: 700; }
+.breadcrumbs ol { display: flex; align-items: center; gap: 8px; width: max-content; min-width: 100%; margin: 0; padding: 0; list-style: none; }
+.breadcrumbs li { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.breadcrumbs a, .breadcrumbs li > span:not(.breadcrumb-separator) { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; white-space: nowrap; }
+.breadcrumbs a { color: var(--brand-700); text-decoration: none; border-radius: 6px; }
 .breadcrumbs a:hover { text-decoration: underline; }
+.breadcrumbs a:focus-visible { outline: 2px solid var(--brand-700); outline-offset: -2px; }
 .breadcrumbs span[aria-current="page"] { color: var(--slate-700); }
+.breadcrumb-separator { color: var(--slate-500); font-weight: 500; }
+
 .setup-checklist-panel { padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; border: 1px solid rgba(243, 111, 86, .28); border-radius: 22px; background: linear-gradient(145deg, rgba(255, 246, 242, .96), rgba(255,255,255,.9)); }
 .setup-checklist-panel h2 { margin: 0; color: var(--slate-900); font-size: 24px; }
 .setup-checklist-panel p:not(.eyebrow) { margin: 6px 0 0; color: var(--slate-600); line-height: 1.55; }

@@ -1,3 +1,13 @@
+{% if not modal_form %}
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Record payment | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="app-page"><div class="app-shell">
+{% include 'partials/sidebar.html' with card_title='Billing workspace' card_text='Manage invoices, payments, and prepaid sessions.' %}
+<main class="app-main">
+  {% include 'partials/breadcrumbs.html' %}
+  <section class="panel form-panel"><div class="panel-head"><div><p class="eyebrow">Manual payment</p><h1>Record payment</h1><p>Record a payment already received for an invoice.</p></div></div>
+{% endif %}
 <form class="appointment-form" method="post" action="{% url 'billing:payment_create' %}">
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
@@ -8,5 +18,9 @@
     <div class="field"><label for="id_paid_at">Payment date</label>{{ form.paid_at }}{{ form.paid_at.errors }}</div>
     <div class="field"><label for="id_external_payment_id">Reference</label>{{ form.external_payment_id }}{{ form.external_payment_id.errors }}</div>
   </div>
-  <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Record payment</button></div>
+  <div class="form-actions">{% if modal_form %}<button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>{% else %}<a class="btn btn-secondary" href="{% url 'billing:list' %}">Cancel</a>{% endif %}<button class="btn btn-primary" type="submit">Record payment</button></div>
 </form>
+{% if not modal_form %}
+  </section>
+</main></div>{% include 'partials/security_session.html' %}</body></html>
+{% endif %}

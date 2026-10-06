@@ -4,6 +4,7 @@
 <body class="marketing-page support-page">
   {% include 'marketing/partials/nav.html' %}
   <main class="support-shell support-contact-shell">
+    {% include 'partials/breadcrumbs.html' %}
     {% if request.GET.sent %}<section class="support-success"><h1>Message sent.</h1><p>We received your support request and will reply by email.</p><a class="btn btn-primary" href="{% url 'help_center' %}">Back to Help Center</a></section>{% else %}
       <section class="support-contact-card support-form-card"><div><p class="eyebrow">NuviaMy support</p><h1>How can we help?</h1><p>Describe the problem without including clinical or client-sensitive information.</p></div><form method="post" class="support-form">{% csrf_token %}{{ form.non_field_errors }}<div class="field-grid two"><div class="field"><label for="id_name">Name</label>{{ form.name }}{{ form.name.errors }}</div><div class="field"><label for="id_email">Email</label>{{ form.email }}{{ form.email.errors }}</div><div class="field"><label for="id_topic">Topic</label>{{ form.topic }}{{ form.topic.errors }}</div><div class="field full"><label for="id_message">Message</label>{{ form.message }}{{ form.message.errors }}</div></div>{{ form.website }}<button class="btn btn-primary" type="submit">Send support request</button></form></section>
     {% endif %}
