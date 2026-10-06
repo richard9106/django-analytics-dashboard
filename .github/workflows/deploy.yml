@@ -65,6 +65,8 @@ jobs:
         run: python -m pip check
       - name: Build static asset manifest
         run: python manage.py collectstatic --noinput
+      - name: Verify Compose credential isolation
+        run: python -m ops.check_compose_roles
       - name: Build deployment image
         run: docker build --tag nuviamy-ci .
       - name: Verify packaged static assets
@@ -76,6 +78,10 @@ jobs:
           nuviamy-ci python -m ops.check_packaged_assets
       - name: Run test suite
         run: python manage.py test --noinput
+      - name: Verify PostgreSQL role separation and backup restore
+        run: python -m ops.check_postgres_roles
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
 
   deploy:
     needs: test
@@ -102,7 +108,9 @@ jobs:
             # Validate the candidate with the actual production environment
             # before replacing the running service or modifying the database.
             docker compose run --rm --no-deps web python manage.py check --deploy --fail-level WARNING
-            docker compose run --rm --no-deps web python manage.py migrate --noinput
+            docker compose run --rm --no-deps migrate
+            docker compose run --rm --no-deps migrate python -m ops.postgres_roles grant
+            docker compose run --rm --no-deps web python -m ops.postgres_roles verify
             docker compose up -d --no-build
             docker compose restart web
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
