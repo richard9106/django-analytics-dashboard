@@ -57,6 +57,7 @@
             </div>
             <div class="calendar-actions">
               <button class="btn btn-soft" type="button" data-modal-target="availability-modal" data-availability-date="{{ calendar_anchor_date|date:'Y-m-d' }}">Set availability</button>
+              <a class="btn btn-soft" href="#availability-changes" data-availability-review>Review availability</a>
               <a class="btn btn-secondary" href="{{ previous_period_url }}">Previous</a>
               <a class="btn btn-soft" href="{{ today_period_url }}">Today</a>
               <a class="btn btn-secondary" href="{{ next_period_url }}">Next</a>
@@ -161,6 +162,24 @@
         </article>
 
       </section>
+
+      <details class="panel" id="availability-changes">
+        <summary id="availability-changes-summary">Review availability changes · {{ calendar_period_label }} ({{ calendar_availability_overrides|length }})</summary>
+        <p>Date-specific changes apply to the whole practice and override weekly hours. Changing availability does not reschedule existing appointments.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">Date</th><th scope="col">Availability</th><th scope="col">Hours</th><th scope="col">Note</th><th scope="col">Actions</th></tr></thead>
+          <tbody>{% for change in calendar_availability_overrides %}<tr>
+            <td>{{ change.date|date:"D, M j, Y" }}</td>
+            <td>{% if change.is_available %}Available{% else %}Unavailable{% endif %}</td>
+            <td>{% if change.starts_at %}{{ change.starts_at|time:"g:i A" }} – {{ change.ends_at|time:"g:i A" }}{% else %}All day{% endif %}</td>
+            <td>{{ change.note|default:"—" }}</td>
+            <td>{% if workspace_permissions.appointments.edit %}<a class="inline-link" href="{% url 'appointments:availability_edit' change.pk %}?next={{ request.get_full_path|urlencode }}">Edit</a>{% endif %}
+              {% if workspace_permissions.appointments.delete %}<form method="post" action="{% url 'appointments:availability_delete' change.pk %}" data-confirm-message="Remove this date-specific availability change? Existing appointments will not be changed.">
+                {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="inline-link" type="submit">Remove change</button>
+              </form>{% endif %}</td>
+          </tr>{% empty %}<tr><td colspan="5">No date-specific changes in this period. Weekly hours apply when configured. Use Set availability to add a change.</td></tr>{% endfor %}</tbody>
+        </table></div>
+      </details>
 
       <dialog class="modal-dialog" id="client-create-modal">
         <div class="modal-card">
@@ -446,6 +465,14 @@
         return rangeStart <= start && rangeEnd >= end;
       });
     }
+
+    document.querySelector('[data-availability-review]')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      const panel = document.getElementById('availability-changes');
+      panel.open = true;
+      panel.querySelector('summary').focus();
+      panel.scrollIntoView({ block: 'start' });
+    });
 
     function openAvailabilityModal(dateValue, startTime = '09:00', endTime = '17:00', showPrompt = false) {
       const dialog = document.getElementById('availability-modal');

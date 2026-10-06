@@ -76,6 +76,7 @@ The current version includes these working modules:
 - Availability is managed from the calendar through the `Set availability` action.
 - Date-specific availability can mark a day or date range as available, unavailable all day, or unavailable for a specific time range.
 - Date-specific availability can repeat weekly or monthly for a configured number of occurrences.
+- Review availability lists changes in the visible calendar period. Edit one change or remove it without changing existing appointments; edit/remove actions follow workspace permissions.
 - Clicking an unavailable calendar time prompts the user to enable that day/range before scheduling.
 - Weekly availability remains as a baseline fallback; date-specific calendar availability overrides it.
 - Unavailable time is visibly shaded in Day/Week calendar views.
@@ -258,7 +259,7 @@ Any ZIP
 ## Remaining Product Roadmap
 
 - Add Stripe subscription quantity reconciliation for failed/manual team changes.
-- Improve calendar availability editing/deleting for existing overrides.
+- Continue simplifying calendar availability workflows; the calendar now includes review, single-record editing and removal for date-specific changes.
 - Add filters/search polish for remaining dense clinical/admin tables where needed.
 - Add Dropbox OAuth/export support.
 - Complete production security, legal, HIPAA/BAA, retention, and incident-response review before clinical use.

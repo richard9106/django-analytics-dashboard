@@ -19,7 +19,7 @@ from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
 from .models import Appointment, PracticeAvailabilityOverride, PracticeWorkingHour
-from .forms import AppointmentForm, PracticeAvailabilityOverrideForm, PracticeWorkingHourForm
+from .forms import AppointmentForm, CalendarAvailabilityEditForm, PracticeAvailabilityOverrideForm, PracticeWorkingHourForm
 
 
 def add_months(value, months):
@@ -284,6 +284,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
 
         return {
             'calendar_view': selected_view,
+            'calendar_availability_overrides': availability_overrides,
             'calendar_weeks': weeks,
             'calendar_period_label': period_labels[selected_view],
             'calendar_anchor_date': anchor,
@@ -665,6 +666,40 @@ class CalendarAvailabilityCreateView(LoginRequiredMixin, PracticePermissionMixin
         return redirect(self.get_success_url())
 
 
+class CalendarAvailabilityUpdateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, UpdateView):
+    permission_resource = 'appointments'
+    permission_action = 'edit'
+    model = PracticeAvailabilityOverride
+    form_class = CalendarAvailabilityEditForm
+    template_name = 'appointments/availability_edit.html'
+
+    def get_queryset(self):
+        return PracticeAvailabilityOverride.objects.filter(practice=self.get_practice())
+
+    def get_success_url(self):
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={self.request.get_host()}, require_https=self.request.is_secure(),
+        ):
+            return next_url
+        return reverse_lazy('appointments:list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['calendar_return_url'] = self.get_success_url()
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_audit_event(
+            self.request, AuditLog.Action.UPDATE, 'appointments.PracticeAvailabilityOverride',
+            self.object.pk, practice=self.object.practice,
+            metadata={'date': self.object.date.isoformat(), 'is_available': self.object.is_available},
+        )
+        messages.success(self.request, 'Availability updated for this date. Existing appointments were not changed.')
+        return response
+
+
 class CalendarAvailabilityDeleteView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'appointments'
     permission_action = 'delete'
@@ -695,7 +730,7 @@ class CalendarAvailabilityDeleteView(LoginRequiredMixin, PracticePermissionMixin
             practice=practice,
             metadata=metadata,
         )
-        messages.success(request, 'Availability override deleted.')
+        messages.success(request, 'Availability change removed. Scheduling uses the remaining date changes or weekly hours; existing appointments were not changed.')
         return redirect(self.get_success_url())
 
 

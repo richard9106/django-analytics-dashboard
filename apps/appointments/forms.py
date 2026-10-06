@@ -83,6 +83,25 @@ class PracticeWorkingHourForm(forms.ModelForm):
         return working_hour
 
 
+class CalendarAvailabilityEditForm(forms.ModelForm):
+    class Meta:
+        model = PracticeAvailabilityOverride
+        fields = ['date', 'is_available', 'starts_at', 'ends_at', 'note']
+        labels = {'is_available': 'Available during these hours', 'starts_at': 'Start time', 'ends_at': 'End time'}
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'starts_at': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+            'ends_at': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # An edit changes one existing date, never a whole recurring series.
+        self.fields['date'].disabled = True
+        for field in ('starts_at', 'ends_at'):
+            self.fields[field].input_formats = ['%H:%M']
+
+
 class PracticeAvailabilityOverrideForm(forms.ModelForm):
     REPEAT_NONE = 'none'
     REPEAT_WEEKLY = 'weekly'
