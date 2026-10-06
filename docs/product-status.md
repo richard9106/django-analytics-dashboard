@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Improved scheduling with a weekly Agenda alternative, explicit single-session cancellation that retains records, touch/keyboard rescheduling and client access from sessions. Calendar create/edit/delete and recurring actions keep a validated calendar return path; client selection is explicit and a sole therapist is preselected. Creating recurring sessions rolls back the entire series on a later conflict, returns the bound form and syncs only after successful saving. Calendar modal dates are prepared before the shared dialog handler, grid hit testing measures its header and rescheduling checks the actual duration. Permissions, 44px calendar controls and optional Google UI were reviewed by the specialized UX designer.
+
 - Replaced ambiguous sidebar glyphs with consistent 24px inline SVG icons, reviewed by the specialized UX designer. Compact navigation retains accessible names and hover titles; request counts fit as corner badges and mobile restores the inline layout. Icons require no external library, requests or JavaScript.
 
 - Added a shared, route-based breadcrumb hierarchy across all workspace modules, profile/security and authenticated help pages. Patient records, intake templates, invoice edits and session-linked forms retain their validated parent context. Ancestor links follow workspace permissions, only the final item is current, labels are escaped, and the mobile trail scrolls horizontally. The template tag uses already-scoped view objects without additional record queries or stored browsing history. Specialized UX review guided layout and keyboard targets.
