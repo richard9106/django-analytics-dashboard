@@ -142,7 +142,7 @@ class ClientViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, f"{reverse('login')}?next={reverse('clients:create')}")
 
-    def test_client_create_requires_practice_setup(self):
+    def test_client_can_be_created_without_email_or_online_payments(self):
         user, _practice, _therapist = self.create_practice_user()
         ExternalIntegration.objects.all().delete()
         Practice.objects.filter(pk=_practice.pk).update(
@@ -154,7 +154,14 @@ class ClientViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse("clients:create"))
 
-        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.post(reverse('clients:create'), {
+            'first_name': 'Maya', 'last_name': 'Johnson', 'status': 'active',
+        })
+        self.assertRedirects(response, reverse('clients:list'))
+        client = Client.objects.get(practice=_practice)
+        self.assertEqual(client.first_name, 'Maya')
+        self.assertEqual(client.practice, _practice)
 
     def test_client_list_is_scoped_to_user_practice(self):
         user, practice, _therapist = self.create_practice_user()

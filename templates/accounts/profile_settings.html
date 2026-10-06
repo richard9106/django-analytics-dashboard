@@ -44,7 +44,7 @@
 
        {% if not practice_setup_complete %}
          <section class="setup-checklist-panel settings-section settings-setup-section">
-            <div><p class="eyebrow">Setup</p><h2>Finish the essentials.</h2></div>
+            <div><p class="eyebrow">Optional connections</p><h2>Add email and online payments when you need them.</h2><p>You can manage clients and appointments without connecting these services.</p></div>
            <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
          </section>
        {% endif %}

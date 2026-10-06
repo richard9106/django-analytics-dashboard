@@ -11,7 +11,7 @@
 </head>
 <body class="app-page">
   <div class="app-shell">
-    {% include 'partials/sidebar.html' with card_title='HIPAA-aware build' card_text='Practice-scoped models, tests, and secure defaults are active.' %}
+    {% include 'partials/sidebar.html' with card_title='Your daily workspace' card_text='Keep clients, sessions, notes, and billing together.' %}
 
     <main class="app-main" data-tour-target="workspace">
       <section class="action-bar" aria-label="Workspace actions">
@@ -47,14 +47,14 @@
       <section class="onboarding-panel" aria-label="Recommended first steps" data-tour-target="setup">
         <div>
           <p class="eyebrow">First steps</p>
-          <h2>Set up your practice in about 10 minutes.</h2>
-          <p>Complete the two secure connections first. Then your practice can add clients, collect invoice payments, and use Gmail-powered invitations and reminders.</p>
+          <h2>Start with your clients and your calendar.</h2>
+          <p>Working solo or with a team? Add a client, set your availability, and schedule a session. Email delivery and online payments are optional connections you can add later.</p>
         </div>
         <div class="onboarding-steps">
-          <a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong><span>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</span></a>
-          <a href="{% url 'profile_settings' %}" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong><span>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</span></a>
-          <a href="{% url 'clients:list' %}" class="{% if not practice_setup_complete %}setup-locked{% endif %}"><strong>3</strong><span>Add your first client</span></a>
-          <a href="{% url 'appointments:list' %}?view=week"><strong>4</strong><span>Set availability</span></a>
+          {% if workspace_permissions.clients.create %}<a href="{% url 'clients:create' %}" data-modal-target="client-create-modal"><strong>1</strong><span>Add a client</span></a>{% endif %}
+          {% if workspace_permissions.appointments.view %}<a href="{% url 'appointments:list' %}?view=week"><strong>2</strong><span>Open your calendar &amp; availability</span></a>{% endif %}
+          {% if workspace_permissions.appointments.create %}<a href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal"><strong>3</strong><span>Schedule a session</span></a>{% endif %}
+          {% if can_manage_team %}<a href="{% url 'team_management' %}"><strong>+</strong><span>Invite your team when needed</span></a>{% endif %}
         </div>
       </section>
 
@@ -81,21 +81,6 @@
         </article>
       </section>
 
-      <section class="performance-grid" aria-label="Practice performance">
-        <article class="panel performance-panel">
-          <div class="panel-head compact"><div><p class="eyebrow">Performance</p><h2>Revenue trend</h2><p>Paid invoices over the last six months.</p></div><span class="badge success">USD</span></div>
-          <div class="performance-chart revenue-chart">
-            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">${{ month.revenue|floatformat:0 }}</span><div class="chart-track"><span style="height: {{ month.revenue_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Performance data will appear after your first paid invoice.</p>{% endfor %}
-          </div>
-        </article>
-        <article class="panel performance-panel">
-          <div class="panel-head compact"><div><p class="eyebrow">Operations</p><h2>Session volume</h2><p>Appointments scheduled by month.</p></div><span class="badge brand">Sessions</span></div>
-          <div class="performance-chart appointments-chart">
-            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">{{ month.appointments }}</span><div class="chart-track"><span style="height: {{ month.appointment_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Session data will appear after appointments are scheduled.</p>{% endfor %}
-          </div>
-        </article>
-      </section>
-
       <section class="content-grid" id="today" data-tour-target="appointments">
         <article class="panel">
           <div class="panel-head">
@@ -113,13 +98,15 @@
                   <span>{{ appointment.ends_at|time:"g:i A" }}</span>
                 </div>
                 <div class="appointment-body">
-                  <h3>{{ appointment.client }}</h3>
+                  <h3>{% if workspace_permissions.clients.view %}<a href="{% url 'clients:detail' appointment.client_id %}">{{ appointment.client }}</a>{% else %}{{ appointment.client }}{% endif %}</h3>
                   <p>{{ appointment.get_appointment_type_display }} with {{ appointment.therapist.user.get_full_name|default:appointment.therapist.user.username }}</p>
+                  {% if workspace_permissions.appointments.edit %}<a class="inline-link" href="{% url 'appointments:edit' appointment.pk %}">Manage session</a>{% endif %}
                 </div>
-                <span class="badge success">{{ appointment.get_status_display }}</span>
+                <span class="badge">{{ appointment.get_status_display }}</span>
               </div>
             {% empty %}
               <p class="empty-state">No appointments scheduled for today.</p>
+              {% if workspace_permissions.appointments.view %}<a class="inline-link" href="{% url 'appointments:list' %}?view=week">View your week →</a>{% endif %}
             {% endfor %}
           </div>
         </article>
@@ -152,6 +139,21 @@
            </div>
            <a class="inline-link" href="{% url 'tasks_list' %}">View all tasks →</a>
          </article>
+      </section>
+
+      <section class="performance-grid" aria-label="Practice performance">
+        <article class="panel performance-panel">
+          <div class="panel-head compact"><div><p class="eyebrow">Performance</p><h2>Revenue trend</h2><p>Paid invoices over the last six months.</p></div><span class="badge success">USD</span></div>
+          <div class="performance-chart revenue-chart">
+            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">${{ month.revenue|floatformat:0 }}</span><div class="chart-track"><span style="height: {{ month.revenue_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Performance data will appear after your first paid invoice.</p>{% endfor %}
+          </div>
+        </article>
+        <article class="panel performance-panel">
+          <div class="panel-head compact"><div><p class="eyebrow">Operations</p><h2>Session volume</h2><p>Appointments scheduled by month.</p></div><span class="badge brand">Sessions</span></div>
+          <div class="performance-chart appointments-chart">
+            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">{{ month.appointments }}</span><div class="chart-track"><span style="height: {{ month.appointment_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Session data will appear after appointments are scheduled.</p>{% endfor %}
+          </div>
+        </article>
       </section>
 
       <section class="panel">
@@ -268,7 +270,7 @@
       },
       {
         title: 'Appointments',
-        copy: 'Manage day, week, month, and year calendar views, availability, recurring sessions, and reminders.',
+        copy: 'Manage day, week, and month calendar views, availability, recurring sessions, and reminders.',
         route: 'Primary navigation → Appointments',
         target: '[data-tour-target="nav-appointments"]',
       },
@@ -315,8 +317,8 @@
         target: '[data-tour-target="nav-settings"]',
       },
       {
-        title: 'Complete the setup checklist',
-        copy: 'Connect Gmail and Stripe first. Then you can safely add clients and use invitations, reminders, and client invoice payments.',
+        title: 'Start your daily workflow',
+        copy: 'Add a client, set availability in your calendar, and schedule a session. Connect email and online payments later when you need them.',
         route: 'Dashboard → Setup checklist',
         target: '[data-tour-target="setup"]',
       },

@@ -235,7 +235,7 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Start guided tour')
         self.assertContains(response, 'Guided setup')
-        self.assertContains(response, 'Set up your practice in about 10 minutes')
+        self.assertContains(response, 'Start with your clients and your calendar')
         self.assertContains(response, 'show-dashboard-tour')
         self.assertContains(response, 'data-tour-spotlight')
         self.assertContains(response, 'target: \'[data-tour-target="setup"]\'')
@@ -244,6 +244,25 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'data-tour-target="nav-billing"')
         self.assertContains(response, 'data-tour-target="nav-settings"')
         self.assertContains(response, 'data-tour-next')
+
+    def test_dashboard_puts_daily_work_before_charts_without_integration_gate(self):
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
+        now = timezone.now()
+        appointment = Appointment.objects.create(
+            practice=practice, client=client, therapist=therapist,
+            starts_at=now, ends_at=now + timedelta(minutes=50),
+        )
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('clients:detail', args=[client.pk]))
+        self.assertContains(response, reverse('appointments:edit', args=[appointment.pk]))
+        self.assertContains(response, 'Optional connections')
+        self.assertNotContains(response, 'before adding clients')
+        self.assertNotContains(response, 'setup-locked')
+        html = response.content.decode()
+        self.assertLess(html.index('id="today"'), html.index('class="performance-grid"'))
 
     def test_client_login_redirects_to_portal(self):
         practice = Practice.objects.create(name='Nuvia Therapy')

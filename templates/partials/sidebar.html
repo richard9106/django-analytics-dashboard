@@ -52,9 +52,9 @@
 
   {% if not practice_setup_complete %}
     <div class="setup-reminder" role="status">
-      <strong>Finish setup</strong>
-      <p>Connect Gmail and Stripe before adding clients.</p>
-      <a href="{% url 'profile_settings' %}">Open setup checklist</a>
+      <strong>Optional connections</strong>
+      <p>Add Gmail for email delivery or Stripe for online client payments whenever you need them.</p>
+      <a href="{% url 'profile_settings' %}">Manage connections</a>
     </div>
   {% endif %}
 

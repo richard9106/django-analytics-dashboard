@@ -1,7 +1,7 @@
 FAQS = [
     {
         'question': 'How do I finish setting up my practice?',
-        'answer': 'Open the dashboard setup checklist. Connect Google with Gmail sending enabled, then complete Stripe Connect so client invoice payments go to your practice before adding clients.',
+        'answer': 'Start by adding a client from the dashboard, set your availability in Appointments, and schedule a session. Invite team members if you work with others. Gmail for email delivery and Stripe Connect for online client invoice payments can be connected later; neither is required to create clients or manage your calendar.',
         'tags': 'setup gmail stripe clients',
     },
     {
