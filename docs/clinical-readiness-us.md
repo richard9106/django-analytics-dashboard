@@ -155,3 +155,9 @@ Las pruebas de transacciones deshabilitan solo los triggers de TRUNCATE durante 
 Por solicitud del propietario, MFA queda diferido: `DJANGO_MFA_REQUIRED=false` es el valor predeterminado y el inicio de sesión utiliza credenciales. El código y sus pruebas de MFA se conservan para reactivarlo mediante `true`. SEC-03 permanece abierto antes del piloto clínico; no se declara MFA activo en producción. Se mantienen límites de intentos, vencimiento/revocación de sesiones, auditoría y CSRF.
 
 La política de referrer autenticada pasa a `same-origin` para permitir la validación CSRF en HTTPS sin enviar referrers a otros orígenes. GET `/logout/` muestra confirmación con token actualizado; POST con CSRF válido termina la sesión.
+
+## Separación de privilegios PostgreSQL
+
+La aplicación pasa a un rol sin privilegios administrativos ni propiedad del esquema. Auditoría solo admite SELECT/INSERT y el rol no puede desactivar triggers, alterar funciones, crear objetos/roles, cambiar al rol de migraciones ni truncar tablas. Migraciones utilizan un rol propietario separado y no superusuario; backups/restauración mantienen la cuenta administrativa existente. El workflow aplica y verifica permisos después de migrar. CI valida accesos reales bajo el rol limitado y restauración en una base ficticia.
+
+Esta entrega reduce el riesgo de manipulación por compromiso de la credencial DB del servidor web. El administrador del host, la cuenta de migraciones y la cuenta bootstrap conservan capacidad administrativa; copia independiente protegida, auditoría operativa y los otros requisitos clínicos siguen pendientes. MFA permanece diferido por decisión del propietario.

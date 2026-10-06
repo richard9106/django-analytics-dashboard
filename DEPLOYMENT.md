@@ -21,6 +21,10 @@ SENTRY_TRACES_SAMPLE_RATE=0.05
 POSTGRES_DB=dashboard
 POSTGRES_USER=dashboard_user
 POSTGRES_PASSWORD=change-me-to-a-strong-password
+POSTGRES_APP_USER=nuviamy_app
+POSTGRES_APP_PASSWORD=REPLACE_WITH_A_DISTINCT_RANDOM_PASSWORD
+POSTGRES_MIGRATION_USER=nuviamy_migration
+POSTGRES_MIGRATION_PASSWORD=REPLACE_WITH_ANOTHER_RANDOM_PASSWORD
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 
@@ -72,7 +76,7 @@ with DEBUG enabled, a weak Django secret, missing or placeholder database
 credentials, SQLite, missing/wildcard allowed hosts, HTTP CSRF origins,
 disabled HTTPS/cookie controls, no HSTS, or a missing/invalid Fernet key.
 Docker Compose always selects the production environment and requires the
-three secrets to be present. Summernote attachment uploads are disabled because
+application secrets and dedicated database credentials to be present. Summernote attachment uploads are disabled because
 they lack Practice/client authorization; use the Documents workspace for uploads. Local non-Docker development can use
 `DJANGO_ENVIRONMENT=development` and SQLite as described in `.env.example`.
 
@@ -87,7 +91,9 @@ For a new installation, build and validate before starting the app:
 docker compose build web
 docker compose up -d db
 docker compose run --rm --no-deps web python manage.py check --deploy --fail-level WARNING
-docker compose run --rm --no-deps web python manage.py migrate --noinput
+docker compose run --rm --no-deps migrate
+docker compose run --rm --no-deps migrate python -m ops.postgres_roles grant
+docker compose run --rm --no-deps web python -m ops.postgres_roles verify
 docker compose up -d --no-build
 docker compose exec web python manage.py collectstatic --noinput
 docker compose exec web python manage.py createsuperuser
@@ -365,3 +371,36 @@ The audit 0003 and clinical 0005 migrations install PostgreSQL triggers rejectin
 Database owners can alter triggers. Separate application and migration/owner privileges and independently protected audit storage remain required operational work. These protections do not establish legal retention periods or WORM storage. Historical actor snapshots use the username present at migration time.
 
 `manage.py flush` on an existing production schema is intentionally blocked. Restore backups into a fresh isolated database, verify the restored schema includes enabled guards, and validate recovery before switching traffic. Do not truncate evidence to make a restore pass. See `docs/clinical-readiness-us.md` for remaining clinical launch gates.
+
+## Dedicated PostgreSQL roles
+
+`POSTGRES_USER` / `POSTGRES_PASSWORD` remain the bootstrap administrative credentials used only by the database container and host backup/restore operations. Preserve them on existing installations. The web container now receives only `POSTGRES_APP_USER` / `POSTGRES_APP_PASSWORD` as its Django database credentials. Set separate `POSTGRES_MIGRATION_USER` / `POSTGRES_MIGRATION_PASSWORD` for the maintenance-profile `migrate` service. Use distinct randomly generated passwords of at least 32 characters, stored in the protected host `.env`, never Git or command arguments.
+
+Provision the roles using `python -m ops.postgres_roles bootstrap --env-file /run/role-bootstrap.env` in an administrative, short-lived container with the protected host `.env` mounted read-only at that path. Its connection must use the bootstrap credentials and the Compose database hostname. The script reads only database credential fields from the file, validates distinct role names and passwords, uses SCRAM password verifiers, and changes ownership only within the current application's public schema/database. It does not use cluster-wide `REASSIGN OWNED` or modify patient records. New installations must provision before running their first migrations; existing installations should take a protected backup and rehearse the transition in an isolated database first.
+
+The runtime role has no superuser, role/database creation, replication, bypass-RLS, owner, role-membership, schema creation or temporary-table rights. Ordinary application tables allow SELECT/INSERT/UPDATE/DELETE; audit allows only SELECT/INSERT; migration history allows only SELECT. Sequences allow USAGE/SELECT, never UPDATE. Audit and clinical triggers remain enabled. The migration role owns the database/schema/application objects and can run DDL, but has no cluster superuser/role/database-creation privileges. Administrative backup/restore still uses the database container's original bootstrap role.
+
+Provisioning command (protected host `.env` contains bootstrap and dedicated credentials):
+
+```bash
+docker compose run --rm --no-deps -v "$PWD/.env:/run/role-bootstrap.env:ro" web python -m ops.postgres_roles bootstrap --env-file /run/role-bootstrap.env
+```
+
+Release procedure after provisioning:
+
+```bash
+docker compose build web
+docker compose run --rm --no-deps web python manage.py check --deploy --fail-level WARNING
+docker compose run --rm --no-deps migrate
+docker compose run --rm --no-deps migrate python -m ops.postgres_roles grant
+docker compose run --rm --no-deps web python -m ops.postgres_roles verify
+docker compose up -d --no-build
+```
+
+Default privileges provide runtime access to future migration-created ordinary tables/sequences. Reapply `grant` after every migration so audit and migration-history exceptions remain correct and new guard functions are accessible. `verify` blocks the release when runtime privileges, ownership or guards differ from policy. Do not use `web manage.py migrate` or give the runtime role DDL to work around failures.
+
+Restore into a fresh isolated database using administrative backup tooling; provision ownership/runtime grants on that restored database and run verification before switching the application. CI tests a fresh migration-role install, authenticated runtime writes/reads, forbidden DDL/role changes/audit mutations, future-object defaults, and a PostgreSQL custom-format dump/restore with guard and actor-snapshot verification.
+
+Host root/Docker operators and the migration/bootstrap credentials still have administrative control. This separation prevents the web database credential from disabling guards; it is not WORM storage or isolation from the host administrator. Independently protected audit copies and complete disaster-recovery/legal retention policies remain pending.
+
+When rolling back application code/image, preserve the new runtime credential isolation and role-grant verification; do not restore the former web configuration that exposed the bootstrap account.

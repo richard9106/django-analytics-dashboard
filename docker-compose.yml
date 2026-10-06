@@ -15,9 +15,10 @@ services:
       retries: 5
 
   web:
+    image: nuviamy-web:local
     build: .
     restart: unless-stopped
-    environment:
+    environment: &web_environment
       DJANGO_ENVIRONMENT: production
       DJANGO_MFA_REQUIRED: ${DJANGO_MFA_REQUIRED:-false}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
@@ -28,8 +29,8 @@ services:
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.05}
       POSTGRES_DB: ${POSTGRES_DB:-dashboard}
-      POSTGRES_USER: ${POSTGRES_USER:-dashboard_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       DJANGO_STORAGE_BACKEND: ${DJANGO_STORAGE_BACKEND:-}
@@ -76,6 +77,19 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
+
+  migrate:
+    image: nuviamy-web:local
+    profiles: [maintenance]
+    environment:
+      <<: *web_environment
+      POSTGRES_USER: ${POSTGRES_MIGRATION_USER:?POSTGRES_MIGRATION_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?POSTGRES_MIGRATION_PASSWORD is required}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER is required}
+    command: [python, manage.py, migrate, --noinput]
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
