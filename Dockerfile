@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Package the manifest and assets in the image used by every web container.
+RUN DJANGO_ENVIRONMENT=test DJANGO_DEBUG=true python manage.py collectstatic --noinput
+
 EXPOSE 8000
 
 CMD ["gunicorn", "config.wsgi:application", "--config", "gunicorn.conf.py"]

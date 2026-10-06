@@ -131,3 +131,10 @@ los formularios y redirecciones sí se ejercitan mediante el cliente de pruebas 
 Suite completa final: 383 tests correctos con PostgreSQL 16 (110,707 segundos en
 cuatro procesos). Las 38 pruebas de seguridad pasan también dentro de una imagen
 Docker limpia con el manifiesto estático generado, sin depender de la .venv local.
+
+La verificación posterior al despliegue detectó que la generación de estáticos en un
+contenedor temporal no persistía: Compose no monta un volumen staticfiles. Se
+recuperaron los archivos en el contenedor activo y se corrigió Dockerfile para
+incluirlos en la imagen. CI comprueba los assets con DEBUG=false en un contenedor
+nuevo, sin collectstatic adicional, y el despliegue comprueba el JavaScript de
+sesiones además de /health/. La salud HTTP por sí sola no detectaba este fallo.
