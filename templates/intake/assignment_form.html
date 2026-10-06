@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Intake | NuviaMy</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="app-page"><div class="app-shell">{% include 'partials/sidebar.html' with card_title='Client intake' card_text='Collect client information and review it before their session.' %}<main class="app-main intake-page">
+
+<section class="action-bar"><a class="btn btn-secondary" href="{% url 'intake:list' %}">Back to intake</a></section><section class="panel intake-form-panel"><div class="panel-head"><div><p class="eyebrow">Client intake</p><h1>Assign intake</h1><p>Select a client and an available template.</p></div></div><form class="appointment-form" method="post">{% csrf_token %}{% include 'intake/partials/assignment_fields.html' %}<div class="form-actions"><a class="btn btn-secondary" href="{% url 'intake:list' %}">Cancel</a><button class="btn btn-primary" type="submit">Assign intake</button></div></form></section>
+</main></div></body></html>

@@ -50,7 +50,7 @@
         <div class="panel-head"><div><h2>Intake packets</h2><p>Complete forms assigned by your practice.</p></div></div>
         <div class="package-list">
           {% for intake in pending_intakes %}
-            <div class="package-card"><div class="client-card-head"><strong>{{ intake.template.name }}</strong><span class="badge warning">Pending</span></div><p>{{ intake.template.description|default:'Please complete this packet before your next visit.' }}</p><a class="inline-link" href="{% url 'portal:intake_complete' intake.pk %}">Complete intake</a></div>
+            <div class="package-card"><div class="client-card-head"><strong>{{ intake.packet_name }}</strong><span class="badge warning">Pending</span></div><p>{{ intake.packet_description|default:'Please complete this packet before your next visit.' }}</p><a class="inline-link" href="{% url 'portal:intake_complete' intake.pk %}">Complete intake</a></div>
           {% empty %}<p class="empty-state">No intake packets pending.</p>{% endfor %}
         </div>
       </article>

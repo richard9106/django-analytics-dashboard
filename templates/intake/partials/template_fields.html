@@ -1,0 +1,7 @@
+{% if form.errors %}<div class="form-error" role="alert" tabindex="-1"><strong>Please review the fields below.</strong>{{ form.non_field_errors }}</div>{% endif %}
+<div class="field-grid two">
+  <div class="field"><label for="{{ form.name.id_for_label }}">Template name</label>{{ form.name }}{{ form.name.errors }}</div>
+  <div class="field checkbox-field intake-checkbox"><label for="{{ form.active.id_for_label }}">{{ form.active }} <span>Available for new assignments</span></label>{{ form.active.errors }}</div>
+  <div class="field full"><label for="{{ form.description.id_for_label }}">Introduction for the client <span class="intake-optional">(optional)</span></label>{{ form.description }}{{ form.description.errors }}</div>
+  <div class="field full"><label for="{{ form.question_lines.id_for_label }}">Questions</label><p>Write one question per line. Clients answer each question in their own words.</p>{{ form.question_lines }}{{ form.question_lines.errors }}</div>
+</div>

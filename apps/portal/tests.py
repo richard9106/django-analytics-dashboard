@@ -610,6 +610,149 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(assignment.status, ClientIntakeAssignment.Status.REVIEWED)
         self.assertEqual(assignment.reviewed_by, practice_user)
 
+    def intake_owner_fixture(self):
+        portal_user, practice, therapist, client, access = self.create_portal_user()
+        owner = get_user_model().objects.create_user(username="intake-owner")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        template = IntakePacketTemplate.objects.create(practice=practice, name="Initial questionnaire", questions=["Original question?"])
+        self.client.force_login(owner)
+        return portal_user, owner, practice, client, template
+
+    def test_intake_template_edit_preserves_assigned_questions_and_portal_submission(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template)
+        response = self.client.post(reverse("intake:template_edit", args=[template.pk]), {
+            "name": "Updated questionnaire", "description": "New description", "active": "on", "question_lines": "New question?\nAnother question?",
+        })
+        self.assertRedirects(response, reverse("intake:list"))
+        template.refresh_from_db()
+        assignment.refresh_from_db()
+        self.assertEqual(template.questions, ["New question?", "Another question?"])
+        self.assertEqual(assignment.packet_questions, ["Original question?"])
+        self.assertEqual(assignment.packet_name, "Initial questionnaire")
+        next_assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template)
+        self.assertEqual(next_assignment.packet_questions, template.questions)
+        self.client.force_login(portal_user)
+        response = self.client.get(reverse("portal:intake_complete", args=[assignment.pk]))
+        self.assertContains(response, "Original question?")
+        self.assertNotContains(response, "Another question?")
+        self.client.post(reverse("portal:intake_complete", args=[assignment.pk]), {"question_0": "Original answer"})
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.answers["question_0"]["question"], "Original question?")
+
+    def test_intake_invalid_template_forms_keep_errors_and_values(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        data = {"name": "Preserved name", "description": "Preserved description", "question_lines": ""}
+        for url in [reverse("intake:template_create"), reverse("intake:template_edit", args=[template.pk])]:
+            response = self.client.post(url, data)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, "intake/template_form.html")
+            self.assertTrue(response.context["form"].errors)
+            self.assertContains(response, "Preserved description")
+        template.refresh_from_db()
+        self.assertEqual(template.name, "Initial questionnaire")
+
+    def test_intake_duplicate_template_names_show_field_errors(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        other = IntakePacketTemplate.objects.create(practice=practice, name="Another template", questions=["Question?"])
+        data = {"name": template.name, "active": "on", "question_lines": "Changed question?"}
+        for url in [reverse("intake:template_create"), reverse("intake:template_edit", args=[other.pk])]:
+            response = self.client.post(url, data)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("name", response.context["form"].errors)
+        other.refresh_from_db()
+        self.assertEqual(other.name, "Another template")
+
+    def test_intake_edit_and_responses_are_practice_scoped(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        other_practice = Practice.objects.create(name="Other clinic")
+        other_client = Client.objects.create(practice=other_practice, first_name="Other", last_name="Patient")
+        other_template = IntakePacketTemplate.objects.create(practice=other_practice, name="Hidden", questions=["Hidden question?"])
+        assignment = ClientIntakeAssignment.objects.create(practice=other_practice, client=other_client, template=other_template)
+        for url in [reverse("intake:template_edit", args=[other_template.pk]), reverse("intake:responses", args=[assignment.pk])]:
+            self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(reverse("intake:template_edit", args=[other_template.pk]), {}).status_code, 404)
+
+    def test_intake_read_only_user_cannot_edit_or_review(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        reader = get_user_model().objects.create_user(username="intake-reader")
+        UserProfile.objects.create(user=reader, practice=practice, role=UserProfile.Role.THERAPIST,
+                                  permissions={"intake": {"view": True, "create": False, "edit": False, "delete": False}})
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template,
+                         status=ClientIntakeAssignment.Status.SUBMITTED, answers={"question_0": {"question": "Original question?", "answer": "Private response"}})
+        self.client.force_login(reader)
+        response = self.client.get(reverse("intake:list"))
+        self.assertNotContains(response, "Private response")
+        self.assertFalse(response.context["can_edit_intake"])
+        response = self.client.get(reverse("intake:responses", args=[assignment.pk]))
+        self.assertContains(response, "Private response")
+        self.assertFalse(response.context["can_review"])
+        self.assertRedirects(self.client.post(reverse("intake:template_edit", args=[template.pk]), {}), reverse("dashboard"))
+        self.assertRedirects(self.client.post(reverse("intake:review", args=[assignment.pk])), reverse("dashboard"))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, ClientIntakeAssignment.Status.SUBMITTED)
+
+    def test_intake_review_requires_submission_and_is_idempotent(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template)
+        url = reverse("intake:review", args=[assignment.pk])
+        self.client.post(url)
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, ClientIntakeAssignment.Status.ASSIGNED)
+        self.assertIsNone(assignment.reviewed_at)
+        assignment.status = ClientIntakeAssignment.Status.SUBMITTED
+        assignment.save(update_fields=["status"])
+        self.client.post(url)
+        assignment.refresh_from_db()
+        reviewed_at = assignment.reviewed_at
+        self.client.post(url)
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.reviewed_at, reviewed_at)
+
+    def test_intake_filters_paginate_without_exposing_answers(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        for index in range(23):
+            ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template)
+        submitted = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template,
+                      status=ClientIntakeAssignment.Status.SUBMITTED, answers={"question_0": {"question": "Original question?", "answer": "Secret multiline\nresponse"}})
+        response = self.client.get(reverse("intake:list"))
+        self.assertEqual(len(response.context["assignments"]), 20)
+        self.assertEqual(response.context["intake_counts"]["total"], 24)
+        self.assertNotContains(response, "Secret multiline")
+        response = self.client.get(reverse("intake:list"), {"status": "submitted", "q": "Initial"})
+        self.assertEqual(list(response.context["assignments"]), [submitted])
+        response = self.client.get(reverse("intake:responses", args=[submitted.pk]))
+        self.assertEqual(response.context["response_items"][0]["answer"], "Secret multiline\nresponse")
+        self.assertTrue(response.context["can_review"])
+
+    def test_intake_snapshot_backfill_preserves_original_answer_questions(self):
+        from importlib import import_module
+        from django.apps import apps
+        from django.db import connection
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        assignment = ClientIntakeAssignment.objects.create(practice=practice, client=client, template=template,
+                      status=ClientIntakeAssignment.Status.SUBMITTED,
+                      answers={"question_1": {"question": "Second original?", "answer": "Second"},
+                               "question_0": {"question": "First original?", "answer": "First"}})
+        ClientIntakeAssignment.objects.filter(pk=assignment.pk).update(template_snapshot={})
+        migration = import_module('apps.portal.migrations.0012_clientintakeassignment_template_snapshot')
+        migration.snapshot_existing_packets(apps, SimpleNamespace(connection=connection))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.packet_questions, ["First original?", "Second original?"])
+        response = self.client.get(reverse("intake:responses", args=[assignment.pk]))
+        self.assertEqual(len(response.context["response_items"]), 2)
+        self.assertContains(response, "Second original?")
+
+    def test_intake_inactive_template_cannot_be_assigned_and_errors_visible(self):
+        portal_user, owner, practice, client, template = self.intake_owner_fixture()
+        template.active = False
+        template.save(update_fields=["active"])
+        response = self.client.post(reverse("intake:assign"), {"client": client.pk, "template": template.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "intake/assignment_form.html")
+        self.assertIn("template", response.context["form"].errors)
+        self.assertFalse(ClientIntakeAssignment.objects.exists())
+
     def test_practice_dashboard_shows_portal_request_task(self):
         user, practice, _therapist, client, _access = self.create_portal_user()
         practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")

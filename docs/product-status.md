@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Intake now has a paginated assignment queue with patient/form search, status totals and filters, a template library with question previews and permission-aware editing, and a separate numbered response review page. Template changes apply only to future assignments: packet content is snapshotted on assignment and existing responses are preserved by a data migration. Invalid create/edit/assign forms retain entered values and field errors; pending packets cannot be marked reviewed and repeat review actions preserve the original reviewer/date. Specialized UX review retained native dialogs, compact checkboxes and mobile layouts.
+
 - Diagnosis creation/editing now opens native dialogs inside the patient record, reviewed by the specialized UX designer. Patient context stays fixed, the checkbox uses compact sizing with a large clickable label, and validation errors preserve entered values and reopen the dialog. Standalone fallback pages retain diagnosis-specific copy and corrected Boolean controls.
 
 - Moved diagnosis management into the patient workspace and removed the practice-wide diagnosis panel/create/edit dialogs from treatment plans. Plan diagnosis choices follow the selected patient in both browser and server validation. Existing linked inactive diagnoses remain selectable on edit. Options load only on opening a form and are reused within the page; a CI JavaScript check verifies switching patients, late responses, existing inactive links and caching.

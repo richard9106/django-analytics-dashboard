@@ -1,50 +1,24 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Intake | NuviaMy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
-</head>
-<body class="app-page">
-  <div class="app-shell">
-    {% include 'partials/sidebar.html' with card_title='Client intake' card_text='Assign intake packets and review submitted client forms.' %}
-    <main class="app-main">
-      <section class="action-bar"><div class="quick-actions"><button class="btn btn-primary" type="button" data-modal-target="template-create-modal">+ Intake template</button><button class="btn btn-secondary" type="button" data-modal-target="assignment-create-modal">Assign packet</button></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
-      <header class="topbar compact-topbar"><div><p class="eyebrow">Intake</p><h1>Client Intake</h1><p>Create reusable intake packets, assign them to clients, and review portal submissions.</p></div></header>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Intake | NuviaMy</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="app-page"><div class="app-shell">{% include 'partials/sidebar.html' with card_title='Client intake' card_text='Collect client information and review it before their session.' %}<main class="app-main intake-page">
 
-      <section class="billing-grid">
-        <article class="panel">
-          <div class="panel-head"><div><h2>Assignments</h2><p>Client-facing packets and submission status.</p></div><span class="badge brand">{{ assignments|length }}</span></div>
-          <div class="package-list">
-            {% for assignment in assignments %}
-              <div class="package-card">
-                <div class="client-card-head"><strong>{{ assignment.client }}</strong><span class="badge {% if assignment.status == 'submitted' %}warning{% elif assignment.status == 'reviewed' %}success{% else %}brand{% endif %}">{{ assignment.get_status_display }}</span></div>
-                <p>{{ assignment.template.name }} · Assigned {{ assignment.created_at|date:"M j, Y" }}{% if assignment.submitted_at %} · Submitted {{ assignment.submitted_at|date:"M j, Y" }}{% endif %}</p>
-                {% if assignment.answers %}<div class="sync-panel">{% for key, item in assignment.answers.items %}<p><strong>{{ item.question }}</strong><br>{{ item.answer }}</p>{% endfor %}</div>{% endif %}
-                {% if assignment.status == 'submitted' %}<form method="post" action="{% url 'intake:review' assignment.pk %}">{% csrf_token %}<button class="inline-button" type="submit">Mark reviewed</button></form>{% endif %}
-              </div>
-            {% empty %}<p class="empty-state">No intake packets assigned yet.</p>{% endfor %}
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head"><div><h2>Templates</h2><p>Reusable question sets for onboarding and consent workflows.</p></div><span class="badge brand">{{ templates|length }}</span></div>
-          <div class="package-list">
-            {% for template in templates %}
-              <div class="package-card"><div class="client-card-head"><strong>{{ template.name }}</strong><span class="badge {% if template.active %}success{% else %}brand{% endif %}">{% if template.active %}Active{% else %}Inactive{% endif %}</span></div><p>{{ template.description|default:'No description' }}</p><p>{{ template.questions|length }} questions</p></div>
-            {% empty %}<p class="empty-state">No intake templates yet.</p>{% endfor %}
-          </div>
-        </article>
-      </section>
-
-      <dialog class="modal-dialog" id="template-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Intake</p><h2>New intake template</h2></div><button class="modal-close" type="button" data-modal-close>×</button></div><form class="appointment-form" method="post" action="{% url 'intake:template_create' %}">{% csrf_token %}<div class="field-grid"><div class="field"><label>Name</label>{{ template_form.name }}</div><div class="field checkbox-field"><label>{{ template_form.active }} Active</label></div><div class="field full"><label>Description</label>{{ template_form.description }}</div><div class="field full"><label>Questions</label>{{ template_form.question_lines }}<small>{{ template_form.question_lines.help_text }}</small></div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create template</button></div></form></div></dialog>
-      <dialog class="modal-dialog" id="assignment-create-modal"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Intake</p><h2>Assign packet</h2></div><button class="modal-close" type="button" data-modal-close>×</button></div><form class="appointment-form" method="post" action="{% url 'intake:assign' %}">{% csrf_token %}<div class="field-grid"><div class="field"><label>Client</label>{{ assignment_form.client }}</div><div class="field"><label>Template</label>{{ assignment_form.template }}</div></div><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Assign packet</button></div></form></div></dialog>
-    </main>
-  </div>
-  <script>document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});</script>
-</body>
-</html>
+<section class="action-bar"><div class="quick-actions">{% if can_create_intake %}<button class="btn btn-primary" type="button" data-modal-target="assignment-create-modal">Assign intake</button><button class="btn btn-secondary" type="button" data-modal-target="template-create-modal">New template</button>{% endif %}</div><a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a></section>
+<header class="topbar compact-topbar"><div><p class="eyebrow">Before the first session</p><h1>Client intake</h1><p>Create a question set, assign it to a client, then review their responses here.</p></div></header>
+<section class="intake-summary" aria-label="Intake assignment totals">
+  <a href="?status=assigned"><strong>{{ intake_counts.assigned }}</strong><span>Awaiting client</span></a>
+  <a href="?status=submitted"><strong>{{ intake_counts.submitted }}</strong><span>Ready to review</span></a>
+  <a href="?status=reviewed"><strong>{{ intake_counts.reviewed }}</strong><span>Reviewed</span></a>
+</section>
+<section class="intake-layout">
+<article class="panel"><div class="panel-head"><div><h2>Client forms</h2><p>Follow each form from assignment to review.</p></div><span class="badge brand">{{ page_obj.paginator.count }} matching</span></div>
+<form class="intake-filters" method="get"><div class="field"><label for="intake-search">Search client or form</label><input id="intake-search" name="q" value="{{ q }}" type="search" placeholder="Name or template"></div><div class="field"><label for="intake-status">Status</label><select id="intake-status" name="status"><option value="">All statuses</option><option value="assigned" {% if status == 'assigned' %}selected{% endif %}>Awaiting client</option><option value="submitted" {% if status == 'submitted' %}selected{% endif %}>Ready to review</option><option value="reviewed" {% if status == 'reviewed' %}selected{% endif %}>Reviewed</option></select></div><button class="btn btn-secondary" type="submit">Filter</button>{% if q or status %}<a class="inline-link" href="{% url 'intake:list' %}">Clear</a>{% endif %}</form>
+<div class="package-list">{% for assignment in assignments %}<article class="package-card intake-assignment"><div class="client-card-head"><strong>{{ assignment.client }}</strong><span class="badge {% if assignment.status == 'submitted' %}warning{% elif assignment.status == 'reviewed' %}success{% else %}brand{% endif %}">{% if assignment.status == 'assigned' %}Awaiting client{% elif assignment.status == 'submitted' %}Ready to review{% else %}Reviewed{% endif %}</span></div><h3>{{ assignment.packet_name }}</h3><p>Assigned {{ assignment.created_at|date:"M j, Y" }}{% if assignment.submitted_at %} · Submitted {{ assignment.submitted_at|date:"M j, Y" }}{% endif %}{% if assignment.reviewed_at %} · Reviewed {{ assignment.reviewed_at|date:"M j, Y" }}{% endif %}</p><div class="intake-card-actions">{% if assignment.status != 'assigned' %}<a class="btn {% if assignment.status == 'submitted' %}btn-primary{% else %}btn-secondary{% endif %}" href="{% url 'intake:responses' assignment.pk %}">{% if assignment.status == 'submitted' %}Review responses{% else %}View responses{% endif %}</a>{% else %}<span class="intake-waiting">Responses appear after the client submits the form.</span>{% endif %}{% if workspace_permissions.clients.view %}<a class="inline-link" href="{% url 'clients:detail' assignment.client_id %}">Client record</a>{% endif %}</div></article>{% empty %}<div class="empty-state"><h3>{% if q or status %}No forms match your filters{% else %}Start with a client intake{% endif %}</h3><p>{% if q or status %}Try a different name or clear the filters.{% else %}Create a reusable template, then assign it to a client with portal access.{% endif %}</p>{% if q or status %}<a class="btn btn-secondary" href="{% url 'intake:list' %}">Show all forms</a>{% endif %}</div>{% endfor %}</div>
+{% if page_obj.has_other_pages %}<nav class="intake-pagination" aria-label="Assignment pages">{% if page_obj.has_previous %}<a class="btn btn-secondary" href="?q={{ q|urlencode }}&amp;status={{ status|urlencode }}&amp;page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-secondary" href="?q={{ q|urlencode }}&amp;status={{ status|urlencode }}&amp;page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+</article>
+<article class="panel intake-templates"><div class="panel-head"><div><h2>Template library</h2><p>Reusable question sets for new clients.</p></div><span class="badge brand">{{ templates|length }}</span></div><p class="intake-hint">Editing a template affects future assignments. Already assigned forms keep their original questions.</p><div class="package-list">{% for template in templates %}<article class="package-card"><div class="client-card-head"><strong>{{ template.name }}</strong><span class="badge {% if template.active %}success{% else %}brand{% endif %}">{% if template.active %}Available{% else %}Inactive{% endif %}</span></div>{% if template.description %}<p>{{ template.description|truncatechars:180 }}</p>{% endif %}<p>{{ template.questions|length }} question{{ template.questions|length|pluralize }}</p><details class="intake-question-preview"><summary>Preview questions</summary><ol>{% for question in template.questions %}<li>{{ question }}</li>{% endfor %}</ol></details>{% if can_edit_intake %}<a class="btn btn-secondary" href="{% url 'intake:template_edit' template.pk %}">Edit template</a>{% endif %}</article>{% empty %}<div class="empty-state"><h3>No templates yet</h3><p>Start with questions you usually ask before the first appointment.</p>{% if can_create_intake %}<button class="btn btn-primary" type="button" data-modal-target="template-create-modal">Create your first template</button>{% endif %}</div>{% endfor %}</div></article>
+</section>
+{% if can_create_intake %}
+<dialog class="modal-dialog intake-dialog" id="template-create-modal" aria-labelledby="template-create-title"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Template library</p><h2 id="template-create-title">New intake template</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close template form">×</button></div><form class="appointment-form" method="post" action="{% url 'intake:template_create' %}">{% csrf_token %}{% include 'intake/partials/template_fields.html' with form=template_form %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create template</button></div></form></div></dialog>
+<dialog class="modal-dialog intake-dialog" id="assignment-create-modal" aria-labelledby="assignment-create-title"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Client intake</p><h2 id="assignment-create-title">Assign intake</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close assignment form">×</button></div><form class="appointment-form" method="post" action="{% url 'intake:assign' %}">{% csrf_token %}{% include 'intake/partials/assignment_fields.html' with form=assignment_form %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Assign intake</button></div></form></div></dialog>
+{% endif %}
+</main></div></body></html>
