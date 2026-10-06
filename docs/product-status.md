@@ -54,7 +54,7 @@ This document captures the current product state after the recent UX, billing, a
 - Availability is practice-wide, not therapist-specific. If individual clinicians need different schedules, add therapist-scoped overrides later.
 - Public booking is validated against availability, but there is not yet a client-facing slot picker that only shows available times.
 - Insurance does not yet include claims submission, ERA/EOB import, eligibility checks, or denial management.
-- The goal is US clinical use with demonstrable HIPAA compliance. The first security delivery upgrades Django LTS, guards production startup, and strengthens CI/deployment. MFA, BAA/vendor validation, protected audit trails, retention, incident response, and operating policies remain prerequisites for real patient data; see `clinical-readiness-us.md`.
+- The goal is US clinical use with demonstrable HIPAA compliance. The first security delivery upgrades Django LTS, guards production startup, and strengthens CI/deployment. Staff MFA, recovery, shared rate limits, and session expiry/revocation are implemented with security boundary tests. BAA/vendor validation, protected audit trails, retention, incident response, and operating policies remain prerequisites for real patient data; see `clinical-readiness-us.md`.
 
 ## Recommended Next Work
 

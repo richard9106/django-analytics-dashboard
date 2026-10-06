@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.models import UserProfile
@@ -11,6 +11,7 @@ from apps.clients.models import Client
 from apps.practices.models import Practice, TherapistProfile
 
 
+@override_settings(MFA_REQUIRED=False)
 class AuditLogViewTests(TestCase):
     def setUp(self):
         self.practice = Practice.objects.create(name='Nuvia Therapy')

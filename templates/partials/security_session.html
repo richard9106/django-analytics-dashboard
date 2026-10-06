@@ -1,0 +1,3 @@
+{% load static %}{% if request.user.is_authenticated and security_deadline_seconds != None %}
+<script defer src="{% static 'security-session.js' %}" data-pending="{{ security_pending|yesno:'true,false' }}" data-deadline-seconds="{{ security_deadline_seconds }}" data-idle-seconds="{{ security_idle_seconds }}"></script>
+{% endif %}

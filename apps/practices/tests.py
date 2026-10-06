@@ -20,6 +20,7 @@ class PracticeModelTests(TestCase):
         self.assertEqual(second.public_booking_slug, "nuviamy-wellness-2")
 
 
+@override_settings(MFA_REQUIRED=False)
 class IntegrationSettingsTests(TestCase):
     def create_practice_user(self):
         user = get_user_model().objects.create_user(username="owner", password="StrongPass123!")

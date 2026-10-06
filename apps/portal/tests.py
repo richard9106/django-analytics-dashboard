@@ -42,6 +42,7 @@ class ClientPortalAccessModelTests(TestCase):
         self.assertTrue(access.is_active)
 
 
+@override_settings(MFA_REQUIRED=False)
 class ClientPortalViewTests(TestCase):
     def setUp(self):
         cache.clear()

@@ -14,5 +14,5 @@
     <section><h2>Your choices</h2><p>You can clear or block cookies in your browser. Blocking session or CSRF cookies will prevent sign-in and protected forms from working. Clearing local storage will make the guided tour available again.</p></section>
     <section><h2>Contact</h2><p>For questions about cookies or privacy, use the <a class="inline-link" href="{% url 'support_contact' %}">NuviaMy support form</a>.</p></section>
   </main>
-</body>
+{% include 'partials/security_session.html' %}</body>
 </html>

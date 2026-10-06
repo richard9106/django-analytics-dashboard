@@ -16,6 +16,7 @@ from apps.practices.models import Practice, TherapistProfile
 from apps.dashboard.models import Task
 
 
+@override_settings(MFA_REQUIRED=False)
 class DashboardTests(TestCase):
     def setUp(self):
         cache.clear()

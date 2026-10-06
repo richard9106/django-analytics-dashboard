@@ -181,6 +181,7 @@ class BillingModelTests(TestCase):
             usage.full_clean()
 
 
+@override_settings(MFA_REQUIRED=False)
 class BillingViewTests(TestCase):
     def create_practice_user(self, username="drsmith", practice_name="NuviaMy Wellness"):
         user = get_user_model().objects.create_user(

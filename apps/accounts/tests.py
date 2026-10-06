@@ -76,6 +76,7 @@ class UserProfileModelTests(TestCase):
         self.assertEqual(subscription.internal_user_count, 1)
 
 
+@override_settings(MFA_REQUIRED=False)
 class PracticeSignupViewTests(TestCase):
     def valid_payload(self, **overrides):
         data = {
@@ -151,6 +152,7 @@ class PracticeSignupViewTests(TestCase):
         self.assertContains(response, "A therapist profile with this license already exists")
 
 
+@override_settings(MFA_REQUIRED=False)
 class ProfileSettingsViewTests(TestCase):
     def create_practice_user(self):
         user = get_user_model().objects.create_user(
@@ -300,6 +302,7 @@ class ProfileSettingsViewTests(TestCase):
         mock_invoice_list.assert_called_once_with(customer="cus_test", limit=10)
 
 
+@override_settings(MFA_REQUIRED=False)
 class TeamManagementViewTests(TestCase):
     def create_practice_user(self, role=UserProfile.Role.OWNER, plan=PracticeSubscription.Plan.GROUP):
         user = get_user_model().objects.create_user(

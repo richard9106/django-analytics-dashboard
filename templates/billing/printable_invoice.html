@@ -40,5 +40,5 @@
     <table><thead><tr><th>Description</th><th>Date</th><th>Amount</th></tr></thead><tbody><tr><td>{% if invoice.package %}{{ invoice.package.name }}{% elif invoice.appointment %}Therapy appointment{% else %}Professional services{% endif %}{% if invoice.notes %}<br><span class="muted">{{ invoice.notes }}</span>{% endif %}</td><td>{% if invoice.appointment %}{{ invoice.appointment.starts_at|date:"M j, Y" }}{% else %}{{ invoice.created_at|date:"M j, Y" }}{% endif %}</td><td>${{ invoice.amount }}</td></tr></tbody></table>
      <section class="box" aria-label="Payment breakdown"><h2>Payment breakdown</h2><p>Invoice total: ${{ invoice.amount }}</p><p>Payments received: ${{ invoice.payment_total }}</p><p class="total">Balance due: ${{ invoice.balance_due }}</p>{% if invoice.payments.all %}<table><thead><tr><th>Payment date</th><th>Method</th><th>Amount</th></tr></thead><tbody>{% for payment in invoice.payments.all %}<tr><td>{{ payment.paid_at|date:"M j, Y" }}</td><td>{{ payment.get_method_display }}</td><td>${{ payment.amount }}</td></tr>{% endfor %}</tbody></table>{% endif %}</section>
   </main>
-</body>
+{% include 'partials/security_session.html' %}</body>
 </html>

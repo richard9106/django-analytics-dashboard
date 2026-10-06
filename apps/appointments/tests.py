@@ -5,7 +5,7 @@ from urllib.error import HTTPError
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -204,6 +204,7 @@ class AppointmentModelTests(TestCase):
         self.assertNotIn(later, list(due_reminder_appointments()))
 
 
+@override_settings(MFA_REQUIRED=False)
 class AppointmentViewTests(TestCase):
     def create_practice_user(self, username='drsmith', practice_name='Nuvia Wellness'):
         user = get_user_model().objects.create_user(

@@ -17,7 +17,7 @@ The product goal is real clinical use in the United States with demonstrable HIP
 
 The current version includes these working modules:
 
-- `accounts`: signup, email-based login/logout, password recovery, editable profiles with optional photos, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary/custom-password invitations, Gmail/SMTP delivery, granular therapist permissions, and active-user billing quantity sync.
+- `accounts`: signup, email-based login/logout, mandatory staff TOTP MFA, single-use recovery codes, account-wide session revocation, idle/absolute session limits, sensitive-action reauthentication, password recovery, editable profiles with optional photos, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary/custom-password invitations, Gmail/SMTP delivery, granular therapist permissions, and active-user billing quantity sync.
 - `practices`: practice and therapist profile models, tenant scoping, integration settings, encrypted Google OAuth tokens, and Stripe Connect payout onboarding.
 - `clients`: Odoo-style tree directory, optional client photos, tenant-scoped client records, full Client Workspace, breadcrumbs, create/edit/delete popups, add note from client, assign package from client, and create appointment popup from client workspace.
 - `appointments`: Monday-start Day/Week/Month calendar, client search, therapist/status/type/sync filters, create/edit/delete popups, today highlighting, tenant-scoped scheduling, weekly recurrence, date-based availability from the calendar, weekly baseline availability, visible unavailable blocks, Google Calendar sync, and Gmail reminder command.

@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -93,6 +93,7 @@ class ClientModelTests(TestCase):
             client.full_clean()
 
 
+@override_settings(MFA_REQUIRED=False)
 class ClientViewTests(TestCase):
     def profile_photo(self):
         buffer = BytesIO()

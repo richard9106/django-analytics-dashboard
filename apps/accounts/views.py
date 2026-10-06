@@ -7,6 +7,7 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, PasswordResetView
 from django.core.mail import send_mail
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseBadRequest
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect
@@ -14,7 +15,6 @@ from django.urls import reverse, reverse_lazy
 from django.utils.crypto import get_random_string
 from django.views.generic import FormView, TemplateView
 from django.views import View
-from django.views.generic.edit import FormView
 
 from .access import get_practice_for_user, is_client_user, must_change_password, permission_redirect
 from .access import DEFAULT_THERAPIST_PERMISSIONS, PERMISSION_ACTIONS, PERMISSION_RESOURCES
@@ -26,6 +26,7 @@ from apps.appointments.reminders import get_gmail_integration
 from apps.rate_limit import PostRateLimitMixin
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, ProfileDetailsForm, TeamMemberCreateForm
 from .models import UserProfile
+from .security import requires_mfa, security_state
 from .export import build_practice_export
 
 
@@ -83,7 +84,11 @@ class RoleAwareLoginView(PostRateLimitMixin, LoginView):
             return reverse_lazy("force_password_change")
         if is_client_user(self.request.user):
             return reverse_lazy("portal:dashboard")
-        return super().get_success_url()
+        destination = super().get_success_url()
+        if requires_mfa(self.request.user):
+            self.request.session['security_next'] = destination
+            return reverse_lazy('mfa_challenge' if security_state(self.request.user).confirmed else 'mfa_setup')
+        return destination
 
 
 class RateLimitedPasswordResetView(PostRateLimitMixin, PasswordResetView):

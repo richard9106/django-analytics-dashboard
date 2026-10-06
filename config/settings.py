@@ -30,6 +30,7 @@ if SENTRY_DSN:
         environment=SENTRY_ENVIRONMENT,
         integrations=[DjangoIntegration()],
         send_default_pii=False,
+        include_local_variables=False,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
     )
 
@@ -65,6 +66,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'apps.accounts.security_middleware.SecuritySessionMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -80,6 +82,7 @@ TEMPLATES = [
             'django.contrib.messages.context_processors.messages',
             'apps.portal.context_processors.portal_request_badge',
             'apps.accounts.access.permission_context',
+            'apps.accounts.context_processors.security_context',
         ]},
     },
 ]
@@ -198,3 +201,12 @@ SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@nuviamy.com')
 
 if DJANGO_ENVIRONMENT == 'production':
     validate_production_settings(globals())
+
+# Staff MFA cannot be disabled through environment variables.
+MFA_REQUIRED = True
+SECURITY_IDLE_TIMEOUT = 15 * 60
+SECURITY_ABSOLUTE_TIMEOUT = 8 * 60 * 60
+SECURITY_CHALLENGE_TIMEOUT = 10 * 60
+SECURITY_REAUTH_TIMEOUT = 5 * 60
+SESSION_COOKIE_AGE = SECURITY_ABSOLUTE_TIMEOUT
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
