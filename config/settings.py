@@ -203,8 +203,8 @@ SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@nuviamy.com')
 if DJANGO_ENVIRONMENT == 'production':
     validate_production_settings(globals())
 
-# Staff MFA cannot be disabled through environment variables.
-MFA_REQUIRED = True
+# MFA is deferred during pre-client development; enable before clinical onboarding.
+MFA_REQUIRED = os.getenv('DJANGO_MFA_REQUIRED', 'false').strip().lower() == 'true'
 SECURITY_IDLE_TIMEOUT = 15 * 60
 SECURITY_ABSOLUTE_TIMEOUT = 8 * 60 * 60
 SECURITY_CHALLENGE_TIMEOUT = 10 * 60

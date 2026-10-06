@@ -19,6 +19,7 @@ services:
     restart: unless-stopped
     environment:
       DJANGO_ENVIRONMENT: production
+      DJANGO_MFA_REQUIRED: ${DJANGO_MFA_REQUIRED:-false}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-127.0.0.1,localhost,nuviamy.com,www.nuviamy.com}

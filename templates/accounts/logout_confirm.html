@@ -1,0 +1,5 @@
+{% extends 'accounts/security_base.html' %}
+{% block title %}Sign out{% endblock %}
+{% block content %}<h2>Sign out of NuviaMy?</h2><p>Confirm to end your current session.</p>
+<form method="post" class="login-form">{% csrf_token %}<button type="submit">Sign out</button></form>
+{% endblock %}

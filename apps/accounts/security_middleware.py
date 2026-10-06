@@ -78,7 +78,8 @@ class SecuritySessionMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         if getattr(request, '_security_authenticated', False):
             patch_cache_control(response, no_store=True, no_cache=True, private=True, max_age=0)
-            response['Referrer-Policy'] = 'no-referrer'
+            # Same-origin referrers are required for HTTPS CSRF checks when Origin is absent.
+            response['Referrer-Policy'] = 'same-origin'
         if request.path.startswith('/accounts/security/'):
             response['Content-Security-Policy'] = "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'"
         return response

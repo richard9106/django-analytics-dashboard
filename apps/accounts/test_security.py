@@ -261,7 +261,7 @@ class AccountSecurityTests(TestCase):
         UserProfile.objects.filter(user=self.user).update(role=UserProfile.Role.CLIENT)
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(reverse('security_settings')).status_code, 200)
-        self.assertRedirects(self.client.get(reverse('mfa_setup')), reverse('security_settings'), fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse('mfa_setup')), reverse('portal:dashboard'), fetch_redirect_response=False)
 
     def test_superuser_without_profile_requires_mfa(self):
         user = get_user_model().objects.create_superuser('synthetic-admin', password=self.password)

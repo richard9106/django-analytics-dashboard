@@ -11,6 +11,8 @@ NuviaMy helps mental health professionals manage their practice from one calm, s
 - Provide clients with a portal for appointments, documents, intake, and practice communication.
 - Implement and validate the technical and operational controls required for a clinical healthcare SaaS.
 
+During pre-client development, sign-in uses credentials only (`DJANGO_MFA_REQUIRED=false`). MFA is preserved for later activation and remains a clinical readiness requirement to validate before onboarding.
+
 The product goal is real clinical use in the United States with demonstrable HIPAA compliance. The current implementation is not yet approved for real patient data: technical controls, contracts, operating policies, and independent validation remain to be completed. HHS does not certify software as HIPAA compliant. See `docs/clinical-readiness-us.md` for the readiness assessment and release criteria.
 
 ## Implemented Product Areas

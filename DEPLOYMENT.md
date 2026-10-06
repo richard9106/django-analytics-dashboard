@@ -295,8 +295,11 @@ Production can run it with a systemd timer every 15 minutes. Gmail must be conne
 
 ## Staff MFA and session operations
 
-Staff, practice owners/admins, and Django administrators must enroll an authenticator
-at their next sign-in. Existing unstamped sessions are revoked by this release.
+MFA is temporarily deferred for pre-client development at the user's request.
+`DJANGO_MFA_REQUIRED=false` is the current default, including in Compose: sign-in
+uses credentials alone. Set `DJANGO_MFA_REQUIRED=true` to restore required MFA for
+staff, owners/admins and Django administrators before clinical onboarding.
+The following enrollment/reauthentication behavior applies when enabled. Existing unstamped sessions are revoked by this release.
 Use synthetic accounts in staging to rehearse enrollment before onboarding a clinic.
 Client portal accounts retain password-based sign-in. Every authenticated account
 has a 15-minute idle timeout and an 8-hour absolute limit; pending staff MFA expires

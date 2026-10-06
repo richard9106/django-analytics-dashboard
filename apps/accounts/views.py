@@ -5,12 +5,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, PasswordResetView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView
 from django.core.mail import send_mail
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseBadRequest
 from django.db.models.deletion import ProtectedError
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.crypto import get_random_string
 from django.views.generic import FormView, TemplateView
@@ -89,6 +89,14 @@ class RoleAwareLoginView(PostRateLimitMixin, LoginView):
             self.request.session['security_next'] = destination
             return reverse_lazy('mfa_challenge' if security_state(self.request.user).confirmed else 'mfa_setup')
         return destination
+
+
+class ConfirmLogoutView(LogoutView):
+    """GET displays a fresh CSRF-protected confirmation; only POST signs out."""
+    http_method_names = ['get', 'post', 'options']
+
+    def get(self, request, *args, **kwargs):
+        return render(request, 'accounts/logout_confirm.html')
 
 
 class RateLimitedPasswordResetView(PostRateLimitMixin, PasswordResetView):
