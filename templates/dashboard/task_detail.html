@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task · NuviaMy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body class="app-page"><div class="app-shell">
+  {% include 'partials/sidebar.html' with card_title='Team follow-through' card_text='Keep small practice commitments visible without mixing them into clinical notes.' %}
+  <main class="app-main">
+    {% include 'partials/breadcrumbs.html' %}
+    <section class="topbar"><div><p class="eyebrow">Team task</p><h1>Task details</h1></div><div class="inline-actions"><a class="btn btn-secondary" href="{% url 'tasks_list' %}">Back to tasks</a><a class="btn btn-soft" href="{% url 'dashboard' %}">Dashboard</a></div></section>
+    {% if messages %}{% for message in messages %}<p class="form-message" role="status">{{ message }}</p>{% endfor %}{% endif %}
+    <article class="panel task-detail-panel">
+      <div class="panel-head"><div><h2>{{ task.title }}</h2><p>Assigned to {{ task.assignee.get_full_name|default:task.assignee.username }}</p></div><span class="badge status-{{ task.status }}">{{ task.get_status_display }}</span></div>
+      <dl class="task-detail-meta"><div><dt>Priority</dt><dd><span class="badge {{ task.priority }}">{{ task.get_priority_display }}</span></dd></div><div><dt>Due date</dt><dd>{{ task.due_date|date:"F j, Y"|default:"No due date" }}</dd></div></dl>
+      <section class="task-detail-description" aria-labelledby="task-description"><h3 id="task-description">Description</h3>{% if task.description %}<div>{{ task.description|linebreaks }}</div>{% else %}<p>No additional description.</p>{% endif %}</section>
+      {% if can_update_task and task.status != 'done' %}<form method="post" action="{% url 'tasks_status' task.pk %}" class="form-actions">{% csrf_token %}<input type="hidden" name="status" value="done"><input type="hidden" name="next" value="task_detail"><button class="btn btn-primary" type="submit">Mark complete</button></form>{% endif %}
+    </article>
+  </main>
+</div></body></html>

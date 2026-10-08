@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
@@ -8,12 +9,14 @@ from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q, F, Value, DecimalField
+from django.db.models.functions import Coalesce, Greatest, TruncMonth
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
-from django.views.generic import FormView, TemplateView
+from django.urls import reverse
+from django.views.generic import DetailView, FormView, TemplateView
 
-from apps.accounts.access import PracticePermissionMixin, get_practice_for_user, is_client_user, permission_redirect
+from apps.accounts.access import PracticePermissionMixin, has_practice_permission, get_practice_for_user, is_client_user, permission_redirect
 from apps.appointments.models import Appointment
 from apps.billing.models import Invoice
 from apps.clients.models import Client
@@ -53,80 +56,43 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_practice(self):
         return get_practice_for_user(self.request.user)
 
+    def can_view(self, resource):
+        return has_practice_permission(self.request.user, resource, 'view')
+
     def get_tasks(self, practice):
-        if not practice:
+        self.dashboard_task_count = 0
+        if not practice or not self.can_view('tasks'):
             return []
-
-        open_note_count = SessionNote.objects.filter(
-            practice=practice,
-            is_locked=False,
-        ).count()
-        open_invoice_count = Invoice.objects.filter(
-            practice=practice,
-            status__in=[Invoice.Status.DRAFT, Invoice.Status.SENT, Invoice.Status.OVERDUE],
-        ).count()
-        pending_notification_count = Notification.objects.filter(
-            practice=practice,
-            status=Notification.Status.PENDING,
-        ).count()
-        open_portal_request_count = ClientPortalRequest.objects.filter(
-            practice=practice,
-            status__in=[ClientPortalRequest.Status.NEW, ClientPortalRequest.Status.REVIEWED],
-        ).count()
-        due_treatment_plan_count = TreatmentPlan.objects.filter(
-            practice=practice,
-            status__in=[TreatmentPlan.Status.ACTIVE, TreatmentPlan.Status.REVIEW_DUE],
-            review_date__lte=timezone.localdate(),
-        ).count()
-
         tasks = []
-        if open_note_count:
-            suffix = '' if open_note_count == 1 else 's'
-            tasks.append({
-                'label': 'Clinical documentation',
-                'detail': f'{open_note_count} note{suffix} ready to review or lock',
-                'tone': 'warning',
-            })
-        if open_invoice_count:
-            suffix = '' if open_invoice_count == 1 else 's'
-            tasks.append({
-                'label': 'Billing follow-up',
-                'detail': f'{open_invoice_count} invoice{suffix} need attention',
-                'tone': 'brand',
-            })
-        if pending_notification_count:
-            suffix = '' if pending_notification_count == 1 else 's'
-            tasks.append({
-                'label': 'Client notifications',
-                'detail': f'{pending_notification_count} message{suffix} pending delivery',
-                'tone': 'success',
-            })
-        if open_portal_request_count:
-            suffix = '' if open_portal_request_count == 1 else 's'
-            tasks.append({
-                'label': 'Client portal requests',
-                'detail': f'{open_portal_request_count} portal request{suffix} awaiting follow-up',
-                'tone': 'brand',
-            })
-        if due_treatment_plan_count:
-            suffix = '' if due_treatment_plan_count == 1 else 's'
-            tasks.append({
-                'label': 'Treatment plan reviews',
-                'detail': f'{due_treatment_plan_count} treatment plan{suffix} due for review',
-                'tone': 'warning',
-            })
-
-        manual_tasks = Task.objects.filter(
-            practice=practice,
-            assignee=self.request.user,
-        ).exclude(status=Task.Status.DONE).select_related('assignee')[:8]
-        for task in manual_tasks:
-            tasks.append({
-                'manual': task,
-                'label': task.title,
-                'detail': task.description or 'Assigned follow-up',
-                'tone': 'manual',
-            })
+        def alert(resource, queryset, label, noun, detail, tone, url, action):
+            if not self.can_view(resource):
+                return
+            count = queryset.count()
+            if count:
+                tasks.append({'label': label, 'detail': f"{count} {noun}{'' if count == 1 else 's'} {detail}",
+                              'tone': tone, 'href': url, 'action_label': action})
+        alert('clinical', SessionNote.objects.filter(practice=practice, is_locked=False),
+              'Clinical documentation', 'note', 'ready to review or lock', 'warning',
+              reverse('clinical:list') + '?status=draft', 'Review notes')
+        alert('billing', Invoice.objects.filter(practice=practice, status__in=[Invoice.Status.DRAFT, Invoice.Status.SENT, Invoice.Status.OVERDUE]),
+              'Billing follow-up', 'invoice', 'need attention', 'brand', reverse('billing:list'), 'Review invoices')
+        alert('tasks', Notification.objects.filter(practice=practice, status=Notification.Status.PENDING),
+              'Client notifications', 'message', 'pending delivery', 'success',
+              reverse('practice_settings:integrations'), 'Review delivery setup')
+        alert('requests', ClientPortalRequest.objects.filter(practice=practice, status__in=[ClientPortalRequest.Status.NEW, ClientPortalRequest.Status.REVIEWED]),
+              'Client portal requests', 'portal request', 'awaiting follow-up', 'brand',
+              reverse('portal_requests:list'), 'Review requests')
+        alert('clinical', TreatmentPlan.objects.filter(practice=practice,
+              status__in=[TreatmentPlan.Status.ACTIVE, TreatmentPlan.Status.REVIEW_DUE], review_date__lte=timezone.localdate()),
+              'Treatment plan reviews', 'treatment plan', 'due for review', 'warning',
+              reverse('clinical:treatment_plans') + '?review_to=' + timezone.localdate().isoformat(), 'Review plans')
+        self.dashboard_task_count = len(tasks)
+        if self.can_view('tasks'):
+            manual_tasks = Task.objects.filter(practice=practice, assignee=self.request.user).exclude(status=Task.Status.DONE)
+            self.dashboard_task_count += manual_tasks.count()
+            for task in manual_tasks.select_related('assignee')[:50]:
+                tasks.append({'manual': task, 'label': task.title, 'detail': task.description or 'Assigned follow-up',
+                              'tone': 'manual', 'href': reverse('tasks_detail', args=[task.pk]), 'action_label': 'Open task'})
         return tasks
 
     def get_performance_months(self, practice, today):
@@ -138,33 +104,30 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             return date(month_index // 12, month_index % 12 + 1, 1)
 
         months = []
+        start_date = shift_month(today.replace(day=1), -5)
+        end_date = shift_month(today.replace(day=1), 1)
+        start_at = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
+        end_at = timezone.make_aware(timezone.datetime.combine(end_date, timezone.datetime.min.time()))
+        revenues = {}
+        volumes = {}
+        if self.can_view('billing'):
+            revenues = {row['month'].date(): row['total'] for row in Invoice.objects.filter(
+                practice=practice, status=Invoice.Status.PAID, paid_at__gte=start_at, paid_at__lt=end_at,
+            ).annotate(month=TruncMonth('paid_at')).values('month').annotate(total=Sum('amount')).order_by()}
+        if self.can_view('appointments'):
+            volumes = {row['month'].date(): row['total'] for row in Appointment.objects.filter(
+                practice=practice, starts_at__gte=start_at, starts_at__lt=end_at,
+            ).annotate(month=TruncMonth('starts_at')).values('month').annotate(total=Count('pk')).order_by()}
         for offset in range(-5, 1):
             month_start = shift_month(today.replace(day=1), offset)
-            next_month = shift_month(month_start, 1)
-            start_at = timezone.make_aware(timezone.datetime.combine(month_start, timezone.datetime.min.time()))
-            end_at = timezone.make_aware(timezone.datetime.combine(next_month, timezone.datetime.min.time()))
-            revenue = Invoice.objects.filter(
-                practice=practice,
-                status=Invoice.Status.PAID,
-                paid_at__gte=start_at,
-                paid_at__lt=end_at,
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            appointments = Appointment.objects.filter(
-                practice=practice,
-                starts_at__gte=start_at,
-                starts_at__lt=end_at,
-            ).count()
-            months.append({
-                'label': month_start.strftime('%b'),
-                'revenue': revenue,
-                'appointments': appointments,
-            })
+            months.append({'label': month_start.strftime('%b'), 'revenue': revenues.get(month_start, 0),
+                           'appointments': volumes.get(month_start, 0)})
 
         max_revenue = max((month['revenue'] for month in months), default=0)
         max_appointments = max((month['appointments'] for month in months), default=0)
         for month in months:
-            month['revenue_height'] = int(month['revenue'] / max_revenue * 100) if max_revenue else 6
-            month['appointment_height'] = int(month['appointments'] / max_appointments * 100) if max_appointments else 6
+            month['revenue_height'] = int(month['revenue'] / max_revenue * 100) if max_revenue else 0
+            month['appointment_height'] = int(month['appointments'] / max_appointments * 100) if max_appointments else 0
         return months
 
     def get_context_data(self, **kwargs):
@@ -183,7 +146,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         active_client_count = 0
         performance_months = self.get_performance_months(practice, today)
 
-        if practice:
+        billing_summary = {'outstanding_balance': Decimal('0.00'), 'overdue_invoice_count': 0, 'open_invoice_count': 0}
+        today_appointment_count = 0
+        if practice and self.can_view('appointments'):
             today_appointments = (
                 Appointment.objects.filter(
                     practice=practice,
@@ -193,19 +158,26 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .select_related('client', 'therapist__user')
                 .order_by('starts_at')
             )
+            today_appointment_count = today_appointments.count()
+            today_appointments = today_appointments[:50]
+        if practice and self.can_view('billing'):
             recent_invoices = Invoice.objects.filter(practice=practice).select_related('client')[:6]
+            monthly_revenue = performance_months[-1]['revenue'] if performance_months else 0
+            money = DecimalField(max_digits=12, decimal_places=2)
+            unpaid = Invoice.objects.filter(practice=practice, status__in=[Invoice.Status.SENT, Invoice.Status.OVERDUE]).annotate(
+                received=Coalesce(Sum('payments__amount'), Value(Decimal('0.00')), output_field=money),
+            ).annotate(balance=Greatest(F('amount') - F('received'), Value(Decimal('0.00')), output_field=money))
+            billing_summary = unpaid.aggregate(
+                outstanding_balance=Coalesce(Sum('balance'), Value(Decimal('0.00')), output_field=money),
+                overdue_invoice_count=Count('pk', filter=Q(balance__gt=0) & (Q(status=Invoice.Status.OVERDUE) | Q(due_date__lt=today))),
+                open_invoice_count=Count('pk', filter=Q(balance__gt=0)),
+            )
+        if practice and self.can_view('clients'):
+            active_client_count = Client.objects.filter(practice=practice, status=Client.Status.ACTIVE).count()
+        if practice and has_practice_permission(self.request.user, 'appointments', 'create'):
             practice_clients = practice.clients.all()
+        if practice and (has_practice_permission(self.request.user, 'appointments', 'create') or has_practice_permission(self.request.user, 'clients', 'create')):
             practice_therapists = practice.therapists.select_related('user')
-            monthly_revenue = Invoice.objects.filter(
-                practice=practice,
-                status=Invoice.Status.PAID,
-                paid_at__year=today.year,
-                paid_at__month=today.month,
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            active_client_count = Client.objects.filter(
-                practice=practice,
-                status=Client.Status.ACTIVE,
-            ).count()
 
         tasks = self.get_tasks(practice)
         context.update({
@@ -216,8 +188,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'practice': practice,
             'monthly_revenue': monthly_revenue,
             'active_client_count': active_client_count,
-            'today_appointment_count': today_appointments.count(),
-            'task_count': len(tasks),
+            'today_appointment_count': today_appointment_count,
+            'task_count': self.dashboard_task_count,
+            'tasks_shown': len(tasks),
             'today_appointments': today_appointments,
             'tasks': tasks,
             'recent_invoices': recent_invoices,
@@ -225,6 +198,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'practice_therapists': practice_therapists,
             'performance_months': performance_months,
         })
+        context.update(billing_summary)
         return context
 
 
@@ -330,6 +304,22 @@ class TaskCreateView(LoginRequiredMixin, PracticePermissionMixin, FormView):
         return self.render_to_response(self.get_context_data(form=form, task_form=form))
 
 
+class TaskDetailView(LoginRequiredMixin, PracticePermissionMixin, DetailView):
+    permission_resource = 'tasks'
+    model = Task
+    template_name = 'dashboard/task_detail.html'
+    context_object_name = 'task'
+
+    def get_queryset(self):
+        return Task.objects.filter(practice=get_practice_for_user(self.request.user)).select_related('assignee', 'created_by', 'practice')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['practice'] = self.object.practice
+        context['can_update_task'] = has_practice_permission(self.request.user, 'tasks', 'edit') and self.request.user.pk in {self.object.assignee_id, self.object.created_by_id}
+        return context
+
+
 class TaskStatusUpdateView(LoginRequiredMixin, PracticePermissionMixin, TemplateView):
     permission_resource = 'tasks'
     permission_action = 'edit'
@@ -343,7 +333,10 @@ class TaskStatusUpdateView(LoginRequiredMixin, PracticePermissionMixin, Template
             task.status = status
             task.save(update_fields=['status', 'updated_at'])
             messages.success(request, 'Task status updated.')
-        return redirect(request.POST.get('next') or 'tasks_list')
+        destination = request.POST.get('next')
+        if destination == 'task_detail':
+            return redirect('tasks_detail', pk=task.pk)
+        return redirect('dashboard' if destination == 'dashboard' else 'tasks_list')
 
 
 class HelpCenterView(TemplateView):

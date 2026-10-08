@@ -208,6 +208,7 @@ def workspace_breadcrumb_items(context):
         root_pages = {
             'dashboard': [], 'profile_settings': [('Profile settings', None)],
             'team_management': [('Settings', None), ('Team', None)],
+            'tasks_detail': [('Tasks', 'tasks_list'), ('Task details', None)],
             'tasks_list': [('Tasks', None)], 'tasks_create': [('Tasks', 'tasks_list'), ('New task', None)],
             'staff_monitoring': [('Monitoring', None)], 'help_center': [('Help Center', None)],
             'support_contact': [('Help Center', 'help_center'), ('Contact support', None)],

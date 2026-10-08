@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
-<body class="app-page">
+<body class="app-page dashboard-page">
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='Your daily workspace' card_text='Keep clients, sessions, notes, and billing together.' %}
 
@@ -45,53 +45,23 @@
          <button class="btn btn-secondary" type="button" data-tour-open>Start guided tour</button>
       </section>
 
-      <section class="onboarding-panel" aria-label="Recommended first steps" data-tour-target="setup">
-        <div>
-          <p class="eyebrow">First steps</p>
-          <h2>Start with your clients and your calendar.</h2>
-          <p>Working solo or with a team? Add a client, set your availability, and schedule a session. Email delivery and online payments are optional connections you can add later.</p>
-        </div>
-        <div class="onboarding-steps">
-          {% if workspace_permissions.clients.create %}<a href="{% url 'clients:create' %}" data-modal-target="client-create-modal"><strong>1</strong><span>Add a client</span></a>{% endif %}
-          {% if workspace_permissions.appointments.view %}<a href="{% url 'appointments:list' %}?view=week"><strong>2</strong><span>Open your calendar &amp; availability</span></a>{% endif %}
-          {% if workspace_permissions.appointments.create %}<a href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal"><strong>3</strong><span>Schedule a session</span></a>{% endif %}
-          {% if can_manage_team %}<a href="{% url 'team_management' %}"><strong>+</strong><span>Invite your team when needed</span></a>{% endif %}
-        </div>
-      </section>
-
-      <section class="stats" aria-label="Practice metrics" data-tour-target="metrics">
-        <article class="stat-card">
-          <span>Monthly revenue</span>
-          <strong>${{ monthly_revenue }}</strong>
-          <small>Paid invoices this month</small>
-        </article>
-        <article class="stat-card">
-          <span>Active patients</span>
-          <strong>{{ active_client_count }}</strong>
-          <small>Active records in workspace</small>
-        </article>
-        <article class="stat-card">
-          <span>Today's sessions</span>
-          <strong>{{ today_appointment_count }}</strong>
-          <small>Appointments on your calendar</small>
-        </article>
-        <article class="stat-card">
-          <span>Pending tasks</span>
-          <strong>{{ task_count }}</strong>
-          <small>Items that need attention</small>
-        </article>
+      <section class="stats dashboard-metrics" aria-label="Practice metrics" data-tour-target="metrics">
+        {% if workspace_permissions.appointments.view %}<a class="stat-card dashboard-metric" href="{% url 'appointments:list' %}?view=agenda"><div class="dashboard-metric-head"><span>Today's sessions</span><span class="dashboard-metric-icon">{% include 'partials/nav_icon.html' with icon='appointments' %}</span></div><strong>{{ today_appointment_count }}</strong><small>Appointments on today's calendar</small></a>{% endif %}
+        {% if workspace_permissions.tasks.view %}<a class="stat-card dashboard-metric" href="#dashboard-tasks-title"><div class="dashboard-metric-head"><span>Pending tasks</span><span class="dashboard-metric-icon aqua">{% include 'partials/nav_icon.html' with icon='intake' %}</span></div><strong>{{ task_count }}</strong><small>Follow-ups and alerts needing attention</small></a>{% endif %}
+        {% if workspace_permissions.clients.view %}<a class="stat-card dashboard-metric" href="{% url 'clients:list' %}"><div class="dashboard-metric-head"><span>Active clients</span><span class="dashboard-metric-icon">{% include 'partials/nav_icon.html' with icon='clients' %}</span></div><strong>{{ active_client_count }}</strong><small>Active records in your practice</small></a>{% endif %}
+        {% if workspace_permissions.billing.view %}<a class="stat-card dashboard-metric" href="{% url 'billing:list' %}"><div class="dashboard-metric-head"><span>Monthly revenue</span><span class="dashboard-metric-icon aqua">{% include 'partials/nav_icon.html' with icon='billing' %}</span></div><strong>${{ monthly_revenue|floatformat:2 }}</strong><small>Paid invoices this month · USD</small></a>{% endif %}
       </section>
 
       <section class="content-grid" id="today" data-tour-target="appointments">
-        <article class="panel">
+        {% if workspace_permissions.appointments.view %}<article class="panel dashboard-work-panel">
           <div class="panel-head">
             <div>
-              <h2>Today's appointments</h2>
+              <h2 id="dashboard-appointments-title">Today's appointments</h2>
               <p>Your scheduled sessions for {{ dashboard_date_label }}.</p>
             </div>
             <span class="badge brand">{{ today_appointment_count }} today</span>
           </div>
-          <div class="appointment-list">
+          <div class="appointment-list dashboard-scroll-list" role="region" aria-labelledby="dashboard-appointments-title" tabindex="0">
             {% for appointment in today_appointments %}
               <div class="appointment-card">
                 <div class="appointment-time">
@@ -110,27 +80,29 @@
               {% if workspace_permissions.appointments.view %}<a class="inline-link" href="{% url 'appointments:list' %}?view=week">View your week →</a>{% endif %}
             {% endfor %}
           </div>
-        </article>
+          <div class="dashboard-panel-footer"><a class="inline-link" href="{% url 'appointments:list' %}?view=agenda">Open calendar →</a></div>
+        </article>{% endif %}
 
-        <article class="panel">
+        {% if workspace_permissions.tasks.view %}<article class="panel dashboard-work-panel">
           <div class="panel-head compact">
             <div>
-              <h2>Tasks</h2>
-              <p>Focused follow-ups for this practice.</p>
+              <h2 id="dashboard-tasks-title" tabindex="-1">Tasks</h2>
+              <p>Focused follow-ups for this practice.</p>{% if task_count > tasks_shown %}<p>Showing {{ tasks_shown }} of {{ task_count }} pending items.</p>{% endif %}
             </div>
           </div>
-          <div class="task-list">
+          <div class="task-list dashboard-scroll-list" role="region" aria-labelledby="dashboard-tasks-title" tabindex="0">
             {% for task in tasks %}
              <div class="task-card {{ task.tone }}">
                 <span aria-hidden="true"></span>
                 <div>
-                  <strong>{{ task.label }}</strong>
-                  <p>{{ task.detail }}</p>
+                  <strong>{% if task.href %}<a class="dashboard-task-link" href="{{ task.href }}">{{ task.label }}</a>{% else %}{{ task.label }}{% endif %}</strong>
+                  <p>{{ task.detail|truncatewords:35 }}</p>
+                  {% if task.href %}<a class="inline-link" href="{{ task.href }}">{{ task.action_label }} →</a>{% endif %}
                   {% if task.manual %}
                     <div class="task-meta"><span class="badge {{ task.manual.priority }}">{{ task.manual.get_priority_display }} priority</span>{% if task.manual.due_date %}<span>Due {{ task.manual.due_date|date:"M j" }}</span>{% endif %}</div>
-                    <form method="post" action="{% url 'tasks_status' task.manual.pk %}" class="task-status-form">
+                    {% if workspace_permissions.tasks.edit %}<form method="post" action="{% url 'tasks_status' task.manual.pk %}" class="task-status-form">
                       {% csrf_token %}<input type="hidden" name="status" value="done"><input type="hidden" name="next" value="dashboard"><button class="inline-link" type="submit">Mark complete</button>
-                    </form>
+                    </form>{% endif %}
                   {% endif %}
                 </div>
               </div>
@@ -138,49 +110,46 @@
                <p class="empty-state">No open tasks right now. Automatic alerts will appear here when something needs attention.</p>
              {% endfor %}
            </div>
-           <a class="inline-link" href="{% url 'tasks_list' %}">View all tasks →</a>
-         </article>
+           <div class="dashboard-panel-footer"><a class="inline-link" href="{% url 'tasks_list' %}">View team tasks →</a></div>
+         </article>{% endif %}
       </section>
 
+      {% if workspace_permissions.billing.view %}<section class="panel dashboard-billing" aria-labelledby="dashboard-billing-title">
+        <div class="panel-head"><div><p class="eyebrow">Financial overview</p><h2 id="dashboard-billing-title">Billing at a glance</h2><p>Balances to follow up and your latest invoices.</p></div><a class="btn btn-secondary" href="{% url 'billing:list' %}">Open billing →</a></div>
+        <div class="dashboard-billing-layout">
+          <div class="dashboard-billing-summary"><div><span>Outstanding balance</span><strong>${{ outstanding_balance|floatformat:2 }}</strong><small>Unpaid sent and overdue balances · USD</small></div><div><span>Overdue invoices</span><strong>{{ overdue_invoice_count }}</strong><small>Unpaid invoices past due</small></div></div>
+          <div class="table-wrap"><table><caption class="dashboard-table-caption">Recent invoices</caption><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead><tbody>{% for invoice in recent_invoices %}<tr><td>{% if workspace_permissions.billing.edit %}<a class="dashboard-record-link" href="{% url 'billing:invoice_edit' invoice.pk %}">{{ invoice.invoice_number }}</a>{% else %}{{ invoice.invoice_number }}{% endif %}</td><td>{% if workspace_permissions.clients.view %}<a class="dashboard-record-link" href="{% url 'clients:detail' invoice.client_id %}">{{ invoice.client }}</a>{% else %}{{ invoice.client }}{% endif %}</td><td><span class="badge {% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}warning{% else %}brand{% endif %}">{{ invoice.get_status_display }}</span></td><td>${{ invoice.amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No invoices yet. Billing activity will appear here after you create one.</td></tr>{% endfor %}</tbody></table></div>
+        </div>
+      </section>{% endif %}
+
       <section class="performance-grid" aria-label="Practice performance">
-        <article class="panel performance-panel">
+        {% if workspace_permissions.billing.view %}<article class="panel performance-panel">
           <div class="panel-head compact"><div><p class="eyebrow">Performance</p><h2>Revenue trend</h2><p>Paid invoices over the last six months.</p></div><span class="badge success">USD</span></div>
           <div class="performance-chart revenue-chart">
             {% for month in performance_months %}<div class="chart-column"><span class="chart-value">${{ month.revenue|floatformat:0 }}</span><div class="chart-track"><span style="height: {{ month.revenue_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Performance data will appear after your first paid invoice.</p>{% endfor %}
           </div>
         </article>
-        <article class="panel performance-panel">
+        {% endif %}
+        {% if workspace_permissions.appointments.view %}<article class="panel performance-panel">
           <div class="panel-head compact"><div><p class="eyebrow">Operations</p><h2>Session volume</h2><p>Appointments scheduled by month.</p></div><span class="badge brand">Sessions</span></div>
           <div class="performance-chart appointments-chart">
             {% for month in performance_months %}<div class="chart-column"><span class="chart-value">{{ month.appointments }}</span><div class="chart-track"><span style="height: {{ month.appointment_height }}%"></span></div><small>{{ month.label }}</small></div>{% empty %}<p class="empty-state">Session data will appear after appointments are scheduled.</p>{% endfor %}
           </div>
         </article>
+      {% endif %}
       </section>
 
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Recent billing activity</h2>
-            <p>Latest invoices for this practice.</p>
-          </div>
-          <span class="badge success">Practice scoped</span>
+      <section class="onboarding-panel" aria-label="Recommended first steps" data-tour-target="setup">
+        <div>
+          <p class="eyebrow">First steps</p>
+          <h2>Start with your clients and your calendar.</h2>
+          <p>Working solo or with a team? Add a client, set your availability, and schedule a session. Email delivery and online payments are optional connections you can add later.</p>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead>
-            <tbody>
-              {% for invoice in recent_invoices %}
-                <tr>
-                  <td>{{ invoice.invoice_number }}</td>
-                  <td>{{ invoice.client }}</td>
-                  <td>{{ invoice.get_status_display }}</td>
-                  <td>${{ invoice.amount }}</td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="4">No invoices have been created yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="onboarding-steps">
+          {% if workspace_permissions.clients.create %}<a href="{% url 'clients:create' %}" data-modal-target="client-create-modal"><strong>1</strong><span>Add a client</span></a>{% endif %}
+          {% if workspace_permissions.appointments.view %}<a href="{% url 'appointments:list' %}?view=week"><strong>2</strong><span>Open your calendar &amp; availability</span></a>{% endif %}
+          {% if workspace_permissions.appointments.create %}<a href="{% url 'appointments:create' %}" data-modal-target="appointment-create-modal"><strong>3</strong><span>Schedule a session</span></a>{% endif %}
+          {% if can_manage_team %}<a href="{% url 'team_management' %}"><strong>+</strong><span>Invite your team when needed</span></a>{% endif %}
         </div>
       </section>
 

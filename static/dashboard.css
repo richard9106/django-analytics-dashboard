@@ -1107,3 +1107,71 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .calendar-grid { min-width: 980px; }
   .calendar-view-tabs a, .calendar-actions .btn { min-height: 44px; }
 }
+
+/* Daily workspace: bounded lists, clear metrics, and billing before trends. */
+.dashboard-page .welcome-panel { padding: 24px; border-radius: 16px; align-items: center; background: linear-gradient(120deg, #fff, #f5f2fe); }
+.dashboard-page .welcome-panel h2 { font-size: clamp(26px, 3vw, 36px); margin-bottom: 8px; }
+.dashboard-page .dashboard-metrics { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.dashboard-page .dashboard-metric { padding: 20px; gap: 12px; text-decoration: none; color: var(--slate-900); border-color: var(--slate-200); transition: border-color .15s, box-shadow .15s; }
+.dashboard-page .dashboard-metric:hover { border-color: var(--brand-600); box-shadow: var(--shadow-2); }
+.dashboard-page .dashboard-metric-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dashboard-page .dashboard-metric-head > span:first-child { color: var(--slate-600); font-size: 13px; }
+.dashboard-page .dashboard-metric-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px; color: var(--brand-700); background: var(--brand-50); }
+.dashboard-page .dashboard-metric-icon.aqua { color: #0f766e; background: #e6faf6; }
+.dashboard-page .dashboard-metric-icon .nav-icon { width: 22px; height: 22px; }
+.dashboard-page .dashboard-metric > strong { font-size: clamp(30px, 3vw, 38px); font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.dashboard-page .dashboard-metric > small { color: var(--slate-600); font-size: 12px; line-height: 1.5; }
+.dashboard-page .content-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); align-items: start; }
+.dashboard-page .dashboard-work-panel { display: flex; flex-direction: column; min-width: 0; }
+.dashboard-page .dashboard-scroll-list { min-height: 0; max-height: 370px; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; overscroll-behavior: contain; padding: 3px; align-content: start; }
+.dashboard-page .dashboard-panel-footer { border-top: 1px solid var(--slate-100); margin-top: 16px; padding-top: 8px; }
+.dashboard-page .dashboard-panel-footer .inline-link { margin-top: 0; }
+.dashboard-page .inline-link { min-height: 44px; align-items: center; }
+.dashboard-page .task-card { border-radius: 12px; grid-template-columns: 4px minmax(0, 1fr); background: #fff; gap: 12px; }
+.dashboard-page .task-card > span { width: 4px; }
+.dashboard-page .task-card p { overflow-wrap: anywhere; white-space: pre-line; }
+.dashboard-page .dashboard-task-link { color: var(--slate-900); display: flex; align-items: center; min-height: 44px; text-decoration: none; overflow-wrap: anywhere; }
+.dashboard-page .dashboard-task-link:hover { color: var(--brand-700); text-decoration: underline; }
+.dashboard-page .task-status-form { margin-top: 0; }
+.dashboard-page .task-status-form .inline-link { margin-top: 0; }
+.dashboard-page .appointment-card { background: #fff; border-radius: 12px; gap: 12px; }
+.dashboard-page .appointment-body { min-width: 0; overflow-wrap: anywhere; }
+.dashboard-page .dashboard-billing-layout { display: grid; grid-template-columns: minmax(180px, .65fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+.dashboard-page .dashboard-billing-summary { display: grid; gap: 16px; padding: 20px; background: var(--slate-50); border: 1px solid var(--slate-100); border-radius: 12px; }
+.dashboard-page .dashboard-billing-summary > div { display: grid; gap: 8px; }
+.dashboard-page .dashboard-billing-summary span { font-size: 13px; font-weight: 700; color: var(--slate-600); }
+.dashboard-page .dashboard-billing-summary strong { font-size: 28px; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.dashboard-page .dashboard-billing-summary small { font-size: 12px; color: var(--slate-600); line-height: 1.5; }
+.dashboard-page .dashboard-billing-summary > div + div { padding-top: 16px; border-top: 1px solid var(--slate-200); }
+.dashboard-page .dashboard-table-caption { text-align: left; font-size: 14px; font-weight: 800; padding: 0 0 12px; color: var(--slate-900); }
+.dashboard-page .dashboard-record-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; color: var(--brand-700); }
+.dashboard-page .dashboard-scroll-list:focus-visible, .dashboard-page .dashboard-metric:focus-visible, .dashboard-page .dashboard-task-link:focus-visible, .dashboard-page .dashboard-record-link:focus-visible { outline: 3px solid var(--brand-600); outline-offset: 2px; border-radius: 8px; }
+.dashboard-page .performance-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
+.dashboard-page .onboarding-panel { background: #fff; border-radius: 16px; }
+.dashboard-page .onboarding-panel h2 { font-size: 20px; }
+@media (max-width: 1100px) {
+  .dashboard-page .dashboard-billing-layout { grid-template-columns: 1fr; }
+  .dashboard-page .dashboard-billing-summary { grid-template-columns: 1fr 1fr; }
+  .dashboard-page .dashboard-billing-summary > div + div { padding-top: 0; padding-left: 20px; border-top: 0; border-left: 1px solid var(--slate-200); }
+}
+@media (max-width: 600px) {
+  .dashboard-page .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .dashboard-page .dashboard-metric { padding: 16px; }
+  .dashboard-page .dashboard-metric-head { align-items: start; gap: 8px; }
+  .dashboard-page .dashboard-metric-icon { width: 32px; height: 32px; flex-basis: 32px; border-radius: 8px; }
+  .dashboard-page .dashboard-metric-icon .nav-icon { width: 20px; height: 20px; }
+  .dashboard-page .dashboard-metric > strong { font-size: 28px; }
+  .dashboard-page .dashboard-scroll-list { max-height: 340px; }
+  .dashboard-page .appointment-card { grid-template-columns: 72px minmax(0, 1fr); }
+  .dashboard-page .appointment-card > .badge { grid-column: 2; justify-self: start; }
+  .dashboard-page .dashboard-billing-summary { padding: 16px; gap: 12px; }
+  .dashboard-page .dashboard-billing-summary strong { font-size: 24px; }
+  .dashboard-page .dashboard-billing-summary > div + div { padding-left: 12px; }
+}
+.task-detail-panel { max-width: 880px; }
+.task-detail-panel h2, .task-detail-description { overflow-wrap: anywhere; }
+.task-detail-meta { display: flex; flex-wrap: wrap; gap: 24px; margin: 24px 0; padding: 16px; border-radius: 12px; background: var(--slate-50); }
+.task-detail-meta dt { font-size: 13px; font-weight: 700; color: var(--slate-600); margin-bottom: 8px; }
+.task-detail-meta dd { margin: 0; }
+.task-detail-description h3 { font-size: 16px; margin-bottom: 12px; }
+.task-detail-description p + p { margin-top: 16px; }
