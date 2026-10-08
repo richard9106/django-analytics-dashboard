@@ -1027,9 +1027,15 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .chat-closed-note { margin: 14px 0 0; color: var(--slate-500); font-size: 12px; }
 .chat-drawer-tab:focus-visible, .chat-drawer-close:focus-visible, .chat-conversation:focus-visible, .chat-reply-form textarea:focus-visible { outline: 3px solid rgba(20, 184, 166, .45); outline-offset: 2px; }
 @media (max-width: 720px) {
-  .chat-drawer { right: 12px; bottom: 12px; left: 12px; }
-  .chat-drawer-tab { width: 100%; justify-content: center; }
-  .chat-drawer-panel { width: 100%; max-height: 70vh; }
+  .chat-drawer { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: auto; }
+  .chat-drawer-tab { position: relative; width: 52px; height: 52px; min-height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
+  .chat-drawer-tab .chat-drawer-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .chat-drawer-tab strong { position: absolute; right: -3px; top: -3px; }
+  .chat-drawer-icon { display: block; flex-shrink: 0; }
+  .chat-drawer-panel { position: absolute; right: 0; bottom: 62px; width: min(420px, calc(100vw - 40px)); max-height: min(70dvh, calc(100dvh - 100px)); margin: 0; }
+  .chat-drawer-close { width: 44px; height: 44px; }
+  .chat-reply-form textarea { font-size: 16px; }
+  .chat-reply-form .btn { min-height: 44px; }
   .chat-drawer-columns { grid-template-columns: 1fr; }
   .chat-drawer-list { order: 1; max-height: 132px; border-right: 0; border-bottom: 1px solid var(--slate-100); }
   .chat-drawer-threads { order: 2; }
@@ -1341,4 +1347,79 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .intake-assignment-status { grid-column: 1; grid-row: 2; }
   .intake-row-actions { grid-column: 2; grid-row: 1 / 3; align-self: center; }
   .intake-assignment-info h3 { font-size: 14px; }
+}
+
+/* Keep hidden table labels inside their scroll region on tablets and phones. */
+@media (max-width: 980px) {
+  .table-wrap, .invoice-table-wrap { position: relative; }
+}
+
+/* Workspace phone layouts: compact surfaces, readable forms, and local scrolling. */
+@media (max-width: 720px) {
+  .sidebar .setup-reminder { display: none; }
+  .mobile-nav-check:checked ~ .setup-reminder { display: block; margin: 8px 0 0; padding: 12px; }
+  .app-main { padding: 12px; gap: 12px; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .app-main .panel { padding: 16px; }
+  .app-main .compact-topbar { padding: 4px 0; }
+  .app-main .topbar h1 { font-size: 24px; overflow-wrap: anywhere; }
+  .app-main .panel h1 { font-size: 24px; line-height: 1.25; overflow-wrap: anywhere; margin-bottom: 12px; }
+  .app-main .panel h2, .modal-head h2 { font-size: 20px; }
+  .app-main .panel-head { gap: 8px; margin-bottom: 12px; }
+  .app-main .panel-head > .badge { justify-self: start; }
+  .app-main .panel-head p { font-size: 13px; line-height: 1.5; }
+  .app-main .intake-form-panel, .app-main .intake-response-panel { width: 100%; }
+  .app-main .action-bar { padding: 8px; gap: 8px; }
+  .app-main .quick-actions { grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 8px; }
+  .app-main .quick-actions .btn { min-width: 0; padding: 8px 10px; text-align: center; }
+  .app-main .btn, .modal-card .btn { min-height: 44px; }
+  .app-main .inline-actions { gap: 8px; }
+  .app-main .inline-actions .btn { flex: 1 1 120px; padding-block: 8px; text-align: center; }
+  .app-main .field, .modal-card .field { min-width: 0; }
+  .app-main .field input, .app-main .field select, .app-main .field textarea,
+  .modal-card .field input, .modal-card .field select, .modal-card .field textarea { min-width: 0; font-size: 16px; }
+  .app-main .client-card-head { flex-wrap: wrap; gap: 8px; }
+  .app-main .client-card-head > div { min-width: 0; max-width: 100%; }
+  .app-main .request-card p, .app-main .document-card p, .app-main .profile-detail-list dd { overflow-wrap: anywhere; }
+  .app-main .table-wrap, .app-main .invoice-table-wrap, .app-main .client-tree-wrap { max-width: 100%; min-width: 0; overscroll-behavior-x: contain; }
+  .invoice-actions-trigger { width: 44px; height: 44px; }
+  .invoice-actions-menu .inline-link, .invoice-actions-menu .inline-button { min-height: 44px; font-size: 14px; }
+  .app-main .client-note-children { margin-left: 8px; padding-left: 8px; }
+  .app-main .client-note-group summary { padding: 10px; gap: 8px; }
+  .app-main .client-workspace-header { padding: 16px; gap: 12px; }
+  .app-main .client-identity { min-width: 0; }
+  .app-main .permission-matrix { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+  .app-main .permission-row { min-width: 338px; grid-template-columns: minmax(130px, 1fr) repeat(4, 44px); gap: 8px; }
+  .app-main .permission-row label { min-height: 44px; display: grid; place-items: center; }
+  .modal-dialog, .modal-card { max-height: calc(100dvh - 24px); }
+  .modal-head { gap: 12px; margin-bottom: 14px; }
+  .modal-head > div { min-width: 0; overflow-wrap: anywhere; }
+  .app-main .calendar-view-tabs a, .app-main .calendar-actions .btn { min-height: 44px; }
+  .portal-shell { width: calc(100% - 24px); padding: 12px 0; gap: 12px; }
+  .portal-shell .panel, .portal-shell .welcome-panel { padding: 16px; }
+  .portal-shell .action-bar { display: flex; flex-wrap: wrap; padding: 8px; }
+  .portal-shell .action-bar > .profile-menu { display: block; }
+  .portal-shell .profile-menu-panel { left: auto; right: 0; max-width: calc(100vw - 24px); }
+  .portal-shell .brand { font-size: 17px; }
+  .portal-shell .welcome-panel h2 { font-size: 26px; }
+  .portal-shell .panel h2, .portal-shell .topbar h1 { font-size: 22px; }
+  .portal-shell .panel h1 { font-size: 24px; line-height: 1.25; overflow-wrap: anywhere; margin-bottom: 12px; }
+  .portal-shell .portal-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .portal-shell .stat-card { min-width: 0; padding: 12px; }
+  .portal-shell .stat-card strong { font-size: 24px; overflow-wrap: anywhere; }
+  .portal-shell .client-card-head { flex-wrap: wrap; }
+  .portal-shell p, .portal-shell strong { overflow-wrap: anywhere; }
+  .portal-shell .table-wrap { max-width: 100%; min-width: 0; }
+  .portal-shell button.inline-link { min-height: 44px; max-width: 100%; padding: 8px 0; border: 0; background: transparent; font: inherit; font-weight: 800; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+  .portal-shell button.inline-link:focus-visible { outline: 3px solid var(--brand-700); outline-offset: 3px; border-radius: 4px; }
+  .portal-shell .btn, .signup-shell .btn, .marketing-page .btn { min-height: 44px; }
+  .portal-shell .field, .signup-shell .field { min-width: 0; }
+  .portal-shell .field input, .portal-shell .field select, .portal-shell .field textarea,
+  .signup-shell .field input, .signup-shell .field select, .signup-shell .field textarea,
+  .login-form input { min-width: 0; font-size: 16px; }
+  .signup-shell { padding: 16px 0; gap: 16px; }
+  .signup-intro, .signup-card, .login-card { padding: 20px; border-radius: 20px; min-width: 0; }
+  .signup-intro h1 { font-size: 30px; overflow-wrap: anywhere; }
+  .signup-intro .eyebrow { margin-top: 20px; }
+  .login-brand-panel h1 { font-size: 34px; }
+  .login-card h2 { font-size: 26px; overflow-wrap: anywhere; }
 }
