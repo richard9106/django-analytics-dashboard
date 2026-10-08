@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.conf import settings
@@ -130,6 +130,76 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             month['appointment_height'] = int(month['appointments'] / max_appointments * 100) if max_appointments else 0
         return months
 
+    def get_onboarding_steps(self, practice):
+        if not practice:
+            return []
+        steps = []
+        if has_practice_permission(self.request.user, 'clients', 'create') and not practice.clients.exists():
+            steps.append({'label': 'Add your first client', 'url': reverse('clients:create'), 'complete': False})
+        if has_practice_permission(self.request.user, 'appointments', 'edit'):
+            if not practice.working_hours.exists() and not practice.availability_overrides.exists():
+                steps.append({'label': 'Set practice availability', 'url': reverse('appointments:list') + '?view=week#availability-changes', 'complete': False})
+        if has_practice_permission(self.request.user, 'appointments', 'create') and not practice.appointments.exists():
+            steps.append({'label': 'Schedule your first session', 'url': reverse('appointments:create'), 'complete': False})
+        return steps
+
+    def get_dashboard_charts(self, practice, today, months):
+        # Fixed SVG geometry and locale-independent numbers; labels retain exact values.
+        maximum = max((Decimal(month['revenue']) for month in months), default=Decimal('0'))
+        scale = Decimal('1')
+        if maximum > 0:
+            magnitude = Decimal('10') ** maximum.adjusted()
+            scale = (maximum / magnitude).to_integral_value(rounding=ROUND_CEILING) * magnitude
+        points = []
+        chart_months = []
+        for index, month in enumerate(months):
+            x = 36 + (468 * index / max(1, len(months) - 1))
+            y = 148 - float(Decimal(month['revenue']) / scale) * 132
+            points.append(f'{x:.1f},{y:.1f}')
+            chart_months.append({'label': month['label'], 'x': f'{x:.1f}', 'revenue': month['revenue']})
+        result = {
+            'revenue_chart_points': ' '.join(points),
+            'revenue_chart_area': '36,148 ' + ' '.join(points) + ' 504,148',
+            'revenue_chart_ticks': [{'value': scale, 'y': 16}, {'value': scale / 2, 'y': 82}, {'value': 0, 'y': 148}],
+            'revenue_chart_months': chart_months,
+            'revenue_chart_has_data': maximum > 0,
+            'session_status_segments': [], 'session_status_total': 0,
+            'invoice_status_breakdown': [], 'invoice_status_total': 0,
+        }
+        if not practice:
+            return result
+        index = today.year * 12 + today.month - 1
+        first = date((index - 5) // 12, (index - 5) % 12 + 1, 1)
+        following = date((index + 1) // 12, (index + 1) % 12 + 1, 1)
+        start = timezone.make_aware(timezone.datetime.combine(first, timezone.datetime.min.time()))
+        end = timezone.make_aware(timezone.datetime.combine(following, timezone.datetime.min.time()))
+        if self.can_view('appointments'):
+            counts = dict(Appointment.objects.filter(practice=practice, starts_at__gte=start, starts_at__lt=end)
+                          .values('status').annotate(total=Count('pk')).values_list('status', 'total').order_by())
+            total = sum(counts.values())
+            result['session_status_total'] = total
+            cursor = 0
+            colors = ['#7052D9', '#14B8A6', '#94A3B8', '#F59E0B']
+            for (status, label), color in zip(Appointment.Status.choices, colors):
+                count = counts.get(status, 0)
+                if not count:
+                    continue
+                share = count / total * 100
+                result['session_status_segments'].append({'label': label, 'count': count, 'color': color,
+                    'start': f'{cursor:.3f}', 'share': f'{share:.3f}', 'gap': f'{100-share:.3f}'})
+                cursor += share
+        if self.can_view('billing'):
+            counts = dict(Invoice.objects.filter(practice=practice, created_at__gte=start, created_at__lt=end)
+                          .values('status').annotate(total=Count('pk')).values_list('status', 'total').order_by())
+            maximum_count = max(counts.values(), default=0)
+            result['invoice_status_total'] = sum(counts.values())
+            colors = ['#94A3B8', '#7052D9', '#14B8A6', '#F36F56', '#CBD5E1']
+            for (status, label), color in zip(Invoice.Status.choices, colors):
+                count = counts.get(status, 0)
+                result['invoice_status_breakdown'].append({'label': label, 'count': count, 'color': color,
+                    'width': f'{count / maximum_count * 100:.3f}' if maximum_count else '0'})
+        return result
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.localtime()
@@ -199,6 +269,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'performance_months': performance_months,
         })
         context.update(billing_summary)
+        context['dashboard_onboarding_steps'] = self.get_onboarding_steps(practice)
+        context.update(self.get_dashboard_charts(practice, today, performance_months))
         return context
 
 
