@@ -43,6 +43,78 @@ class DashboardTests(TestCase):
         )
         return user, practice, therapist
 
+    def test_dashboard_task_links_count_and_detail_are_scoped(self):
+        user, practice, _ = self.create_practice_user()
+        Task.objects.bulk_create([Task(practice=practice, title=f'Follow-up {index}', assignee=user, created_by=user) for index in range(55)])
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['task_count'], 55)
+        self.assertEqual(response.context['tasks_shown'], 50)
+        self.assertContains(response, 'Showing 50 of 55')
+        self.assertContains(response, 'aria-labelledby="dashboard-tasks-title" tabindex="0"')
+        item = response.context['tasks'][0]
+        self.assertEqual(item['href'], reverse('tasks_detail', args=[item['manual'].pk]))
+        detail = self.client.get(item['href'])
+        self.assertContains(detail, item['manual'].title)
+        self.assertContains(detail, 'Mark complete')
+        response = self.client.post(reverse('tasks_status', args=[item['manual'].pk]), {'status': 'done', 'next': 'task_detail'})
+        self.assertEqual(response.url, item['href'])
+        other, _, _ = self.create_practice_user(username='other-tasks')
+        self.client.force_login(other)
+        self.assertEqual(self.client.get(item['href']).status_code, 404)
+
+    def test_dashboard_billing_remaining_balance_excludes_drafts_and_partial_payments(self):
+        from decimal import Decimal
+        from apps.billing.models import Invoice, Payment
+        user, practice, _ = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Billing', last_name='Client')
+        today = timezone.localdate()
+        invoice = Invoice.objects.create(practice=practice, client=client, invoice_number='DASH-1', amount='100', status='sent', due_date=today - timedelta(days=1))
+        Payment.objects.create(practice=practice, client=client, invoice=invoice, amount='20', paid_at=timezone.now())
+        Payment.objects.create(practice=practice, client=client, invoice=invoice, amount='10', paid_at=timezone.now())
+        settled = Invoice.objects.create(practice=practice, client=client, invoice_number='SETTLED', amount='50', status='overdue')
+        Payment.objects.create(practice=practice, client=client, invoice=settled, amount='50', paid_at=timezone.now())
+        Invoice.objects.create(practice=practice, client=client, invoice_number='DRAFT', amount='900', status='draft')
+        Invoice.objects.create(practice=practice, client=client, invoice_number='VOID', amount='800', status='void')
+        Invoice.objects.create(practice=practice, client=client, invoice_number='PAID', amount='200', status='paid', paid_at=timezone.now())
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['outstanding_balance'], Decimal('70'))
+        self.assertEqual(response.context['overdue_invoice_count'], 1)
+        self.assertEqual(response.context['open_invoice_count'], 1)
+        self.assertEqual(response.context['monthly_revenue'], Decimal('200'))
+        html = response.content.decode()
+        self.assertLess(html.index('id="dashboard-billing-title"'), html.index('Revenue trend'))
+
+    def test_dashboard_hides_billing_data_and_alerts_without_permission(self):
+        from apps.billing.models import Invoice
+        user, practice, _ = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Hidden', last_name='Billing')
+        Invoice.objects.create(practice=practice, client=client, invoice_number='HIDDEN-INVOICE', amount='123', status='sent')
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'tasks': {'view': True}, 'appointments': {'view': True}}
+        profile.save()
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertNotContains(response, 'HIDDEN-INVOICE')
+        self.assertNotContains(response, 'Monthly revenue')
+        self.assertNotContains(response, 'Billing follow-up')
+        self.assertNotContains(response, 'id="dashboard-billing-title"')
+        self.assertEqual(response.context['outstanding_balance'], 0)
+
+    def test_performance_months_use_two_grouped_queries(self):
+        from types import SimpleNamespace
+        from apps.dashboard.views import DashboardView
+        user, practice, _ = self.create_practice_user()
+        view = DashboardView()
+        view.request = SimpleNamespace(user=user)
+        view.can_view('billing')
+        with self.assertNumQueries(2):
+            months = view.get_performance_months(practice, timezone.localdate())
+        self.assertEqual(len(months), 6)
+        self.assertTrue(all(month['revenue_height'] == 0 for month in months))
+
     def test_dashboard_requires_login(self):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 302)
