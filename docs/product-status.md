@@ -4,6 +4,8 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
+- Ordered Overview as metrics, billing, charts, then appointments/tasks; conditional first steps remain at the top. Increased authenticated session inactivity timeout to one hour, shared by server enforcement and the browser countdown.
+
 - Compacted Overview typography, task rows and billing tables following specialized UX review. First steps appear above the workspace actions only while permitted setup actions remain incomplete. Added a revenue line/area, session columns, session-status donut and invoice-status horizontal bars using scoped six-month data, accessible numerical summaries and truthful zero states.
 
 - Redesigned Overview with actionable KPI cards, independent bounded appointment/task scroll regions and billing balances plus recent invoice links before trend charts. Assigned tasks open a tenant-scoped detail page; automatic follow-ups link to their permitted source workspaces. Pending-item counts include all assigned tasks while the dashboard preview is capped at 50, and financial balances subtract partial payments and exclude drafts/voids. Restricted modules are omitted from dashboard data and cards. Six-month performance uses two grouped queries rather than twelve monthly queries. Specialized UX review covered hierarchy, keyboard access, mobile layout and the task flow.

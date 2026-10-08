@@ -389,7 +389,7 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'data-tour-target="nav-settings"')
         self.assertContains(response, 'data-tour-next')
 
-    def test_dashboard_puts_daily_work_before_charts_without_integration_gate(self):
+    def test_dashboard_orders_summary_billing_charts_then_daily_work_without_integration_gate(self):
         user, practice, therapist = self.create_practice_user()
         client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
         now = timezone.now()
@@ -406,7 +406,9 @@ class DashboardTests(TestCase):
         self.assertNotContains(response, 'before adding clients')
         self.assertNotContains(response, 'setup-locked')
         html = response.content.decode()
-        self.assertLess(html.index('id="today"'), html.index('class="performance-grid"'))
+        self.assertLess(html.index('class="stats dashboard-metrics"'), html.index('id="dashboard-billing-title"'))
+        self.assertLess(html.index('id="dashboard-billing-title"'), html.index('class="performance-grid"'))
+        self.assertLess(html.index('class="performance-grid"'), html.index('id="today"'))
 
     def test_client_login_redirects_to_portal(self):
         practice = Practice.objects.create(name='Nuvia Therapy')

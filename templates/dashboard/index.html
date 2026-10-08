@@ -60,6 +60,49 @@
         {% if workspace_permissions.billing.view %}<a class="stat-card dashboard-metric" href="{% url 'billing:list' %}"><div class="dashboard-metric-head"><span>Monthly revenue</span><span class="dashboard-metric-icon aqua">{% include 'partials/nav_icon.html' with icon='billing' %}</span></div><strong>${{ monthly_revenue|floatformat:2 }}</strong><small>Paid invoices this month · USD</small></a>{% endif %}
       </section>
 
+      {% if workspace_permissions.billing.view %}<section class="panel dashboard-billing" aria-labelledby="dashboard-billing-title">
+        <div class="panel-head"><div><p class="eyebrow">Financial overview</p><h2 id="dashboard-billing-title">Billing at a glance</h2><p>Balances to follow up and your latest invoices.</p></div><a class="btn btn-secondary" href="{% url 'billing:list' %}">Open billing →</a></div>
+        <div class="dashboard-billing-layout">
+          <div class="dashboard-billing-summary"><div><span>Outstanding balance</span><strong>${{ outstanding_balance|floatformat:2 }}</strong><small>Unpaid sent and overdue balances · USD</small></div><div><span>Overdue invoices</span><strong>{{ overdue_invoice_count }}</strong><small>Unpaid invoices past due</small></div></div>
+          <div class="table-wrap"><table><caption class="dashboard-table-caption">Recent invoices</caption><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead><tbody>{% for invoice in recent_invoices %}<tr><td>{% if workspace_permissions.billing.edit %}<a class="dashboard-record-link" href="{% url 'billing:invoice_edit' invoice.pk %}">{{ invoice.invoice_number }}</a>{% else %}{{ invoice.invoice_number }}{% endif %}</td><td>{% if workspace_permissions.clients.view %}<a class="dashboard-record-link" href="{% url 'clients:detail' invoice.client_id %}">{{ invoice.client }}</a>{% else %}{{ invoice.client }}{% endif %}</td><td><span class="badge {% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}warning{% else %}brand{% endif %}">{{ invoice.get_status_display }}</span></td><td>${{ invoice.amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No invoices yet. Billing activity will appear here after you create one.</td></tr>{% endfor %}</tbody></table></div>
+        </div>
+      </section>{% endif %}
+
+      <section class="performance-grid" aria-label="Practice performance">
+        {% if workspace_permissions.billing.view %}<article class="panel performance-panel">
+          <div class="panel-head compact"><div><h2 id="revenue-chart-title">Revenue trend</h2><p>Paid invoices · last six months · USD</p></div><span class="chart-type-label">Trend</span></div>
+          <div class="dashboard-line-chart" aria-hidden="true">
+            <svg viewBox="0 0 520 180" preserveAspectRatio="none" focusable="false">
+              {% for tick in revenue_chart_ticks %}<line x1="36" y1="{{ tick.y }}" x2="504" y2="{{ tick.y }}" class="chart-gridline"/><text x="29" y="{{ tick.y }}" text-anchor="end" dy="4">${{ tick.value|floatformat:"-2" }}</text>{% endfor %}
+              <polygon points="{{ revenue_chart_area }}" class="chart-area"/>
+              <polyline points="{{ revenue_chart_points }}" class="chart-line"/>
+              {% for month in revenue_chart_months %}<text x="{{ month.x }}" y="174" text-anchor="middle">{{ month.label }}</text>{% endfor %}
+            </svg>
+          </div>
+          {% if not revenue_chart_has_data %}<p class="chart-empty-note">No paid invoices in this period.</p>{% endif %}
+          <details class="dashboard-chart-data"><summary>View monthly values</summary><table><caption class="sr-only">Monthly revenue and session values</caption><thead><tr><th>Month</th><th>Paid invoices (USD)</th><th>Sessions</th></tr></thead><tbody>{% for month in performance_months %}<tr><td>{{ month.label }}</td><td>${{ month.revenue|floatformat:2 }}</td><td>{% if workspace_permissions.appointments.view %}{{ month.appointments }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></details>
+        </article>{% endif %}
+        {% if workspace_permissions.appointments.view %}<article class="panel performance-panel">
+          <div class="panel-head compact"><div><h2>Session volume</h2><p>Appointments scheduled · last six months</p></div><span class="chart-type-label">Monthly</span></div>
+          <div class="performance-chart appointments-chart">
+            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">{{ month.appointments }}</span><div class="chart-track"><span style="height: {{ month.appointment_height }}%"></span></div><small>{{ month.label }}</small></div>{% endfor %}
+          </div>
+        </article>
+        <article class="panel performance-panel">
+          <div class="panel-head compact"><div><h2>Session outcomes</h2><p>Appointment status · last six months</p></div><span class="chart-type-label">Distribution</span></div>
+          <div class="dashboard-distribution">
+            <div class="dashboard-donut"><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false"><circle cx="60" cy="60" r="40" fill="none" stroke="#edf0f5" stroke-width="16"/>{% for segment in session_status_segments %}<circle cx="60" cy="60" r="40" fill="none" stroke="{{ segment.color }}" stroke-width="16" pathLength="100" stroke-dasharray="{{ segment.share }} {{ segment.gap }}" stroke-dashoffset="-{{ segment.start }}" transform="rotate(-90 60 60)"/>{% endfor %}</svg><div><strong>{{ session_status_total }}</strong><small>sessions</small></div></div>
+            <ul class="dashboard-chart-legend">{% for segment in session_status_segments %}<li><span class="chart-legend-dot" style="background: {{ segment.color }}" aria-hidden="true"></span><span>{{ segment.label }}</span><strong>{{ segment.count }}</strong><small>{{ segment.share|floatformat:0 }}%</small></li>{% endfor %}</ul>
+          </div>
+          {% if not session_status_total %}<p class="chart-empty-note">No sessions in this period.</p>{% endif %}
+        </article>{% endif %}
+        {% if workspace_permissions.billing.view %}<article class="panel performance-panel">
+          <div class="panel-head compact"><div><h2>Invoice status</h2><p>Invoice counts · last six months</p></div><span class="chart-type-label">Comparison</span></div>
+          <ul class="dashboard-horizontal-chart">{% for item in invoice_status_breakdown %}<li><div><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div><div class="horizontal-chart-track" aria-hidden="true"><span style="width: {{ item.width }}%; background: {{ item.color }}"></span></div></li>{% endfor %}</ul>
+          {% if not invoice_status_total %}<p class="chart-empty-note">No invoices in this period.</p>{% endif %}
+        </article>{% endif %}
+      </section>
+
       <section class="content-grid" id="today" data-tour-target="appointments">
         {% if workspace_permissions.appointments.view %}<article class="panel dashboard-work-panel">
           <div class="panel-head">
@@ -118,49 +161,6 @@
            </div>
            <div class="dashboard-panel-footer"><a class="inline-link" href="{% url 'tasks_list' %}">View team tasks →</a></div>
          </article>{% endif %}
-      </section>
-
-      {% if workspace_permissions.billing.view %}<section class="panel dashboard-billing" aria-labelledby="dashboard-billing-title">
-        <div class="panel-head"><div><p class="eyebrow">Financial overview</p><h2 id="dashboard-billing-title">Billing at a glance</h2><p>Balances to follow up and your latest invoices.</p></div><a class="btn btn-secondary" href="{% url 'billing:list' %}">Open billing →</a></div>
-        <div class="dashboard-billing-layout">
-          <div class="dashboard-billing-summary"><div><span>Outstanding balance</span><strong>${{ outstanding_balance|floatformat:2 }}</strong><small>Unpaid sent and overdue balances · USD</small></div><div><span>Overdue invoices</span><strong>{{ overdue_invoice_count }}</strong><small>Unpaid invoices past due</small></div></div>
-          <div class="table-wrap"><table><caption class="dashboard-table-caption">Recent invoices</caption><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead><tbody>{% for invoice in recent_invoices %}<tr><td>{% if workspace_permissions.billing.edit %}<a class="dashboard-record-link" href="{% url 'billing:invoice_edit' invoice.pk %}">{{ invoice.invoice_number }}</a>{% else %}{{ invoice.invoice_number }}{% endif %}</td><td>{% if workspace_permissions.clients.view %}<a class="dashboard-record-link" href="{% url 'clients:detail' invoice.client_id %}">{{ invoice.client }}</a>{% else %}{{ invoice.client }}{% endif %}</td><td><span class="badge {% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}warning{% else %}brand{% endif %}">{{ invoice.get_status_display }}</span></td><td>${{ invoice.amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4">No invoices yet. Billing activity will appear here after you create one.</td></tr>{% endfor %}</tbody></table></div>
-        </div>
-      </section>{% endif %}
-
-      <section class="performance-grid" aria-label="Practice performance">
-        {% if workspace_permissions.billing.view %}<article class="panel performance-panel">
-          <div class="panel-head compact"><div><h2 id="revenue-chart-title">Revenue trend</h2><p>Paid invoices · last six months · USD</p></div><span class="chart-type-label">Trend</span></div>
-          <div class="dashboard-line-chart" aria-hidden="true">
-            <svg viewBox="0 0 520 180" preserveAspectRatio="none" focusable="false">
-              {% for tick in revenue_chart_ticks %}<line x1="36" y1="{{ tick.y }}" x2="504" y2="{{ tick.y }}" class="chart-gridline"/><text x="29" y="{{ tick.y }}" text-anchor="end" dy="4">${{ tick.value|floatformat:"-2" }}</text>{% endfor %}
-              <polygon points="{{ revenue_chart_area }}" class="chart-area"/>
-              <polyline points="{{ revenue_chart_points }}" class="chart-line"/>
-              {% for month in revenue_chart_months %}<text x="{{ month.x }}" y="174" text-anchor="middle">{{ month.label }}</text>{% endfor %}
-            </svg>
-          </div>
-          {% if not revenue_chart_has_data %}<p class="chart-empty-note">No paid invoices in this period.</p>{% endif %}
-          <details class="dashboard-chart-data"><summary>View monthly values</summary><table><caption class="sr-only">Monthly revenue and session values</caption><thead><tr><th>Month</th><th>Paid invoices (USD)</th><th>Sessions</th></tr></thead><tbody>{% for month in performance_months %}<tr><td>{{ month.label }}</td><td>${{ month.revenue|floatformat:2 }}</td><td>{% if workspace_permissions.appointments.view %}{{ month.appointments }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></details>
-        </article>{% endif %}
-        {% if workspace_permissions.appointments.view %}<article class="panel performance-panel">
-          <div class="panel-head compact"><div><h2>Session volume</h2><p>Appointments scheduled · last six months</p></div><span class="chart-type-label">Monthly</span></div>
-          <div class="performance-chart appointments-chart">
-            {% for month in performance_months %}<div class="chart-column"><span class="chart-value">{{ month.appointments }}</span><div class="chart-track"><span style="height: {{ month.appointment_height }}%"></span></div><small>{{ month.label }}</small></div>{% endfor %}
-          </div>
-        </article>
-        <article class="panel performance-panel">
-          <div class="panel-head compact"><div><h2>Session outcomes</h2><p>Appointment status · last six months</p></div><span class="chart-type-label">Distribution</span></div>
-          <div class="dashboard-distribution">
-            <div class="dashboard-donut"><svg viewBox="0 0 120 120" aria-hidden="true" focusable="false"><circle cx="60" cy="60" r="40" fill="none" stroke="#edf0f5" stroke-width="16"/>{% for segment in session_status_segments %}<circle cx="60" cy="60" r="40" fill="none" stroke="{{ segment.color }}" stroke-width="16" pathLength="100" stroke-dasharray="{{ segment.share }} {{ segment.gap }}" stroke-dashoffset="-{{ segment.start }}" transform="rotate(-90 60 60)"/>{% endfor %}</svg><div><strong>{{ session_status_total }}</strong><small>sessions</small></div></div>
-            <ul class="dashboard-chart-legend">{% for segment in session_status_segments %}<li><span class="chart-legend-dot" style="background: {{ segment.color }}" aria-hidden="true"></span><span>{{ segment.label }}</span><strong>{{ segment.count }}</strong><small>{{ segment.share|floatformat:0 }}%</small></li>{% endfor %}</ul>
-          </div>
-          {% if not session_status_total %}<p class="chart-empty-note">No sessions in this period.</p>{% endif %}
-        </article>{% endif %}
-        {% if workspace_permissions.billing.view %}<article class="panel performance-panel">
-          <div class="panel-head compact"><div><h2>Invoice status</h2><p>Invoice counts · last six months</p></div><span class="chart-type-label">Comparison</span></div>
-          <ul class="dashboard-horizontal-chart">{% for item in invoice_status_breakdown %}<li><div><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div><div class="horizontal-chart-track" aria-hidden="true"><span style="width: {{ item.width }}%; background: {{ item.color }}"></span></div></li>{% endfor %}</ul>
-          {% if not invoice_status_total %}<p class="chart-empty-note">No invoices in this period.</p>{% endif %}
-        </article>{% endif %}
       </section>
 
       <dialog class="modal-dialog" id="client-create-modal">
