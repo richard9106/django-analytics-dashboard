@@ -115,6 +115,78 @@ class DashboardTests(TestCase):
         self.assertEqual(len(months), 6)
         self.assertTrue(all(month['revenue_height'] == 0 for month in months))
 
+    def test_first_steps_show_only_missing_actions_at_top_and_disappear_when_complete(self):
+        from datetime import time
+        from apps.appointments.models import PracticeWorkingHour
+        user, practice, therapist = self.create_practice_user()
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(len(response.context['dashboard_onboarding_steps']), 3)
+        html = response.content.decode()
+        self.assertLess(html.index('aria-label="Recommended first steps"'), html.index('aria-label="Workspace actions"'))
+        client = Client.objects.create(practice=practice, first_name='First', last_name='Client')
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(len(response.context['dashboard_onboarding_steps']), 2)
+        self.assertNotIn('Add your first client', [step['label'] for step in response.context['dashboard_onboarding_steps']])
+        PracticeWorkingHour.objects.create(practice=practice, weekday=0, starts_at=time(9), ends_at=time(17), active=False)
+        starts = timezone.now()
+        Appointment.objects.create(practice=practice, client=client, therapist=therapist, starts_at=starts,
+                                   ends_at=starts + timedelta(minutes=50), status='cancelled')
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['dashboard_onboarding_steps'], [])
+        self.assertNotContains(response, 'aria-label="Recommended first steps"')
+
+    def test_first_steps_do_not_offer_actions_without_permission(self):
+        user, _, _ = self.create_practice_user()
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'tasks': {'view': True}}
+        profile.save()
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['dashboard_onboarding_steps'], [])
+        self.assertEqual(response.context['session_status_total'], 0)
+        self.assertEqual(response.context['invoice_status_total'], 0)
+
+    def test_status_charts_use_real_scoped_recent_data_and_line_geometry(self):
+        from apps.billing.models import Invoice
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Chart', last_name='Client')
+        starts = timezone.now()
+        for index, status in enumerate(['completed', 'cancelled']):
+            Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+                starts_at=starts + timedelta(hours=index), ends_at=starts + timedelta(hours=index, minutes=50), status=status)
+        Appointment.objects.create(practice=practice, client=client, therapist=therapist,
+            starts_at=starts - timedelta(days=400), ends_at=starts - timedelta(days=400) + timedelta(minutes=50))
+        Invoice.objects.create(practice=practice, client=client, invoice_number='CHART-PAID', amount='123.45', status='paid', paid_at=starts)
+        Invoice.objects.create(practice=practice, client=client, invoice_number='CHART-SENT', amount='100', status='sent')
+        other_user, other_practice, other_therapist = self.create_practice_user(username='other-charts')
+        other_client = Client.objects.create(practice=other_practice, first_name='Other', last_name='Chart')
+        Appointment.objects.create(practice=other_practice, client=other_client, therapist=other_therapist,
+            starts_at=starts, ends_at=starts + timedelta(minutes=50))
+        Invoice.objects.create(practice=other_practice, client=other_client, invoice_number='OTHER', amount='999', status='paid', paid_at=starts)
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.context['session_status_total'], 2)
+        segments = response.context['session_status_segments']
+        self.assertEqual(sum(item['count'] for item in segments), 2)
+        self.assertAlmostEqual(sum(float(item['share']) for item in segments), 100, places=2)
+        self.assertEqual(response.context['invoice_status_total'], 2)
+        self.assertEqual(len(response.context['revenue_chart_points'].split()), 6)
+        self.assertTrue(response.context['revenue_chart_has_data'])
+        self.assertTrue(response.context['revenue_chart_points'].split()[-1].startswith('504.0,'))
+        self.assertTrue(all(16 <= float(point.split(',')[1]) <= 148 for point in response.context['revenue_chart_points'].split()))
+
+    def test_empty_charts_have_no_fabricated_segments_or_values(self):
+        user, _, _ = self.create_practice_user()
+        self.client.force_login(user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertFalse(response.context['revenue_chart_has_data'])
+        self.assertEqual(response.context['session_status_segments'], [])
+        self.assertEqual(response.context['session_status_total'], 0)
+        self.assertEqual(response.context['invoice_status_total'], 0)
+        self.assertTrue(all(item['width'] == '0' for item in response.context['invoice_status_breakdown']))
+
     def test_dashboard_requires_login(self):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 302)
@@ -307,7 +379,7 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Start guided tour')
         self.assertContains(response, 'Guided setup')
-        self.assertContains(response, 'Start with your clients and your calendar')
+        self.assertContains(response, 'Finish setting up your practice')
         self.assertContains(response, 'show-dashboard-tour')
         self.assertContains(response, 'data-tour-spotlight')
         self.assertContains(response, 'target: \'[data-tour-target="setup"]\'')
