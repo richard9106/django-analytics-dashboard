@@ -164,9 +164,16 @@ class AccountSecurityTests(TestCase):
 
     def test_idle_timeout(self):
         self.enrolled()
-        self.change_session(security_last_activity=time.time() - 901)
+        self.change_session(security_last_activity=time.time() - 3601)
         self.assertRedirects(self.client.get('/accounts/security/'), '/login/?session_expired=1', fetch_redirect_response=False)
         self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_session_remains_active_after_fifteen_minutes(self):
+        self.enrolled()
+        self.change_session(security_last_activity=time.time() - 901)
+        response = self.client.get('/accounts/security/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('_auth_user_id', self.client.session)
 
     def test_absolute_timeout_despite_recent_activity(self):
         self.enrolled()
