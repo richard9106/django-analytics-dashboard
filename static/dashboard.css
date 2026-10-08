@@ -1305,7 +1305,7 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .intake-page .intake-filters input, .intake-page .intake-filters select { min-height: 44px; font-size: 13px; padding-inline: 10px; }
 .intake-page .btn { min-height: 44px; font-size: 12px; padding-inline: 12px; }
 .intake-assignment-list { border-top: 1px solid var(--border); }
-.intake-assignment-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .58fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.intake-assignment-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .58fr) 44px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .intake-assignment-row:last-child { border-bottom: 0; }
 .intake-assignment-info { min-width: 0; }
 .intake-assignment-info h3 { margin: 0 0 3px; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
@@ -1313,7 +1313,9 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 .intake-page .intake-assignment-date { margin-top: 3px; font-size: 11px; line-height: 1.5; }
 .intake-assignment-status { display: grid; justify-items: start; gap: 5px; min-width: 0; }
 .intake-assignment-status .intake-waiting { font-size: 11px; line-height: 1.45; }
-.intake-row-actions { display: grid; justify-items: end; gap: 0; }
+.intake-row-actions { display: flex; justify-content: flex-end; }
+.intake-page .intake-row-actions .invoice-actions-trigger { width: 44px; height: 44px; }
+.intake-actions-menu .inline-link { min-height: 44px; }
 .intake-row-actions .inline-link { min-height: 44px; display: inline-flex; align-items: center; font-size: 12px; }
 .intake-page .intake-hint { margin: 0 0 8px; padding: 10px 12px; font-size: 12px; line-height: 1.5; }
 .intake-page .intake-templates .package-list { gap: 0; }
@@ -1335,8 +1337,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .intake-page .intake-summary span { font-size: 11px; }
   .intake-page .intake-filters .field { flex: 1 1 100%; }
   .intake-page .intake-filters .btn { flex: 1 1 auto; }
-  .intake-assignment-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
-  .intake-assignment-status { max-width: 140px; }
-  .intake-row-actions { grid-column: 1 / -1; display: flex; justify-content: flex-start; flex-wrap: wrap; gap: 8px 12px; }
+  .intake-assignment-row { grid-template-columns: minmax(0, 1fr) 44px; gap: 6px 12px; }
+  .intake-assignment-status { grid-column: 1; grid-row: 2; }
+  .intake-row-actions { grid-column: 2; grid-row: 1 / 3; align-self: center; }
   .intake-assignment-info h3 { font-size: 14px; }
 }

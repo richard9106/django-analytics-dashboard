@@ -4,7 +4,7 @@ This document captures the current product state after the recent UX, billing, a
 
 ## Recently Completed
 
-- Made Treatment Plans fill the available workspace width while preserving its filter sidebar and mobile stacking. Compacted Intake into separated client-form rows and a smaller template library, with scoped typography, status/actions, preview/edit controls and responsive layouts reviewed by the specialized UX designer.
+- Made Treatment Plans fill the available workspace width while preserving its filter sidebar and mobile stacking. Compacted Intake into separated client-form rows with trailing three-dot action menus and a smaller template library, with scoped typography, visible status, preview/edit controls and responsive layouts reviewed by the specialized UX designer.
 
 - Ordered Overview as metrics, charts, billing, then appointments/tasks; conditional first steps remain at the top. Increased authenticated session inactivity timeout to one hour, shared by server enforcement and the browser countdown.
 
