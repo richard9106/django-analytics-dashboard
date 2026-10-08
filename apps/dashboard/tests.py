@@ -84,7 +84,7 @@ class DashboardTests(TestCase):
         self.assertEqual(response.context['open_invoice_count'], 1)
         self.assertEqual(response.context['monthly_revenue'], Decimal('200'))
         html = response.content.decode()
-        self.assertLess(html.index('id="dashboard-billing-title"'), html.index('Revenue trend'))
+        self.assertLess(html.index('Revenue trend'), html.index('id="dashboard-billing-title"'))
 
     def test_dashboard_hides_billing_data_and_alerts_without_permission(self):
         from apps.billing.models import Invoice
@@ -389,7 +389,7 @@ class DashboardTests(TestCase):
         self.assertContains(response, 'data-tour-target="nav-settings"')
         self.assertContains(response, 'data-tour-next')
 
-    def test_dashboard_orders_summary_billing_charts_then_daily_work_without_integration_gate(self):
+    def test_dashboard_orders_summary_charts_billing_then_daily_work_without_integration_gate(self):
         user, practice, therapist = self.create_practice_user()
         client = Client.objects.create(practice=practice, first_name='Maya', last_name='Johnson')
         now = timezone.now()
@@ -406,9 +406,9 @@ class DashboardTests(TestCase):
         self.assertNotContains(response, 'before adding clients')
         self.assertNotContains(response, 'setup-locked')
         html = response.content.decode()
-        self.assertLess(html.index('class="stats dashboard-metrics"'), html.index('id="dashboard-billing-title"'))
-        self.assertLess(html.index('id="dashboard-billing-title"'), html.index('class="performance-grid"'))
-        self.assertLess(html.index('class="performance-grid"'), html.index('id="today"'))
+        self.assertLess(html.index('class="stats dashboard-metrics"'), html.index('class="performance-grid"'))
+        self.assertLess(html.index('class="performance-grid"'), html.index('id="dashboard-billing-title"'))
+        self.assertLess(html.index('id="dashboard-billing-title"'), html.index('id="today"'))
 
     def test_client_login_redirects_to_portal(self):
         practice = Practice.objects.create(name='Nuvia Therapy')
