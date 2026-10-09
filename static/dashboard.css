@@ -961,6 +961,8 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .marketing-nav-links { max-height: 0; overflow: hidden; display: grid; grid-template-columns: 1fr; gap: 8px; opacity: 0; transform: translateY(-4px); transition: max-height .24s ease, opacity .2s ease, transform .2s ease, padding .2s ease; }
   .marketing-nav-check:checked ~ .marketing-nav-links { max-height: 70vh; overflow-y: auto; padding-top: 12px; opacity: 1; transform: translateY(0); }
   .marketing-nav-links a { min-height: 42px; padding: 0 12px; border: 1px solid rgba(112, 82, 217, .14); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.9); text-align: center; }
+  .marketing-nav-links a.btn-primary { min-height: 44px; background: var(--brand-600); border-color: var(--brand-600); color: #fff; }
+  .marketing-nav-links a.btn-primary:hover, .marketing-nav-links a.btn-primary:focus-visible { background: var(--brand-700); border-color: var(--brand-700); color: #fff; }
   .marketing-nav-links form, .marketing-nav-links form .btn { width: 100%; }
   .marketing-nav-links .btn { width: 100%; }
   .marketing-hero { min-height: 0; padding: 22px 12px; border-radius: 0; background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.84)), url('/static/marketing/therapy-practice-hero-banner.webp') center / cover no-repeat; }
