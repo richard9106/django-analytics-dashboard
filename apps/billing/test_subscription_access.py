@@ -31,7 +31,7 @@ class SubscriptionAccessTests(TestCase):
         response = self.client.post(reverse('clients:create'), {'first_name': 'Blocked'}, HTTP_ACCEPT='application/json')
         self.assertEqual(response.status_code, 403)
         self.assertEqual(Client.objects.filter(practice=self.practice).count(), 1)
-        self.assertContains(self.client.get(reverse('billing:subscription_access')), 'Start your free trial')
+        self.assertContains(self.client.get(reverse('billing:subscription_access')), 'Choose a subscription')
 
     def test_trialing_and_active_allow_workspace(self):
         sub = self.subscription('trialing')
@@ -123,7 +123,7 @@ class SubscriptionAccessTests(TestCase):
     def test_pending_checkout_is_reused_instead_of_creating_duplicate(self, create, retrieve):
         from types import SimpleNamespace
         self.subscription('incomplete', stripe_price_id='price_current', stripe_checkout_session_id='cs_pending')
-        retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending')
+        retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending', metadata={'billing_policy': 'cardless-v1'})
         response=self.client.post(reverse('billing:subscribe',args=['solo','monthly']))
         self.assertEqual(response.url, 'https://checkout.stripe.test/pending')
         create.assert_not_called()
@@ -160,3 +160,74 @@ class SubscriptionAccessTests(TestCase):
         form = PracticeSignupForm(data={'practice_name':'New practice','practice_type':'solo','first_name':'Test','last_name':'Owner','email':'new-owner@example.invalid','password1':'ValidPasswordForTest2026!','password2':'ValidPasswordForTest2026!','license_number':'test-signup','license_state':'CA'})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertTrue(form.save().nuvia_profile.practice.subscription_required)
+
+
+class CardlessTrialTests(TestCase):
+    def signup_data(self, **extra):
+        return dict(practice_name='Trial practice', practice_type='solo', first_name='Test', last_name='Owner', email='owner@example.invalid', password1='TrialSecureTest2026!', password2='TrialSecureTest2026!', license_number='trial-unique', license_state='CA', **extra)
+
+    def test_signup_starts_fifteen_days_without_checkout(self):
+        form = PracticeSignupForm(self.signup_data())
+        self.assertTrue(form.is_valid(), form.errors)
+        with patch('stripe.checkout.Session.create') as checkout:
+            user = form.save()
+        practice = user.nuvia_profile.practice
+        self.assertEqual(practice.free_trial_ends_at - practice.free_trial_started_at, timedelta(days=15))
+        self.assertEqual(subscription_access(practice)['mode'], 'full')
+        checkout.assert_not_called()
+        with patch('apps.billing.access.timezone.now', return_value=practice.free_trial_ends_at):
+            self.assertEqual(subscription_access(practice)['mode'], 'readonly')
+        self.assertFalse(PracticeSubscription.objects.filter(practice=practice).exists())
+
+    def test_private_invitation_is_email_bound_and_single_use(self):
+        import hashlib
+        from apps.practices.models import EarlyAccessInvitation
+        from apps.practices.early_access import assert_free_seat_available
+        from django.core.exceptions import ValidationError
+        token = 'private-test-token'
+        invitation, _ = EarlyAccessInvitation.objects.update_or_create(slot=1, defaults={'email': 'owner@example.invalid', 'token_hash': hashlib.sha256(token.encode()).hexdigest(), 'expires_at': timezone.now()+timedelta(days=30)})
+        wrong = self.signup_data(invitation=token)
+        wrong['email'] = 'other@example.invalid'
+        self.assertFalse(PracticeSignupForm(wrong).is_valid())
+        form = PracticeSignupForm(self.signup_data(invitation=token))
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        practice = user.nuvia_profile.practice
+        self.assertEqual(practice.free_trial_ends_at.year, practice.free_trial_started_at.year+1)
+        self.assertEqual(subscription_access(practice)['free_access'], 'early_access')
+        with self.assertRaises(ValidationError):
+            assert_free_seat_available(practice)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.practice_id, practice.pk)
+        from apps.practices.early_access import invitation_for
+        with self.assertRaises(ValidationError):
+            invitation_for(token, invitation.email)
+        PracticeSubscription.objects.create(practice=practice, status='active', stripe_subscription_id='sub_paid')
+        assert_free_seat_available(practice)
+
+    def test_pending_checkout_does_not_change_free_deadline(self):
+        practice = Practice.objects.create(name='Pending trial', subscription_required=True, free_trial_ends_at=timezone.now()+timedelta(days=1))
+        sub = PracticeSubscription.objects.create(practice=practice, status='incomplete')
+        self.assertEqual(subscription_access(practice)['mode'], 'full')
+        sub.stripe_subscription_id='sub_canceled'
+        sub.status='canceled'
+        sub.save()
+        self.assertEqual(subscription_access(practice)['mode'], 'readonly')
+
+
+    def test_expired_invitation_and_reissuing_redeemed_slot_are_rejected(self):
+        import hashlib
+        from django.core.exceptions import ValidationError
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from apps.practices.models import EarlyAccessInvitation
+        from apps.practices.early_access import invitation_for
+        invitation, _ = EarlyAccessInvitation.objects.update_or_create(slot=2, defaults={'email': 'owner@example.invalid', 'token_hash': hashlib.sha256(b'expired').hexdigest(), 'expires_at': timezone.now()-timedelta(seconds=1)})
+        with self.assertRaises(ValidationError):
+            invitation_for('expired')
+        invitation.redeemed_at = timezone.now()
+        invitation.save()
+        with self.assertRaises(CommandError):
+            call_command('issue_early_access_invitation', 2, invitation.email)
+        with self.assertRaises(CommandError):
+            call_command('issue_early_access_invitation', 11, invitation.email)

@@ -7,7 +7,7 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView
 from django.core.mail import send_mail
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -301,7 +301,11 @@ class TeamManagementView(LoginRequiredMixin, FormView):
         return context
 
     def form_valid(self, form):
-        user = form.save()
+        try:
+            user = form.save()
+        except ValidationError as error:
+            form.add_error(None, error)
+            return self.form_invalid(form)
         member_name = user.get_full_name() or user.email
         if form.cleaned_data.get("send_invitation_email"):
             try:
@@ -389,8 +393,18 @@ class TeamMemberActionView(LoginRequiredMixin, View):
             if not sync_subscription_user_quantity(practice):
                 messages.warning(request, 'Stripe subscription quantity could not be updated. Please review billing in Stripe.')
         elif action == "reactivate":
-            target.user.is_active = True
-            target.user.save(update_fields=["is_active"])
+            from apps.practices.early_access import assert_free_seat_available
+            from apps.practices.models import Practice
+            from django.db import transaction
+            with transaction.atomic():
+                locked_practice = Practice.objects.select_for_update().get(pk=practice.pk)
+                try:
+                    assert_free_seat_available(locked_practice, exclude_user_id=target.user_id)
+                except ValidationError as error:
+                    messages.error(request, error.messages[0])
+                    return redirect("team_management")
+                target.user.is_active = True
+                target.user.save(update_fields=["is_active"])
             messages.success(request, f"{target.user.get_full_name() or target.user.email} was reactivated.")
             if not sync_subscription_user_quantity(practice):
                 messages.warning(request, 'Stripe subscription quantity could not be updated. Please review billing in Stripe.')
@@ -434,9 +448,13 @@ class PracticeSignupView(FormView):
 
             if is_client_user(request.user):
                 return redirect("portal:dashboard")
-            plan, period = self.get_plan_period()
-            return redirect("billing:subscribe", plan=plan, period=period)
+            return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['invitation'] = self.request.GET.get('invitation', '')
+        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -448,10 +466,13 @@ class PracticeSignupView(FormView):
         return context
 
     def get_success_url(self):
-        plan, period = self.get_plan_period()
-        return reverse("billing:subscribe", kwargs={"plan": plan, "period": period})
+        return reverse("dashboard")
 
     def form_valid(self, form):
-        user = form.save()
+        try:
+            user = form.save()
+        except ValidationError as error:
+            form.add_error(None, error)
+            return self.form_invalid(form)
         login(self.request, user)
         return super().form_valid(form)

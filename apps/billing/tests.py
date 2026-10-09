@@ -870,7 +870,7 @@ class BillingViewTests(TestCase):
         cancel_response = self.client.get(reverse("billing:subscribe_cancel"))
 
         self.assertEqual(success_response.status_code, 200)
-        self.assertContains(success_response, "Your 15-day trial is starting")
+        self.assertContains(success_response, "Your subscription is being confirmed")
         self.assertContains(success_response, f"{reverse('dashboard')}?tour=1")
         self.assertEqual(cancel_response.status_code, 200)
         self.assertContains(cancel_response, "Checkout was canceled")
@@ -1030,7 +1030,7 @@ class BillingViewTests(TestCase):
         kwargs = mock_create.call_args.kwargs
         self.assertEqual(kwargs["line_items"], [{"price": "price_solo_monthly", "quantity": 2}])
         self.assertEqual(kwargs["payment_method_collection"], "always")
-        self.assertEqual(kwargs["subscription_data"]["trial_period_days"], 15)
+        self.assertNotIn("trial_period_days", kwargs["subscription_data"])
         self.assertEqual(kwargs["metadata"]["practice_id"], str(practice.pk))
         subscription = PracticeSubscription.objects.get(practice=practice)
         self.assertEqual(subscription.plan, PracticeSubscription.Plan.SOLO)

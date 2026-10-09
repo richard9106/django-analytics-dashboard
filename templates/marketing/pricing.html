@@ -61,14 +61,13 @@
         <p>For solo therapists, growing groups, and clinics that want the same complete workflow without plan gates.</p>
         <div class="pricing-actions">
           {% if user.is_authenticated %}
-            <a class="btn btn-primary" href="{% url 'billing:subscribe' 'solo' 'monthly' %}">Start monthly</a>
-            <a class="btn btn-ghost" href="{% url 'billing:subscribe' 'solo' 'yearly' %}">Pay yearly</a>
+            <a class="btn btn-primary" href="{% url 'billing:subscribe' 'solo' 'monthly' %}">Subscribe monthly</a>
+            <a class="btn btn-ghost" href="{% url 'billing:subscribe' 'solo' 'yearly' %}">Subscribe annually</a>
           {% else %}
-            <a class="btn btn-primary" href="{% url 'signup' %}?plan=solo&period=monthly">Start monthly</a>
-            <a class="btn btn-ghost" href="{% url 'signup' %}?plan=solo&period=yearly">Pay yearly</a>
+            <a class="btn btn-primary" href="{% url 'signup' %}?plan=solo&period=monthly">Start free trial</a>
           {% endif %}
         </div>
-        <p class="pricing-trial-note">Card required. Your first subscription includes 15 days free.</p>
+        <p class="pricing-trial-note">No card required for your 15-day trial. A paid subscription starts only when you choose it.</p>
         </div>
         <div class="pricing-plan-included"><h3>Everything included</h3>
         <ul>
@@ -96,7 +95,7 @@
     <section class="marketing-cta">
       <p class="eyebrow">Start monthly or save yearly</p>
       <h2>Start with per-user pricing today.</h2>
-      <p>You can start with a 15-day free trial, add your card securely through Stripe, and move to annual billing when the workflow fits your practice.</p>
+      <p>Start your 15-day free trial without a card. After the trial, choose monthly or annual billing through Stripe if you want to continue creating and updating records.</p>
       <a class="btn btn-primary" href="{% url 'signup' %}?plan=solo&period=monthly">Create your practice workspace</a>
     </section>
   </main>

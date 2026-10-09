@@ -16,6 +16,13 @@ def subscription_access(practice):
     if not practice or not practice.subscription_required:
         return {'mode': 'full'}
     sub = getattr(practice, 'subscription', None)
+    # Local trials never create a Stripe customer or payment commitment.
+    # An existing paid subscription always governs access, including cancellation.
+    if not sub or not sub.stripe_subscription_id:
+        if practice.free_trial_ends_at:
+            if timezone.now() < practice.free_trial_ends_at:
+                return {'mode': 'full', 'free_access': practice.free_access_kind, 'until': practice.free_trial_ends_at}
+            return {'mode': 'readonly', 'free_access': practice.free_access_kind, 'until': practice.free_trial_ends_at}
     if not sub:
         return {'mode': 'pending'}
     if sub.status in {PracticeSubscription.Status.ACTIVE, PracticeSubscription.Status.TRIALING}:
