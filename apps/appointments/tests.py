@@ -257,6 +257,20 @@ class AppointmentViewTests(TestCase):
         response = self.client.get(reverse('billing:list'), {'appointment': 'invalid'})
         self.assertEqual(list(response.context['invoices']), [])
 
+    def test_new_appointment_client_prefill_is_practice_scoped(self):
+        user, practice, therapist, client = self.create_practice_user()
+        client.primary_therapist = therapist
+        client.save()
+        _other_user, _other_practice, _other_therapist, other_client = self.create_practice_user(username='other-prefill')
+        self.client.force_login(user)
+        url = reverse('appointments:create')
+        response = self.client.get(url, {'client': client.pk})
+        self.assertEqual(response.context['form'].initial['client'], client.pk)
+        self.assertEqual(response.context['form'].initial['therapist'], therapist.pk)
+        for value in [str(other_client.pk), 'bad', '9' * 30]:
+            response = self.client.get(url, {'client': value})
+            self.assertNotIn('client', response.context['form'].initial)
+
     def create_practice_user(self, username='drsmith', practice_name='Nuvia Wellness'):
         user = get_user_model().objects.create_user(
             username=username,

@@ -1,6 +1,8 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.db.models.deletion import ProtectedError
+from django.db.models import Sum
+from decimal import Decimal
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -69,30 +71,43 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         client = self.object
-        now = timezone.now()
+        permissions = {resource: has_practice_permission(self.request.user, resource, 'view')
+                       for resource in ('appointments', 'clinical', 'billing', 'documents', 'intake')}
+        allowed_tabs = {'overview'} | {tab for tab in ('clinical', 'billing', 'documents') if permissions[tab]}
+        requested_tab = self.request.GET.get('tab', 'overview')
+        if self.request.method == 'POST' and self.request.POST.get('return_to_patient') == '1':
+            requested_tab = 'clinical'
+        active_tab = requested_tab if requested_tab in allowed_tabs else 'overview'
         context.update({
-            'breadcrumbs': [
-                {'label': 'Clients', 'url': reverse('clients:list')},
-                {'label': str(client)},
-            ],
-            'client_therapists': client.practice.therapists.select_related('user'),
-            'upcoming_appointments': Appointment.objects.filter(client=client, starts_at__gte=now).select_related('therapist__user')[:8],
-            'recent_appointments': Appointment.objects.filter(client=client, starts_at__lt=now).select_related('therapist__user').order_by('-starts_at')[:8],
-            'invoices': Invoice.objects.filter(client=client).order_by('-created_at')[:8],
-            'packages': ServicePackage.objects.filter(client=client).order_by('-created_at')[:8],
-            'notes': SessionNote.objects.filter(client=client).select_related('therapist__user', 'treatment_plan')[:8],
-            'treatment_plans': TreatmentPlan.objects.filter(client=client).prefetch_related('diagnoses')[:8],
-            'diagnoses': Diagnosis.objects.filter(client=client, practice=client.practice),
-            'documents': ClientDocument.objects.filter(client=client).order_by('-created_at')[:8],
-            'portal_access': ClientPortalAccess.objects.filter(client=client).first(),
+            'breadcrumbs': [{'label': 'Clients', 'url': reverse('clients:list')}, {'label': str(client)}],
+            'workspace_tab': active_tab,
         })
-        if has_practice_permission(self.request.user, 'clinical', 'view'):
-            diagnoses = list(context['diagnoses'])
+        if has_practice_permission(self.request.user, 'clients', 'edit'):
+            context['client_therapists'] = client.practice.therapists.select_related('user')
+        if permissions['appointments']:
+            appointments = Appointment.objects.filter(client=client, practice=client.practice).select_related('therapist__user')
+            now = timezone.now()
+            context['recent_appointments'] = appointments.filter(starts_at__lt=now).order_by('-starts_at')[:8]
+            context['upcoming_appointments'] = appointments.filter(starts_at__gte=now, status=Appointment.Status.SCHEDULED).order_by('starts_at')[:5]
+        if permissions['intake']:
+            context['portal_access'] = ClientPortalAccess.objects.filter(client=client, practice=client.practice).first()
+        if active_tab == 'billing':
+            invoices = list(Invoice.objects.filter(client=client, practice=client.practice).annotate(
+                workspace_paid=Sum('payments__amount'),
+            ).order_by('-created_at')[:20])
+            for invoice in invoices:
+                invoice.workspace_balance = max(invoice.amount - (invoice.workspace_paid or Decimal('0.00')), Decimal('0.00'))
+            context['invoices'] = invoices
+            context['packages'] = ServicePackage.objects.filter(client=client, practice=client.practice).order_by('-created_at')[:8]
+        if active_tab == 'documents':
+            context['documents'] = ClientDocument.objects.filter(client=client, practice=client.practice).order_by('-created_at')[:20]
+        if active_tab == 'clinical':
+            context['notes'] = SessionNote.objects.filter(client=client, practice=client.practice).select_related('therapist__user', 'treatment_plan').order_by('-updated_at')[:8]
+            context['treatment_plans'] = TreatmentPlan.objects.filter(client=client, practice=client.practice).prefetch_related('diagnoses').order_by('-updated_at')[:8]
+            diagnoses = list(Diagnosis.objects.filter(client=client, practice=client.practice))
             context['diagnoses'] = diagnoses
             if has_practice_permission(self.request.user, 'clinical', 'create'):
-                context['diagnosis_create_form'] = DiagnosisForm(
-                    practice=client.practice, patient=client, auto_id='diagnosis-create-%s',
-                )
+                context['diagnosis_create_form'] = DiagnosisForm(practice=client.practice, patient=client, auto_id='diagnosis-create-%s')
             if has_practice_permission(self.request.user, 'clinical', 'edit'):
                 context['diagnosis_edit_forms'] = [
                     (diagnosis, DiagnosisForm(instance=diagnosis, practice=client.practice,

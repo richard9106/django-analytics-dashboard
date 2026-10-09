@@ -222,12 +222,49 @@ class ClientViewTests(TestCase):
         self.assertContains(response, 'Latest session')
         self.assertNotContains(response, 'Upcoming appointments')
         self.assertNotContains(response, 'Recent appointments')
-        self.assertContains(response, 'Treatment plans')
+        self.assertContains(response, 'treatment plans')
         self.assertContains(response, 'Clinical notes')
         self.assertContains(response, reverse('clients:list'))
         self.assertContains(response, 'id="client-edit-modal"')
         self.assertContains(response, 'data-modal-target="client-edit-modal"')
         self.assertEqual(self.client.get(reverse('clients:detail', args=[other_client.pk])).status_code, 404)
+
+    def test_client_chart_denied_sections_do_not_expose_records_or_actions(self):
+        from apps.clinical.models import SessionNote
+        user, practice, therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Read', last_name='Only')
+        SessionNote.objects.create(practice=practice, client=client, therapist=therapist, content='Restricted clinical content')
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'clients': {'view': True, 'edit': False}, 'appointments': {'view': False, 'create': False}, 'clinical': {'view': False}, 'billing': {'view': False}, 'documents': {'view': False}, 'requests': {'view': False}}
+        profile.save()
+        self.client.force_login(user)
+        for tab in ['overview', 'clinical', 'billing', 'documents', 'invalid']:
+            response = self.client.get(reverse('clients:detail', args=[client.pk]), {'tab': tab})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context['workspace_tab'], 'overview')
+            self.assertNotContains(response, 'Restricted clinical content')
+            self.assertNotContains(response, '?tab=clinical')
+            self.assertNotContains(response, '?tab=billing')
+            self.assertNotContains(response, '?tab=documents')
+            self.assertNotContains(response, 'id="client-edit-modal"')
+            self.assertNotIn('notes', response.context)
+            self.assertNotIn('invoices', response.context)
+            self.assertNotIn('documents', response.context)
+
+    def test_client_chart_billing_balance_includes_partial_payments(self):
+        from apps.billing.models import Invoice, Payment
+        from django.utils import timezone
+        user, practice, _therapist = self.create_practice_user()
+        client = Client.objects.create(practice=practice, first_name='Example', last_name='Billing')
+        invoice = Invoice.objects.create(practice=practice, client=client, invoice_number='CHART-001', amount=Decimal('125.00'))
+        Payment.objects.create(practice=practice, client=client, invoice=invoice, amount=Decimal('30.00'), paid_at=timezone.now())
+        Payment.objects.create(practice=practice, client=client, invoice=invoice, amount=Decimal('20.00'), paid_at=timezone.now())
+        self.client.force_login(user)
+        response = self.client.get(reverse('clients:detail', args=[client.pk]), {'tab': 'billing'})
+        self.assertEqual(response.context['invoices'][0].workspace_balance, Decimal('75.00'))
+        self.assertContains(response, '$75.00')
+        self.assertContains(response, reverse('billing:invoice_print', args=[invoice.pk]))
 
     def test_therapist_without_client_read_permission_is_forbidden(self):
         user, practice, _therapist = self.create_practice_user()
