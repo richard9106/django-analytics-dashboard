@@ -79,6 +79,7 @@ class PracticeSignupForm(forms.Form):
         )
         practice = Practice.objects.create(
             name=self.cleaned_data["practice_name"],
+            subscription_required=True,
             practice_type=self.cleaned_data["practice_type"],
             email=self.cleaned_data.get("practice_email", ""),
             phone=self.cleaned_data.get("practice_phone", ""),
