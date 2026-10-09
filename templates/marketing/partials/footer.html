@@ -1,0 +1,15 @@
+<footer class="public-footer" aria-label="NuviaMy footer">
+  <div class="public-footer-main">
+    <div class="public-footer-brand"><a class="brand" href="{% url 'home' %}">NuviaMy</a><p>Practice management for therapists.</p></div>
+    <nav class="public-footer-links" aria-label="Footer links">
+      <a href="{% url 'features' %}">Features</a>
+      <a href="{% url 'pricing' %}">Pricing</a>
+      <a href="{% url 'help_center' %}">Help center</a>
+      <a href="{% url 'support_contact' %}">Contact</a>
+      <a href="{% url 'privacy_policy' %}">Privacy notice</a>
+      <a href="{% url 'cookie_policy' %}">Cookie policy</a>
+      <button type="button" data-cookie-settings>Cookie settings</button>
+    </nav>
+  </div>
+  <p class="public-footer-copyright">© {% now "Y" %} NuviaMy</p>
+</footer>
