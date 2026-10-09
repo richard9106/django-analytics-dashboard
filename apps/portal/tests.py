@@ -880,6 +880,64 @@ class ClientPortalViewTests(TestCase):
         self.assertContains(response, "Unique slug")
         self.assertContains(response, 'class="nav-badge">1</strong>')
 
+    def test_request_list_actions_match_status_and_preserve_post_routes(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        owner = get_user_model().objects.create_user(username="request-list-owner")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        requests = [ClientPortalRequest.objects.create(
+            practice=practice, client=client, submitted_by=user,
+            subject=f"Request {status}", message="Full request details",
+            status=status,
+        ) for status in ClientPortalRequest.Status.values]
+        starts = timezone.now() + timedelta(days=4)
+        bookings = [PublicBookingRequest.objects.create(
+            practice=practice, first_name="Example", last_name=status,
+            email="example@example.invalid", requested_starts_at=starts,
+            requested_ends_at=starts + timedelta(hours=1), status=status,
+        ) for status in PublicBookingRequest.Status.values]
+        self.client.force_login(owner)
+        response = self.client.get(reverse("portal_requests:list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="status" value="reviewed"', count=2)
+        self.assertContains(response, 'name="status" value="resolved"', count=2)
+        self.assertContains(response, 'Approve and create appointment', count=1)
+        for booking in bookings:
+            approve_url = reverse("portal_requests:booking_approve", args=[booking.pk])
+            if booking.status == PublicBookingRequest.Status.PENDING:
+                self.assertContains(response, f'action="{approve_url}"')
+                self.assertContains(response, reverse("portal_requests:booking_decline", args=[booking.pk]))
+            else:
+                self.assertNotContains(response, approve_url)
+        for portal_request in requests:
+            self.assertContains(response, f'action="{reverse("portal_requests:status", args=[portal_request.pk])}"')
+        self.assertContains(response, 'Full request details', count=3)
+
+    def test_read_only_request_list_keeps_details_without_edit_actions(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        reader = get_user_model().objects.create_user(username="request-list-reader")
+        UserProfile.objects.create(
+            user=reader, practice=practice, role=UserProfile.Role.THERAPIST,
+            permissions={"requests": {"view": True, "create": False, "edit": False, "delete": False}},
+        )
+        portal_request = ClientPortalRequest.objects.create(
+            practice=practice, client=client, submitted_by=user,
+            subject="Read-only request", message="Details remain readable",
+        )
+        starts = timezone.now() + timedelta(days=4)
+        booking = PublicBookingRequest.objects.create(
+            practice=practice, first_name="Example", last_name="Booking",
+            email="example@example.invalid", requested_starts_at=starts,
+            requested_ends_at=starts + timedelta(hours=1),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse("portal_requests:list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Details remain readable")
+        self.assertContains(response, "Example Booking")
+        self.assertNotContains(response, reverse("portal_requests:status", args=[portal_request.pk]))
+        self.assertNotContains(response, reverse("portal_requests:booking_approve", args=[booking.pk]))
+        self.assertNotContains(response, reverse("portal_requests:booking_decline", args=[booking.pk]))
+
     def test_practice_can_update_portal_request_status(self):
         user, practice, _therapist, client, _access = self.create_portal_user()
         practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
