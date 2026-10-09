@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q, Sum, Value
+from django.db.models import CharField, Count, Q, Sum, Value
 from django.db.models.functions import Concat
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect
@@ -630,20 +630,38 @@ class PortalAccessPasswordResetView(PracticePermissionMixin, PracticeContextMixi
 
 class PracticePortalRequestListView(PracticePermissionMixin, PracticeContextMixin, ListView):
     permission_resource = 'requests'
-    model = ClientPortalRequest
     template_name = 'requests/list.html'
-    context_object_name = 'portal_requests'
+    context_object_name = 'request_rows'
+    paginate_by = 25
 
     def get_queryset(self):
         practice = self.get_practice()
-        if not practice:
-            return ClientPortalRequest.objects.none()
-        return ClientPortalRequest.objects.filter(practice=practice).select_related('client', 'submitted_by', 'appointment')
+        source = self.request.GET.get('source', '')
+        self.source = source if source in {'public', 'portal'} else ''
+        self.search = self.request.GET.get('q', '').strip()[:200]
+        portal = ClientPortalRequest.objects.filter(practice=practice)
+        public = PublicBookingRequest.objects.filter(practice=practice)
+        if self.search:
+            portal = portal.filter(Q(subject__icontains=self.search) | Q(client__first_name__icontains=self.search) | Q(client__last_name__icontains=self.search) | Q(client__email__icontains=self.search))
+            public = public.filter(Q(first_name__icontains=self.search) | Q(last_name__icontains=self.search) | Q(email__icontains=self.search))
+        portal = portal.order_by().annotate(source=Value('portal', output_field=CharField())).values('pk', 'created_at', 'source')
+        public = public.order_by().annotate(source=Value('public', output_field=CharField())).values('pk', 'created_at', 'source')
+        rows = public if self.source == 'public' else portal if self.source == 'portal' else public.union(portal, all=True)
+        return rows.order_by('-created_at', 'source', '-pk')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
-        context['booking_requests'] = PublicBookingRequest.objects.filter(practice=practice).select_related('client', 'appointment', 'approved_by') if practice else PublicBookingRequest.objects.none()
+        page_rows = list(context['request_rows'])
+        public = {record.pk: record for record in PublicBookingRequest.objects.filter(
+            practice=practice, pk__in=[row['pk'] for row in page_rows if row['source'] == 'public'],
+        ).select_related('client', 'appointment')}
+        portal = {record.pk: record for record in ClientPortalRequest.objects.filter(
+            practice=practice, pk__in=[row['pk'] for row in page_rows if row['source'] == 'portal'],
+        ).select_related('client', 'appointment')}
+        context['request_rows'] = [dict(row, record=(public if row['source'] == 'public' else portal)[row['pk']]) for row in page_rows]
+        context['source'] = self.source
+        context['q'] = self.search
         context['public_booking_url'] = self.request.build_absolute_uri(reverse_lazy('public_booking', args=[practice.public_booking_slug])) if practice else ''
         return context
 

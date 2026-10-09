@@ -15,66 +15,44 @@
     <main class="app-main requests-page">
       {% include 'partials/breadcrumbs.html' %}
       <section class="action-bar" aria-label="Workspace actions"><div class="quick-actions"><a class="btn btn-soft" href="{% url 'portal_settings:portal_access' %}">Portal access</a><a class="btn btn-soft" href="{% url 'portal_requests:conversations' %}" aria-label="Secure messages{% if unread_message_count %}, {{ unread_message_count }} unread{% endif %}">Messages{% if unread_message_count %} <strong>{{ unread_message_count }}</strong>{% endif %}</a></div><details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
-      <header class="topbar compact-topbar"><div><p class="eyebrow">Portal inbox</p><h1>Client Requests</h1><p>Requests submitted from client portal accounts.</p></div><span class="badge brand">{{ open_portal_request_count }} open</span></header>
+      <header class="topbar compact-topbar"><div><p class="eyebrow">Requests inbox</p><h1>Client Requests</h1><p>Public bookings and requests from registered clients.</p></div><span class="badge brand">{{ open_portal_request_count }} open</span></header>
       {% if messages %}<section class="message-list" aria-label="Request messages">{% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}</section>{% endif %}
-      <section class="panel booking-link-panel">
-        <div class="panel-head compact">
-          <div>
-            <p class="eyebrow">Public booking</p>
-            <h2>Booking link for {{ practice.name }}</h2>
-            <p>Share this URL on your website, email signature, or social profiles. Requests arrive below and must be approved before an appointment is created.</p>
-          </div>
-        </div>
-        <div class="booking-link-box">
-          <span>Public URL</span>
-          <div class="copy-link-row">
-            <code data-copy-value>{{ public_booking_url }}</code>
-            <button class="btn btn-secondary" type="button" data-copy-button data-copy-text="{{ public_booking_url }}">Copy link</button>
-          </div>
-        </div>
-        <p class="sync-meta">Unique slug: <strong>{{ practice.public_booking_slug }}</strong>. If another practice has the same name, NuviaMy automatically adds a suffix so each booking link stays unique.</p>
+      <section class="request-booking-link" aria-label="Public booking link">
+        <strong>Booking link</strong><div class="copy-link-row"><code data-copy-value>{{ public_booking_url }}</code><button class="btn btn-secondary" type="button" data-copy-button data-copy-text="{{ public_booking_url }}">Copy link</button></div>
       </section>
-      <section class="panel">
-        <div class="panel-head"><div><h2>Public booking requests</h2><p>New prospects and clients who requested an appointment from your public booking link.</p></div></div>
-        <div class="request-tree" role="list" aria-label="Public booking requests">
-          {% for booking_request in booking_requests %}
-          <article class="request-tree-row" role="listitem">
-            <div class="request-tree-info"><h3>{{ booking_request.first_name }} {{ booking_request.last_name }}</h3><p>{{ booking_request.requested_starts_at|date:"M j, Y" }} at {{ booking_request.requested_starts_at|time:"g:i A" }} · {{ booking_request.get_appointment_type_display }}</p></div>
-            <span class="badge request-tree-status {% if booking_request.status == 'approved' %}success{% elif booking_request.status == 'declined' %}danger{% else %}brand{% endif %}">{{ booking_request.get_status_display }}</span>
-            <div class="request-tree-actions">
-              {% if booking_request.status == 'pending' and workspace_permissions.requests.edit %}
-              <button class="invoice-actions-trigger" type="button" aria-label="Actions for booking from {{ booking_request.first_name }} {{ booking_request.last_name }}" aria-haspopup="menu" aria-expanded="false" aria-controls="booking-actions-{{ booking_request.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button>
-              <div class="invoice-actions-menu request-actions-menu" id="booking-actions-{{ booking_request.pk }}" role="menu" hidden data-row-actions-menu>
-                <form method="post" action="{% url 'portal_requests:booking_approve' booking_request.pk %}" data-confirm-message="Approve this booking request and create the appointment?">{% csrf_token %}<button class="inline-button" role="menuitem" type="submit">Approve and create appointment</button></form>
-                <form method="post" action="{% url 'portal_requests:booking_decline' booking_request.pk %}" data-confirm-message="Decline this booking request?">{% csrf_token %}<button class="inline-button" role="menuitem" type="submit" data-destructive-action>Decline</button></form>
+      <section class="panel requests-table-panel">
+        <form class="requests-toolbar" method="get">
+          <div class="field"><label for="request-search">Search</label><input id="request-search" type="search" name="q" value="{{ q }}" placeholder="Client, email or subject"></div>
+          <div class="field"><label for="request-source">Source</label><select id="request-source" name="source"><option value="">All sources</option><option value="public" {% if source == 'public' %}selected{% endif %}>Public booking</option><option value="portal" {% if source == 'portal' %}selected{% endif %}>Registered clients</option></select></div>
+          <button class="btn btn-secondary" type="submit">Filter</button>{% if q or source %}<a class="inline-link" href="{% url 'portal_requests:list' %}">Clear</a>{% endif %}<span class="requests-result-count">{{ paginator.count }} request{{ paginator.count|pluralize }}</span>
+        </form>
+        <div class="table-wrap requests-table-wrap"><table class="requests-table"><caption class="sr-only">All client requests, newest first</caption><thead><tr><th scope="col">Client</th><th scope="col">Request</th><th scope="col">Source</th><th scope="col" class="request-received">Received</th><th scope="col">Status</th><th scope="col" class="invoice-actions-cell"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+        {% for row in request_rows %}{% with record=row.record %}
+          <tr>
+            <td>{% if row.source == 'public' %}{{ record.first_name }} {{ record.last_name }}{% else %}{{ record.client }}{% endif %}</td>
+            <td><button class="request-subject-button" type="button" data-modal-target="request-detail-{{ row.source }}-{{ record.pk }}">{% if row.source == 'public' %}Appointment request{% else %}{{ record.subject }}{% endif %}</button></td>
+            <td><span class="request-source-label">{% if row.source == 'public' %}Public booking{% else %}Registered client{% endif %}</span></td>
+            <td class="request-received">{{ record.created_at|date:"M j, Y" }}<span>{{ record.created_at|time:"g:i A" }}</span></td>
+            <td><span class="badge {% if record.status == 'approved' or record.status == 'resolved' %}success{% elif record.status == 'declined' %}danger{% else %}brand{% endif %}">{{ record.get_status_display }}</span></td>
+            <td class="invoice-actions-cell"><button class="invoice-actions-trigger" type="button" aria-label="Actions for {% if row.source == 'public' %}booking from {{ record.first_name }} {{ record.last_name }}{% else %}{{ record.subject }} — {{ record.client }}{% endif %}" aria-haspopup="menu" aria-expanded="false" aria-controls="request-actions-{{ row.source }}-{{ record.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button>
+              <div class="invoice-actions-menu request-actions-menu" id="request-actions-{{ row.source }}-{{ record.pk }}" role="menu" hidden data-row-actions-menu>
+                <button class="inline-button" role="menuitem" type="button" data-modal-target="request-detail-{{ row.source }}-{{ record.pk }}">View details</button>
+                {% if workspace_permissions.requests.edit %}{% if row.source == 'public' %}{% if record.status == 'pending' %}
+                <form method="post" action="{% url 'portal_requests:booking_approve' record.pk %}" data-confirm-message="Approve this booking request and create the appointment?">{% csrf_token %}<button class="inline-button" role="menuitem" type="submit">Approve and create appointment</button></form>
+                <form method="post" action="{% url 'portal_requests:booking_decline' record.pk %}" data-confirm-message="Decline this booking request?">{% csrf_token %}<button class="inline-button" role="menuitem" type="submit" data-destructive-action>Decline</button></form>
+                {% endif %}{% else %}<form method="post" action="{% url 'portal_requests:status' record.pk %}">{% csrf_token %}{% if record.status != 'reviewed' %}<button class="inline-button" role="menuitem" name="status" value="reviewed" type="submit">Mark reviewed</button>{% endif %}{% if record.status != 'resolved' %}<button class="inline-button" role="menuitem" name="status" value="resolved" type="submit">Resolve</button>{% endif %}</form>{% endif %}{% endif %}
               </div>
-              {% else %}<span class="sr-only">No actions available</span>{% endif %}
-            </div>
-            <details class="request-tree-details"><summary>View details<span class="sr-only"> for booking from {{ booking_request.first_name }} {{ booking_request.last_name }}</span></summary><div class="request-tree-content"><p>{{ booking_request.email }}{% if booking_request.phone %} · {{ booking_request.phone }}{% endif %}</p>{% if booking_request.reason %}<p class="request-message">{{ booking_request.reason }}</p>{% endif %}{% if booking_request.appointment %}<p>Appointment created: {{ booking_request.appointment.starts_at|date:"M j, Y" }} at {{ booking_request.appointment.starts_at|time:"g:i A" }}</p>{% endif %}</div></details>
-          </article>
-          {% empty %}<p class="empty-state">No public booking requests yet.</p>{% endfor %}
-        </div>
+            </td>
+          </tr>
+        {% endwith %}{% empty %}<tr><td colspan="6" class="empty-state">{% if q or source %}No requests match these filters.{% else %}No requests yet.{% endif %}</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if page_obj.has_other_pages %}<nav class="intake-pagination" aria-label="Request pages">{% if page_obj.has_previous %}<a class="btn btn-secondary" href="?source={{ source|urlencode }}&amp;q={{ q|urlencode }}&amp;page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-secondary" href="?source={{ source|urlencode }}&amp;q={{ q|urlencode }}&amp;page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
       </section>
-      <section class="panel">
-        <div class="panel-head"><div><h2>Requests</h2><p>Newest requests appear first.</p></div></div>
-        <div class="request-tree" role="list" aria-label="Client portal requests">
-          {% for portal_request in portal_requests %}
-          <article class="request-tree-row" role="listitem">
-            <div class="request-tree-info"><h3>{{ portal_request.subject }}</h3><p>{{ portal_request.client }} · {{ portal_request.get_category_display }} · {{ portal_request.created_at|date:"M j, Y g:i A" }}</p></div>
-            <span class="badge request-tree-status {% if portal_request.status == 'resolved' %}success{% else %}brand{% endif %}">{{ portal_request.get_status_display }}</span>
-            <div class="request-tree-actions">
-              {% if workspace_permissions.requests.edit %}
-              <button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ portal_request.subject }} — {{ portal_request.client }}" aria-haspopup="menu" aria-expanded="false" aria-controls="request-actions-{{ portal_request.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button>
-              <div class="invoice-actions-menu request-actions-menu" id="request-actions-{{ portal_request.pk }}" role="menu" hidden data-row-actions-menu>
-                <form method="post" action="{% url 'portal_requests:status' portal_request.pk %}">{% csrf_token %}{% if portal_request.status != 'reviewed' %}<button class="inline-button" role="menuitem" name="status" value="reviewed" type="submit">Mark reviewed</button>{% endif %}{% if portal_request.status != 'resolved' %}<button class="inline-button" role="menuitem" name="status" value="resolved" type="submit">Resolve</button>{% endif %}</form>
-              </div>
-              {% else %}<span class="sr-only">No actions available</span>{% endif %}
-            </div>
-            <details class="request-tree-details"><summary>View details<span class="sr-only"> for {{ portal_request.subject }}</span></summary><div class="request-tree-content">{% if portal_request.appointment %}<p>Appointment: {{ portal_request.appointment.starts_at|date:"M j, Y" }} at {{ portal_request.appointment.starts_at|time:"g:i A" }}</p>{% endif %}<p class="request-message">{{ portal_request.message }}</p></div></details>
-          </article>
-          {% empty %}<p class="empty-state">No client portal requests yet.</p>{% endfor %}
-        </div>
-      </section>
+      {% for row in request_rows %}{% with record=row.record %}
+      <dialog class="modal-dialog" id="request-detail-{{ row.source }}-{{ record.pk }}" aria-labelledby="request-title-{{ row.source }}-{{ record.pk }}"><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">{% if row.source == 'public' %}Public booking{% else %}Registered client{% endif %}</p><h2 id="request-title-{{ row.source }}-{{ record.pk }}">{% if row.source == 'public' %}{{ record.first_name }} {{ record.last_name }}{% else %}{{ record.subject }}{% endif %}</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close request details">×</button></div><div class="request-detail-content">
+      {% if row.source == 'public' %}<p>{{ record.email }}{% if record.phone %} · {{ record.phone }}{% endif %}</p><p>Requested session: {{ record.requested_starts_at|date:"M j, Y" }} at {{ record.requested_starts_at|time:"g:i A" }} · {{ record.get_appointment_type_display }}</p>{% if record.reason %}<p class="request-message">{{ record.reason }}</p>{% endif %}{% else %}<p>{{ record.client }}{% if record.category %} · {{ record.get_category_display }}{% endif %}</p><p class="request-message">{{ record.message }}</p>{% endif %}
+      {% if record.appointment %}<p>Appointment: {{ record.appointment.starts_at|date:"M j, Y" }} at {{ record.appointment.starts_at|time:"g:i A" }}</p>{% endif %}<span class="badge brand">{{ record.get_status_display }}</span></div></div></dialog>
+      {% endwith %}{% endfor %}
     </main>
   </div>
   <script>
