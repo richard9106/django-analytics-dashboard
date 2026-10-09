@@ -154,4 +154,5 @@ class WorkspaceBreadcrumbTests(TestCase):
                 response = self.client.get(reverse(route, args=args))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'aria-label="Breadcrumb"', count=1)
-                self.assertContains(response, 'aria-current="page"', count=1)
+                trail = response.content.decode().split('aria-label="Breadcrumb">', 1)[1].split('</nav>', 1)[0]
+                self.assertEqual(trail.count('aria-current="page"'), 1)

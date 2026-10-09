@@ -539,7 +539,7 @@ class PatientDiagnosisMixin:
 
     def get_success_url(self):
         if has_practice_permission(self.request.user, 'clients', 'view'):
-            return reverse('clients:detail', args=[self.object.client_id])
+            return reverse('clients:detail', args=[self.object.client_id]) + '?tab=clinical'
         return super().get_success_url()
 
     def get_context_data(self, **kwargs):

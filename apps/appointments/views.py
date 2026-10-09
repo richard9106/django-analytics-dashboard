@@ -17,6 +17,7 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
 from apps.practices.models import ExternalIntegration
+from apps.clients.models import Client
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
@@ -371,6 +372,13 @@ class AppointmentCreateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
 
     def get_initial(self):
         initial = super().get_initial()
+        client_value = self.request.GET.get('client', '')
+        if client_value.isascii() and client_value.isdigit() and len(client_value) <= 18:
+            client = Client.objects.filter(pk=client_value, practice=self.get_practice()).first()
+            if client:
+                initial['client'] = client.pk
+                if client.primary_therapist_id:
+                    initial['therapist'] = client.primary_therapist_id
         date_value = self.request.GET.get('date')
         if date_value:
             try:

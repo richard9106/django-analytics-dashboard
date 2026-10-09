@@ -1462,3 +1462,62 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .requests-page .requests-toolbar .field { flex: 1 1 160px; }
   .requests-page .requests-toolbar input, .requests-page .requests-toolbar select { font-size: 16px; }
 }
+
+/* Client chart: stable identity, focused sections, and an independent context rail. */
+.client-chart-page .client-workspace-header { padding: 20px; flex-wrap: wrap; }
+.client-chart-page .client-workspace-header .avatar-lg { width: 56px; height: 56px; flex: 0 0 56px; font-size: 20px; }
+.client-chart-page .client-identity { min-width: 0; flex: 1; }
+.client-chart-page .client-identity h1 { font-size: 28px; line-height: 1.2; }
+.client-chart-page .client-identity p:not(.eyebrow) { white-space: normal; overflow-wrap: anywhere; }
+.client-chart-page .client-workspace-header > .badge { margin: 0; }
+.client-chart-nav { display: flex; gap: 8px; padding: 0 20px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.client-chart-nav a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 12px; border-bottom: 2px solid transparent; color: var(--slate-600); font-size: 13px; font-weight: 750; white-space: nowrap; text-decoration: none; }
+.client-chart-nav a:hover, .client-chart-nav a[aria-current] { color: var(--brand-700); background: var(--brand-50); }
+.client-chart-nav a[aria-current] { border-color: var(--brand-700); }
+.client-chart-nav a:focus-visible, .client-record-shortcuts a:focus-visible { outline: 3px solid var(--brand-700); outline-offset: -3px; }
+.client-chart-body { padding: 20px; display: grid; gap: 20px; }
+.client-chart-overview { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 20px; }
+.client-chart-main, .client-chart-rail { display: grid; gap: 20px; min-width: 0; align-content: start; }
+.client-chart-page .client-workspace-surface .chart-section { padding: 0; min-width: 0; }
+.client-chart-page .client-workspace-surface .panel h2 { font-size: 17px; margin: 0; }
+.client-chart-page .client-workspace-surface .panel-head { margin-bottom: 12px; align-items: center; }
+.client-chart-rail { border-left: 1px solid var(--border); padding-left: 20px; }
+.client-chart-page .profile-detail-list { gap: 12px; }
+.client-chart-page .profile-detail-list > div { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.client-chart-page .profile-detail-list dt { font-size: 11px; }
+.client-chart-page .profile-detail-list dd { font-size: 13px; font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+.client-chart-page .profile-detail-list dd span { display: block; margin-top: 2px; color: var(--slate-500); font-weight: 500; }
+.chart-meta { font-size: 12px; color: var(--slate-500); }
+.client-next-session { padding: 16px; border: 1px solid rgba(112,82,217,.14); border-radius: 12px; background: var(--brand-50); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.client-next-session > div { flex: 1; min-width: 0; }
+.client-next-session p { margin: 4px 0; color: var(--slate-600); }
+.client-next-session strong { font-size: 16px; }
+.chart-record-list { display: grid; }
+.chart-record-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.chart-record-row:last-child { border-bottom: 0; }
+.chart-record-row > div { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.chart-record-row p { font-size: 12px; line-height: 1.6; color: var(--slate-500); margin: 4px 0 0; }
+.chart-record-row > .badge, .chart-record-row > .inline-link { flex-shrink: 0; }
+.client-chart-page .inline-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; }
+.client-record-shortcuts { display: grid; }
+.client-record-shortcuts a { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--border); color: var(--slate-800); font-size: 13px; text-decoration: none; }
+.client-record-shortcuts a:last-child { border-bottom: 0; }
+.client-record-shortcuts a span { font-size: 12px; color: var(--brand-700); }
+.client-chart-page .table-wrap { position: relative; }
+.client-chart-page table { font-size: 13px; }
+.client-chart-page td { padding-block: 8px; }
+@media (max-width: 980px) {
+  .client-chart-overview { grid-template-columns: minmax(0, 1fr); }
+  .client-chart-rail { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); padding-top: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .client-chart-page .client-workspace-header { padding: 16px; gap: 12px; }
+  .client-chart-page .client-identity h1 { font-size: 24px; }
+  .client-chart-nav { padding: 0 8px; gap: 0; }
+  .client-chart-body { padding: 16px; gap: 16px; }
+  .client-chart-main, .client-chart-overview, .client-chart-rail { gap: 16px; }
+  .client-chart-rail { grid-template-columns: minmax(0, 1fr); }
+  .chart-record-row { flex-wrap: wrap; gap: 8px; }
+  .chart-record-row > div { flex-basis: 100%; }
+  .client-chart-page .panel-head { flex-wrap: wrap; gap: 8px; }
+}

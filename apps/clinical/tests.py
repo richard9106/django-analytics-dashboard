@@ -785,7 +785,7 @@ class TreatmentPlanViewTests(TestCase):
         self.assertEqual(diagnosis.label, 'Existing')
         response = self.client.post(reverse('clinical:diagnosis_edit', args=[diagnosis.pk]),
             self.diagnosis_payload(client, label='Updated', return_to_patient='1'))
-        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]))
+        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]) + '?tab=clinical')
         diagnosis.refresh_from_db()
         self.assertEqual(diagnosis.label, 'Updated')
 
@@ -795,7 +795,7 @@ class TreatmentPlanViewTests(TestCase):
         other_client = Client.objects.create(practice=practice, first_name='Other', last_name='Patient')
         Diagnosis.objects.create(practice=practice, client=other_client, code='F32.1', label='Unrelated diagnosis')
         self.client.force_login(user)
-        response = self.client.get(reverse('clients:detail', args=[client.pk]))
+        response = self.client.get(reverse('clients:detail', args=[client.pk]), {'tab': 'clinical'})
         self.assertContains(response, 'Patient diagnosis')
         self.assertNotContains(response, 'Unrelated diagnosis')
         self.assertContains(response, reverse('clinical:diagnosis_create') + f'?client={client.pk}')
@@ -811,7 +811,7 @@ class TreatmentPlanViewTests(TestCase):
         page = self.client.get(url)
         self.assertTrue(page.context['form'].fields['client'].disabled)
         response = self.client.post(url, self.diagnosis_payload(other))
-        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]))
+        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]) + '?tab=clinical')
         self.assertEqual(Diagnosis.objects.get().client, client)
 
     def test_diagnosis_options_are_patient_and_practice_scoped(self):
@@ -1060,7 +1060,7 @@ class TreatmentPlanViewTests(TestCase):
         self.client.force_login(user)
         response = self.client.post(reverse("clinical:diagnosis_create"), self.diagnosis_payload(client))
 
-        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]))
+        self.assertRedirects(response, reverse('clients:detail', args=[client.pk]) + '?tab=clinical')
         diagnosis = Diagnosis.objects.get()
         self.assertEqual(diagnosis.practice, practice)
         self.assertEqual(diagnosis.client, client)
