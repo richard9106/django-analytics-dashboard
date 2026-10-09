@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'apps.audit.middleware.AccessAuditMiddleware',
     'apps.accounts.security_middleware.SecuritySessionMiddleware',
+    'apps.billing.access.SubscriptionAccessMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

@@ -21,6 +21,7 @@ class Practice(models.Model):
     state = models.CharField(max_length=60, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
     description = models.TextField(blank=True)
+    subscription_required = models.BooleanField(default=False)
     public_booking_slug = models.SlugField(max_length=160, unique=True, blank=True)
     stripe_connect_account_id = models.CharField(max_length=120, blank=True)
     stripe_connect_details_submitted = models.BooleanField(default=False)

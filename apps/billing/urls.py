@@ -32,11 +32,13 @@ from .views import (
     StripeSubscribeSuccessView,
     StripeSubscribeView,
     StripeWebhookView,
+    SubscriptionAccessView,
 )
 
 app_name = 'billing'
 
 urlpatterns = [
+    path('subscription/', SubscriptionAccessView.as_view(), name='subscription_access'),
     path('', BillingListView.as_view(), name='list'),
     path('invoices/new/', InvoiceCreateView.as_view(), name='invoice_create'),
     path('invoices/<int:pk>/edit/', InvoiceUpdateView.as_view(), name='invoice_edit'),

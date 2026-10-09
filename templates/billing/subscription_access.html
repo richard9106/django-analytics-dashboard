@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Practice subscription | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="signup-page"><main class="login-shell subscription-shell"><section class="login-card">
+<a class="brand" href="{% url 'home' %}">NuviaMy</a>
+{% if request.subscription_access.mode == 'pending' %}
+  {% if request.subscription_manager %}<h1>Start your free trial</h1><p>Your practice is ready. Start your trial to schedule sessions and create client records.</p><p>Your first subscription includes 15 days free. A card is required through Stripe Checkout.</p>{% else %}<h1>Your practice is waiting for activation</h1><p>Ask your practice owner to activate the subscription.</p>{% endif %}
+{% elif request.subscription_access.mode == 'readonly' %}<h1>Your practice is in read-only mode</h1><p>Existing records remain available. Authorized users can export practice data. Creating or changing records is temporarily unavailable.</p>
+{% else %}<h1>Practice subscription</h1><p>Your practice is available. Manage your subscription from your account.</p>{% endif %}
+{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+<div class="hero-actions">
+{% if request.subscription_manager %}
+  <a class="btn btn-secondary" href="{% url 'pricing' %}">Review plans and pricing</a>
+  {% if subscription.stripe_subscription_id and subscription.status != 'canceled' and subscription.status != 'incomplete' %}
+  <form method="post" action="{% url 'billing:customer_portal' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Manage subscription</button></form>
+  {% else %}<form method="post" action="{% url 'billing:subscribe' 'solo' 'monthly' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% if subscription.stripe_subscription_id %}Restore monthly subscription{% else %}Start monthly trial{% endif %}</button></form><form method="post" action="{% url 'billing:subscribe' 'solo' 'yearly' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit">{% if subscription.stripe_subscription_id %}Restore annual subscription{% else %}Start annual trial{% endif %}</button></form>{% endif %}
+{% else %}<p>Contact your practice owner.</p>{% endif %}
+{% if request.subscription_access.mode != 'pending' %}<a class="btn btn-secondary" href="{% if request.user.client_portal_access %}{% url 'portal:dashboard' %}{% else %}{% url 'dashboard' %}{% endif %}">View records</a>{% endif %}
+{% if request.subscription_manager %}<form method="post" action="{% url 'practice_data_export' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit">Export practice data</button></form>{% endif %}
+<a class="btn btn-secondary" href="{% url 'logout' %}">Sign out</a>
+</div></section></main>{% include 'partials/security_session.html' %}</body></html>

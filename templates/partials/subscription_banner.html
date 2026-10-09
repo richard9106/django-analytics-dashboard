@@ -1,0 +1,7 @@
+{% if request.subscription_access.mode == 'readonly' or request.subscription_access.mode == 'grace' %}
+<aside class="subscription-banner" role="status">
+{% if request.subscription_access.mode == 'grace' %}<p><strong>Payment needs attention.</strong> Your practice remains fully available until {{ request.subscription_access.until|date:"M j, Y" }}.</p>{% else %}<p><strong>Your practice is in read-only mode.</strong> Existing records remain available. Authorized users can export practice data. Creating or changing records is temporarily unavailable.</p>{% endif %}
+{% if request.subscription_manager %}<a href="{% url 'billing:subscription_access' %}">Manage subscription</a>{% else %}<p>Contact your practice owner.</p>{% endif %}
+</aside>
+{% endif %}
+{% if request.subscription_access.mode == 'readonly' %}{% load static %}<script defer src="{% static 'subscription-access.js' %}"></script>{% endif %}

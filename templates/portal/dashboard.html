@@ -11,6 +11,7 @@
 </head>
 <body class="app-page portal-page">
   <main class="portal-shell">
+    {% include 'partials/subscription_banner.html' %}
     <section class="action-bar" aria-label="Portal actions">
       <a class="brand" href="{% url 'portal:dashboard' %}" aria-label="NuviaMy client portal">
         <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span>

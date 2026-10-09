@@ -364,7 +364,9 @@ class PracticeSubscription(models.Model):
     stripe_customer_id = models.CharField(max_length=120, blank=True)
     stripe_subscription_id = models.CharField(max_length=120, blank=True)
     stripe_price_id = models.CharField(max_length=120, blank=True)
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True)
     current_period_end = models.DateTimeField(null=True, blank=True)
+    payment_failed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

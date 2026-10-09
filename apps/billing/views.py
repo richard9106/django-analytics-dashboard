@@ -4,6 +4,7 @@ import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -17,6 +18,7 @@ from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMi
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.appointments.workflow import SessionWorkflowMixin
+from apps.practices.models import Practice
 from .forms import InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, PaymentForm, ServicePackageForm, SessionPackageTemplateForm
 from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, PracticeSubscription, ServicePackage, SessionPackageTemplate
 
@@ -36,6 +38,9 @@ def _plan_period_for_price(price_id):
 def _period_end_from_subscription(stripe_subscription):
     period_end = stripe_subscription.get('current_period_end')
     if not period_end:
+        items = stripe_subscription.get('items', {}).get('data', [])
+        period_end = items[0].get('current_period_end') if items else None
+    if not period_end:
         return None
     return datetime.fromtimestamp(period_end, tz=dt_timezone.utc)
 
@@ -54,7 +59,7 @@ def _stripe_subscription_quantity(practice):
     return PracticeSubscription.billable_user_count_for_practice(practice)
 
 
-def _sync_subscription_from_stripe(stripe_subscription, practice=None):
+def _sync_subscription_from_stripe(stripe_subscription, practice=None, allow_replacement=False):
     price_id = ''
     items = stripe_subscription.get('items', {}).get('data', [])
     if items:
@@ -76,6 +81,12 @@ def _sync_subscription_from_stripe(stripe_subscription, practice=None):
     if practice is None:
         return None
 
+    existing = getattr(practice, 'subscription', None)
+    if (existing and existing.stripe_subscription_id
+            and existing.stripe_subscription_id != stripe_subscription.get('id')
+            and not allow_replacement):
+        return None
+
     defaults = {
         'status': stripe_subscription.get('status', PracticeSubscription.Status.INCOMPLETE),
         'stripe_customer_id': stripe_subscription.get('customer', ''),
@@ -83,6 +94,10 @@ def _sync_subscription_from_stripe(stripe_subscription, practice=None):
         'stripe_price_id': price_id,
         'current_period_end': _period_end_from_subscription(stripe_subscription),
     }
+    defaults['payment_failed_at'] = (
+        (existing.payment_failed_at if existing else None) or timezone.now()
+        if defaults['status'] == PracticeSubscription.Status.PAST_DUE else None
+    )
     if plan:
         defaults['plan'] = plan
     if period:
@@ -579,6 +594,7 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
     def post(self, request, *args, **kwargs):
         return self.create_checkout_session(request)
 
+    @transaction.atomic
     def create_checkout_session(self, request):
         practice = get_practice_for_user(request.user)
         price_id = _stripe_price_id(self.plan, self.period)
@@ -587,14 +603,34 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
         if not practice:
             messages.error(request, 'Create a practice workspace before starting a subscription.')
             return redirect('signup')
+        practice = Practice.objects.select_for_update().get(pk=practice.pk)
         if not settings.STRIPE_SECRET_KEY or not price_id:
             messages.error(request, 'Online subscription checkout is not configured yet. Please contact NuviaMy support.')
             return redirect('pricing')
 
         stripe.api_key = settings.STRIPE_SECRET_KEY
         subscription = getattr(practice, 'subscription', None)
+        if subscription and subscription.stripe_subscription_id and subscription.status not in {
+            PracticeSubscription.Status.CANCELED, 'incomplete_expired', PracticeSubscription.Status.INCOMPLETE,
+        }:
+            messages.info(request, 'Manage your existing subscription to update payment details or change billing.')
+            return redirect('billing:subscription_access')
         customer_id = subscription.stripe_customer_id if subscription else ''
         quantity = _stripe_subscription_quantity(practice)
+        if subscription and subscription.status == PracticeSubscription.Status.INCOMPLETE and subscription.stripe_checkout_session_id:
+            try:
+                previous = stripe.checkout.Session.retrieve(subscription.stripe_checkout_session_id)
+                if previous.status == 'complete':
+                    if previous.subscription:
+                        _sync_subscription_from_stripe(stripe.Subscription.retrieve(previous.subscription), practice=practice, allow_replacement=True)
+                    return redirect('billing:subscription_access')
+                if previous.status == 'open':
+                    if subscription.stripe_price_id == price_id:
+                        return redirect(previous.url)
+                    stripe.checkout.Session.expire(previous.id)
+            except stripe.error.StripeError:
+                messages.error(request, 'We could not check your pending checkout. Please try again or contact support.')
+                return redirect('billing:subscription_access')
         session_kwargs = {
             'mode': 'subscription',
             'payment_method_collection': 'always',
@@ -605,15 +641,20 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
             'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period},
             'subscription_data': {
                 'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period},
-                'trial_period_days': 15,
             },
         }
+        if not subscription or not subscription.stripe_subscription_id:
+            session_kwargs['subscription_data']['trial_period_days'] = 15
         if customer_id:
             session_kwargs['customer'] = customer_id
         else:
             session_kwargs['customer_email'] = request.user.email
 
-        session = stripe.checkout.Session.create(**session_kwargs)
+        try:
+            session = stripe.checkout.Session.create(**session_kwargs)
+        except stripe.error.StripeError:
+            messages.error(request, 'Checkout is temporarily unavailable. Please try again or contact support.')
+            return redirect('billing:subscription_access')
         PracticeSubscription.objects.update_or_create(
             practice=practice,
             defaults={
@@ -622,8 +663,10 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
                 'status': PracticeSubscription.Status.INCOMPLETE,
                 'stripe_customer_id': customer_id,
                 'stripe_price_id': price_id,
+                'stripe_checkout_session_id': getattr(session, 'id', ''),
             },
         )
+        Practice.objects.filter(pk=practice.pk).update(subscription_required=True)
         return redirect(session.url)
 
 
@@ -631,6 +674,16 @@ class StripeSubscribeSuccessView(LoginRequiredMixin, PracticePermissionMixin, Cl
     permission_resource = 'billing'
     permission_action = 'view'
     template_name = 'billing/subscribe_success.html'
+
+
+class SubscriptionAccessView(LoginRequiredMixin, TemplateView):
+    template_name = 'billing/subscription_access.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        practice = get_practice_for_user(self.request.user)
+        context['subscription'] = getattr(practice, 'subscription', None) if practice else None
+        return context
 
 
 class StripeSubscribeCancelView(LoginRequiredMixin, PracticePermissionMixin, ClientPortalRedirectMixin, TemplateView):
@@ -792,11 +845,16 @@ class StripeWebhookView(View):
         event_type = event.get('type')
         data_object = event.get('data', {}).get('object', {})
         if event_type in {'checkout.session.completed', 'checkout.session.async_payment_succeeded'}:
-            subscription_id = data_object.get('subscription')
+            subscription_id = data_object.get('subscription') or (
+                data_object.get('parent', {}).get('subscription_details', {}).get('subscription'))
             if subscription_id:
+                practice_id = (data_object.get('metadata') or {}).get('practice_id')
+                pending = PracticeSubscription.objects.filter(practice_id=practice_id).first() if practice_id else None
+                if pending and pending.stripe_checkout_session_id and pending.stripe_checkout_session_id != data_object.get('id'):
+                    return HttpResponse(status=200)
                 stripe.api_key = settings.STRIPE_SECRET_KEY
                 stripe_subscription = stripe.Subscription.retrieve(subscription_id)
-                _sync_subscription_from_stripe(stripe_subscription)
+                _sync_subscription_from_stripe(stripe_subscription, allow_replacement=True)
             invoice_id = (data_object.get('metadata') or {}).get('invoice_id')
             if invoice_id and data_object.get('payment_status', 'paid') == 'paid':
                 Invoice.objects.filter(
@@ -810,8 +868,12 @@ class StripeWebhookView(View):
         elif event_type in {'customer.subscription.updated', 'customer.subscription.deleted'}:
             _sync_subscription_from_stripe(data_object)
         elif event_type == 'invoice.payment_failed':
-            subscription_id = data_object.get('subscription')
+            subscription_id = data_object.get('subscription') or (
+                (data_object.get('parent') or {}).get('subscription_details', {}).get('subscription'))
             if subscription_id:
-                PracticeSubscription.objects.filter(stripe_subscription_id=subscription_id).update(status=PracticeSubscription.Status.PAST_DUE)
+                subscriptions = PracticeSubscription.objects.filter(stripe_subscription_id=subscription_id).exclude(
+                    status__in=[PracticeSubscription.Status.CANCELED, PracticeSubscription.Status.UNPAID])
+                subscriptions.filter(payment_failed_at__isnull=True).update(payment_failed_at=timezone.now())
+                subscriptions.update(status=PracticeSubscription.Status.PAST_DUE)
 
         return HttpResponse(status=200)
