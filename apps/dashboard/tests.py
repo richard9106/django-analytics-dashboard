@@ -224,6 +224,17 @@ class DashboardTests(TestCase):
         self.assertContains(user_response, 'Sign out')
         self.assertNotContains(user_response, '>Sign in</a>')
 
+    def test_public_legal_links_and_cookie_choices(self):
+        for name in ("home", "features", "pricing", "help_center", "support_contact", "privacy_policy", "cookie_policy"):
+            with self.subTest(page=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'aria-label="Footer links"')
+                self.assertContains(response, 'data-cookie-settings')
+                self.assertContains(response, 'data-cookie-choice="essential"')
+                self.assertContains(response, 'data-cookie-choice="preferences"')
+                self.assertNotContains(response, '>Cookies</a>')
+
     def test_cookie_policy_is_public(self):
         response = self.client.get(reverse('cookie_policy'))
 

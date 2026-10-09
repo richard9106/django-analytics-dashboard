@@ -1,0 +1,12 @@
+{% load static %}
+<section class="cookie-notice" role="region" aria-labelledby="cookie-notice-title" data-cookie-notice hidden>
+  <h2 id="cookie-notice-title">Your privacy choices</h2>
+  <p>We use essential cookies for sign-in and secure forms. Optional browser storage remembers whether you’ve completed the guided tour. We do not use advertising or analytics cookies.</p>
+  <div class="cookie-notice-actions">
+    <button class="btn btn-secondary" type="button" data-cookie-choice="preferences">Accept preferences</button>
+    <button class="btn btn-secondary" type="button" data-cookie-choice="essential">Essential only</button>
+  </div>
+  <a href="{% url 'cookie_policy' %}">Read our cookie policy</a>
+</section>
+<noscript><p class="cookie-noscript">Only essential cookies are used when JavaScript is disabled. <a href="{% url 'cookie_policy' %}">Cookie policy</a></p></noscript>
+<script src="{% static 'cookie-choices.js' %}"></script>

@@ -40,4 +40,6 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url><loc>https://nuviamy.com/privacy/</loc></url>
+  <url><loc>https://nuviamy.com/cookie-policy/</loc></url>
 </urlset>

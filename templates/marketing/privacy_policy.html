@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Privacy notice | NuviaMy</title><link rel="canonical" href="https://nuviamy.com/privacy/"><link rel="stylesheet" href="/static/dashboard.css"></head>
+<body class="marketing-page support-page">
+  {% include 'marketing/partials/nav.html' %}
+  <main class="legal-shell">
+    <p class="eyebrow">NuviaMy privacy</p><h1>Privacy notice</h1>
+    <p class="legal-updated">Last updated: October 9, 2026</p>
+    <section><h2>Information handled by the service</h2><p>NuviaMy handles account and contact details, practice settings, scheduling, billing information, and records that a practice adds to its workspace, including client information and clinical documentation. Support messages contain the information you submit through our contact form.</p></section>
+    <section><h2>How information is used</h2><p>Information is used to provide the workspace, authenticate users, manage appointments and subscriptions, respond to support requests, and investigate technical errors. Access to practice records depends on the user’s role and practice membership.</p></section>
+    <section><h2>Connected services</h2><p>Stripe processes payments through its hosted payment pages. Google integrations exchange information needed for the features a practice enables. Technical error monitoring helps investigate failures. These services have their own privacy notices; enabling an integration may share information needed to operate it.</p></section>
+    <section><h2>Browser storage</h2><p>Essential cookies support sign-in and secure forms. Optional storage remembers completion of the guided tour only when you accept preferences. See our <a href="{% url 'cookie_policy' %}">cookie policy</a> for details and controls.</p></section>
+    <section><h2>Questions about records</h2><p>For access, correction, or retention questions about your clinical records, contact the practice that provides your care. For questions about your NuviaMy account or how the service handles information, use our <a href="{% url 'support_contact' %}">contact form</a>. Please do not include clinical details in a support message.</p></section>
+  </main>
+{% include 'marketing/partials/footer.html' %}
+{% include 'partials/security_session.html' %}</body>
+</html>

@@ -315,9 +315,10 @@
     const tourOpenButton = document.querySelector('[data-tour-open]');
     const tourShouldOpen = JSON.parse(document.getElementById('show-dashboard-tour').textContent);
     let tourIndex = 0;
+    let tourCompletedThisVisit = false;
 
     function syncTourButton() {
-      if (tourOpenButton) tourOpenButton.hidden = localStorage.getItem('nuviamy.dashboardTourComplete') === '1';
+      if (tourOpenButton) tourOpenButton.hidden = tourCompletedThisVisit || Boolean(window.NuviaMyCookieChoices?.tourCompleted());
     }
 
     function renderTourStep() {
@@ -355,7 +356,7 @@
 
     function openTour(force = false) {
       if (!tourOverlay) return;
-      if (!force && localStorage.getItem('nuviamy.dashboardTourComplete') === '1') return;
+      if (!force && (tourCompletedThisVisit || window.NuviaMyCookieChoices?.tourCompleted())) return;
       tourIndex = 0;
       renderTourStep();
       tourOverlay.hidden = false;
@@ -366,7 +367,8 @@
     }
 
     function closeTour() {
-      localStorage.setItem('nuviamy.dashboardTourComplete', '1');
+      tourCompletedThisVisit = true;
+      window.NuviaMyCookieChoices?.completeTour();
       tourOverlay.hidden = true;
       document.body.classList.remove('tour-active');
       syncTourButton();
@@ -385,6 +387,7 @@
       if (trigger) trigger.closest('dialog')?.close();
     });
     document.querySelector('[data-tour-open]')?.addEventListener('click', () => openTour(true));
+    window.addEventListener('nuviamy:cookie-choice', syncTourButton);
     document.querySelector('[data-tour-close]')?.addEventListener('click', closeTour);
     tourPrev?.addEventListener('click', () => {
       if (tourIndex > 0) tourIndex -= 1;
