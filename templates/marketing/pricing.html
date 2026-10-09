@@ -43,40 +43,22 @@
   }
   </script>
 </head>
-<body id="top" class="marketing-page">
+<body id="top" class="marketing-page pricing-page">
   {% include 'marketing/partials/nav.html' %}
 
   <main>
     <section class="pricing-hero">
-      <h1>Fair per-user pricing for therapy practices.</h1>
-      <p>Choose monthly or yearly billing after your 15-day free trial. Every active internal user gets the full NuviaMy workspace: scheduling, clinical notes, treatment plans, billing, documents, intake, portal access, reminders, and Google integrations.</p>
-      <div class="billing-note"><strong>15-day free trial:</strong> start with one user and add your team when you need them.</div>
-    </section>
-
-    <section class="visual-band pricing-banner" aria-label="Pricing plan guidance">
-      <div>
-        <p class="eyebrow coral-eyebrow">Choose gently, grow steadily</p>
-        <h2>One plan that grows with the people using it.</h2>
-        <p>No forced tiers or artificial seat ceilings. Active owners, admins, and therapists are billed per user; client portal users and deactivated staff do not count.</p>
-      </div>
-      <div class="plan-visual" aria-hidden="true"><span>Owner</span><span>Admin</span><span>Therapist</span></div>
+      <h1>Fair per-user pricing.</h1>
+      <p>One complete plan for solo therapists and teams. Choose monthly or annual billing.</p>
     </section>
 
     <section class="pricing-grid" aria-label="NuviaMy subscription plans">
       <article class="pricing-card featured">
-        <span class="badge coral">Simple pricing</span>
+        <div class="pricing-plan-summary"><span class="badge success">15-day free trial</span>
         <p class="eyebrow">Per active user</p>
         <h2>$39<span>/user/month</span></h2>
         <p class="annual-price">$421/user/year with 10% annual discount</p>
         <p>For solo therapists, growing groups, and clinics that want the same complete workflow without plan gates.</p>
-        <ul>
-          <li>Active owners, admins, and therapists count</li>
-          <li>Client portal users are included at no extra charge</li>
-          <li>Client records and appointment scheduling</li>
-          <li>Clinical notes and treatment plans</li>
-          <li>Billing, invoices, superbills, and documents</li>
-          <li>Intake, reminders, insurance settings, and Google integrations</li>
-        </ul>
         <div class="pricing-actions">
           {% if user.is_authenticated %}
             <a class="btn btn-primary" href="{% url 'billing:subscribe' 'solo' 'monthly' %}">Start monthly</a>
@@ -86,17 +68,23 @@
             <a class="btn btn-ghost" href="{% url 'signup' %}?plan=solo&period=yearly">Pay yearly</a>
           {% endif %}
         </div>
+        <p class="pricing-trial-note">Card required. Your first subscription includes 15 days free.</p>
+        </div>
+        <div class="pricing-plan-included"><h3>Everything included</h3>
+        <ul>
+          <li>Client records and appointment scheduling</li>
+          <li>Clinical notes and treatment plans</li>
+          <li>Billing, invoices, superbills, and documents</li>
+          <li>Intake, reminders, insurance settings, and Google integrations</li>
+        </ul>
+        <div class="pricing-seat-note"><strong>Who counts as a user?</strong><p>Active owners, admins, and therapists count. Deactivated staff do not.</p><p>Client portal users are included at no extra charge.</p></div>
+        </div>
       </article>
-    </section>
-
-    <section class="marketing-band pricing-advice">
-      <div><p class="eyebrow">Pricing recommendation</p><h2>Predictable billing without feature gates.</h2></div>
-      <p>Every practice gets the same workflow depth. Your subscription scales only when active internal users are added, so small practices can start lean and larger teams can grow without changing tiers.</p>
     </section>
 
     <section class="marketing-section pricing-faq" id="faq">
       <p class="eyebrow">Pricing FAQ</p>
-      <h2>Questions therapists ask before choosing practice management software.</h2>
+      <h2>A few helpful answers.</h2>
       <div class="marketing-grid two">
         <article><h3>Can I pay monthly?</h3><p>Yes. Monthly per-user subscriptions are available, and yearly billing includes a 10% discount.</p></article>
         <article><h3>Do yearly plans include a discount?</h3><p>Yes. Yearly billing includes a 10% discount compared with paying monthly for 12 months.</p></article>

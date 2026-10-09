@@ -1556,3 +1556,38 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
 body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
 .cookie-notice-open .back-to-top { bottom:calc(var(--cookie-notice-space,300px) + 16px); }
 @media(max-width:600px) { .legal-shell { padding:16px; margin:16px auto; } .legal-shell h1 { font-size:26px; } }
+
+/* Pricing has one plan, presented as one centered workspace. */
+.pricing-page .pricing-hero { width:min(760px,calc(100% - 32px)); margin:32px auto 20px; }
+.pricing-page .pricing-hero h1 { margin:0 0 12px; font-size:clamp(30px,4vw,42px); line-height:1.15; }
+.pricing-page .pricing-hero p { margin:0; font-size:16px; }
+.pricing-page .billing-note { margin-top:12px; padding:8px 12px; font-size:13px; }
+.pricing-page .pricing-grid { width:min(920px,calc(100% - 32px)); grid-template-columns:minmax(0,1fr); margin:20px auto 32px; }
+.pricing-page .pricing-card { grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto; gap:32px; padding:28px; border-radius:20px; transform:none; box-shadow:var(--shadow-1); }
+.pricing-plan-summary,.pricing-plan-included { min-width:0; }
+.pricing-page .pricing-card .eyebrow { margin:12px 0; }
+.pricing-page .pricing-card h2 { margin:0 0 12px; font-size:44px; line-height:1.2; }
+.pricing-page .pricing-card h2 span { display:inline-block; font-size:14px; }
+.pricing-page .pricing-card p { margin:0 0 12px; font-size:14px; }
+.pricing-page .pricing-actions { display:grid; gap:8px; margin-top:20px; }
+.pricing-page .pricing-actions .btn { min-height:44px; text-align:center; }
+.pricing-page .pricing-actions .btn-primary:hover,.pricing-page .pricing-actions .btn-primary:focus-visible { background:var(--brand-700); color:#fff; }
+.pricing-page .pricing-card .pricing-trial-note { margin:12px 0 0; font-size:12px; color:var(--slate-500); }
+.pricing-plan-included { border-left:1px solid var(--border); padding-left:32px; }
+.pricing-plan-included h3 { margin:0 0 16px; font-size:17px; color:var(--slate-900); }
+.pricing-page .pricing-card ul { margin:0; gap:12px; }
+.pricing-page .pricing-card li { color:var(--slate-600); }
+.pricing-page .pricing-faq { width:min(920px,calc(100% - 32px)); padding-top:0; }
+.pricing-page .pricing-faq h2 { font-size:clamp(24px,3vw,30px); }
+.pricing-page .marketing-cta { width:min(920px,calc(100% - 32px)); }
+@media(max-width:720px) {
+.pricing-page .pricing-hero { width:calc(100% - 24px); margin:24px auto 20px; }
+.pricing-page .pricing-grid,.pricing-page .pricing-faq,.pricing-page .marketing-cta { width:calc(100% - 24px); }
+.pricing-page .pricing-card { grid-template-columns:minmax(0,1fr); padding:20px; gap:24px; border-radius:16px; }
+.pricing-plan-included { padding-left:0; padding-top:20px; border-left:0; border-top:1px solid var(--border); }
+.pricing-page .pricing-card h2 { font-size:38px; }
+}
+
+.pricing-seat-note { margin-top:24px; padding-top:16px; border-top:1px solid var(--border); font-size:13px; }
+.pricing-seat-note strong { display:block; margin-bottom:8px; }
+.pricing-page .pricing-seat-note p { font-size:13px; }
