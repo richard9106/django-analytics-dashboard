@@ -877,8 +877,45 @@ class ClientPortalViewTests(TestCase):
         self.assertContains(response, 'data-copy-button')
         self.assertContains(response, 'Copy link')
         self.assertNotContains(response, f'href="http://testserver/book/{practice.public_booking_slug}/"')
-        self.assertContains(response, "Unique slug")
+        self.assertContains(response, "All sources")
         self.assertContains(response, 'class="nav-badge">1</strong>')
+
+    def test_unified_requests_filter_search_order_and_practice_isolation(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        owner = get_user_model().objects.create_user(username="unified-requests-owner")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        portal = ClientPortalRequest.objects.create(practice=practice, client=client, submitted_by=user, subject="Invoice explanation", message="Question")
+        starts = timezone.now() + timedelta(days=4)
+        booking = PublicBookingRequest.objects.create(practice=practice, first_name="Jordan", last_name="Rivera", email="jordan@example.invalid", requested_starts_at=starts, requested_ends_at=starts + timedelta(hours=1))
+        ClientPortalRequest.objects.filter(pk=portal.pk).update(created_at=timezone.now() - timedelta(days=1))
+        _other_user, other_practice, _therapist, _client, _access = self.create_portal_user(username="other-unified-client", practice_name="Other unified clinic")
+        PublicBookingRequest.objects.create(practice=other_practice, first_name="Hidden", last_name="Prospect", email="hidden@example.invalid", requested_starts_at=starts, requested_ends_at=starts + timedelta(hours=1))
+        self.client.force_login(owner)
+        url = reverse("portal_requests:list")
+        response = self.client.get(url)
+        self.assertEqual([(row['source'], row['record'].pk) for row in response.context['request_rows']], [('public', booking.pk), ('portal', portal.pk)])
+        self.assertNotContains(response, 'Hidden Prospect')
+        for source, expected in [('public', booking), ('portal', portal)]:
+            response = self.client.get(url, {'source': source})
+            self.assertEqual([row['record'] for row in response.context['request_rows']], [expected])
+            self.assertEqual(response.context['paginator'].count, 1)
+        self.assertEqual(self.client.get(url, {'q': 'jordan@example.invalid'}).context['paginator'].count, 1)
+        self.assertEqual(self.client.get(url, {'q': 'Invoice explanation', 'source': 'public'}).context['paginator'].count, 0)
+        self.assertEqual(self.client.get(url, {'source': 'invalid'}).context['paginator'].count, 2)
+
+    def test_unified_requests_pagination_spans_both_sources(self):
+        user, practice, _therapist, client, _access = self.create_portal_user()
+        owner = get_user_model().objects.create_user(username="paginated-requests-owner")
+        UserProfile.objects.create(user=owner, practice=practice, role=UserProfile.Role.OWNER)
+        for index in range(26):
+            ClientPortalRequest.objects.create(practice=practice, client=client, submitted_by=user, subject=f"Request {index}", message="Question")
+        self.client.force_login(owner)
+        first = self.client.get(reverse("portal_requests:list"))
+        second = self.client.get(reverse("portal_requests:list"), {'page': 2})
+        self.assertEqual(first.context['paginator'].count, 26)
+        self.assertEqual(len(first.context['request_rows']), 25)
+        self.assertEqual(len(second.context['request_rows']), 1)
+        self.assertFalse({row['pk'] for row in first.context['request_rows']} & {row['pk'] for row in second.context['request_rows']})
 
     def test_request_list_actions_match_status_and_preserve_post_routes(self):
         user, practice, _therapist, client, _access = self.create_portal_user()
