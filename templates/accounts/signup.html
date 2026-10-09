@@ -24,11 +24,11 @@
       </a>
       <p class="eyebrow">Start your workspace</p>
       <h1>Create your therapy practice account.</h1>
-      <p>NuviaMy creates your practice, owner account, therapist profile, and secure workspace in one guided flow. Then you will start a 15-day free trial in Stripe Checkout and add your card before billing begins.</p>
+      <p>NuviaMy creates your practice, owner account, therapist profile, and secure workspace in one guided flow. {% if form.invitation.value %}Private invitation: 12 months free for one internal user. No card required.{% else %}Your 15-day free trial starts immediately. No card required.{% endif %}</p>
       <div class="trust-list dark">
         <span>{{ selected_plan_label }}</span>
-        <span>{{ selected_period_label }} billing</span>
-        <span>15 days free</span>
+        <span>No card required</span>
+        <span>{% if form.invitation.value %}12 months free · one internal user{% else %}15 days free{% endif %}</span>
         <span>Practice-scoped data</span>
       </div>
       <div class="hero-actions"><a class="btn btn-secondary" href="{% url 'home' %}">← Back to home</a></div>
@@ -37,6 +37,7 @@
     <section class="signup-card">
       <form method="post" class="signup-form" novalidate>
         {% csrf_token %}
+        {{ form.invitation }}
         <input type="hidden" name="plan" value="{{ selected_plan }}">
         <input type="hidden" name="period" value="{{ selected_period }}">
         {% if form.non_field_errors %}
@@ -44,8 +45,8 @@
         {% endif %}
 
         <div class="sync-panel">
-          <strong>Selected plan: {{ selected_plan_label }} · {{ selected_period_label }}</strong>
-          <p>After creating your account, you will continue to Stripe Checkout. Your first charge starts after the 15-day free trial unless you cancel.</p>
+          <strong>Free access — no payment commitment</strong>
+          <p>No card required. You won’t be charged automatically. At the end of your free access, choose a paid subscription or keep read-only access to existing records. Authorized users can export practice data.</p>
         </div>
 
         <fieldset>
@@ -126,7 +127,7 @@
           </div>
         </fieldset>
 
-        <button class="btn btn-primary signup-submit" type="submit">Create account and continue to checkout</button>
+        <button class="btn btn-primary signup-submit" type="submit">Create account and start free access</button>
         <p class="signup-footnote">Already have an account? <a href="{% url 'login' %}">Sign in</a>.</p>
       </form>
     </section>

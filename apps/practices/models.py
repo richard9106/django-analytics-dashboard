@@ -22,6 +22,9 @@ class Practice(models.Model):
     postal_code = models.CharField(max_length=20, blank=True)
     description = models.TextField(blank=True)
     subscription_required = models.BooleanField(default=False)
+    free_access_kind = models.CharField(max_length=20, default="trial")
+    free_trial_started_at = models.DateTimeField(null=True, blank=True)
+    free_trial_ends_at = models.DateTimeField(null=True, blank=True)
     public_booking_slug = models.SlugField(max_length=160, unique=True, blank=True)
     stripe_connect_account_id = models.CharField(max_length=120, blank=True)
     stripe_connect_details_submitted = models.BooleanField(default=False)
@@ -130,3 +133,15 @@ class ExternalIntegration(models.Model):
 
     def __str__(self):
         return f"{self.practice.name} - {self.get_provider_display()}"
+
+
+class EarlyAccessInvitation(models.Model):
+    slot = models.PositiveSmallIntegerField(unique=True)
+    email = models.EmailField()
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    redeemed_at = models.DateTimeField(null=True, blank=True)
+    practice = models.OneToOneField(Practice, null=True, blank=True, on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(slot__gte=1, slot__lte=10), name="early_access_ten_slots")]

@@ -61,7 +61,14 @@
 
          <article class="panel subscription-panel settings-section-card">
            <div class="panel-head compact"><div><h2>Subscription</h2></div></div>
-           {% if subscription %}
+           {% if request.subscription_access.free_access %}
+             <div class="subscription-summary">
+               <span class="badge brand">{% if request.subscription_access.mode == 'readonly' %}Free access ended{% elif request.subscription_access.free_access == 'early_access' %}Invited access{% else %}Free trial{% endif %}</span>
+               <p>Ends {{ request.subscription_access.until|date:"M j, Y" }}. No automatic charges.</p>
+               {% if request.subscription_access.free_access == 'early_access' %}<p>Your invitation includes one internal user.</p>{% endif %}
+             </div>
+             <a class="btn btn-primary" href="{% url 'billing:subscription_access' %}">Choose subscription</a>
+           {% elif subscription %}
              <div class="subscription-summary">
                <span class="badge {% if subscription.status == 'active' or subscription.status == 'trialing' %}success{% elif subscription.status == 'past_due' %}warning{% else %}brand{% endif %}">{{ subscription.status|title }}</span>
                <h3>Per-user subscription</h3>
@@ -84,7 +91,7 @@
             <div class="subscription-summary muted-subscription">
               <span class="badge warning">No active subscription</span>
               <h3>Choose a NuviaMy plan</h3>
-              <p>Start a 15-day free trial and add your card securely through Stripe.</p>
+              <p>Choose a paid subscription when you are ready. Billing starts only after you confirm in Stripe.</p>
             </div>
             <a class="btn btn-primary" href="{% url 'pricing' %}">Choose a plan</a>
           {% endif %}

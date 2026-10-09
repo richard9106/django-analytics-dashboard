@@ -101,7 +101,7 @@ class PracticeSignupViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Create your therapy practice account")
-        self.assertContains(response, "Selected plan: Group Practice · Yearly")
+        self.assertContains(response, "Free access — no payment commitment")
         self.assertContains(response, "15-day free trial")
         self.assertContains(response, "Back to home")
         self.assertNotContains(response, "Username")
@@ -109,7 +109,7 @@ class PracticeSignupViewTests(TestCase):
     def test_signup_creates_practice_user_therapist_and_owner_profile(self):
         response = self.client.post(reverse("signup"), data=self.valid_payload(plan="group", period="yearly"))
 
-        self.assertRedirects(response, reverse("billing:subscribe", args=["group", "yearly"]), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
         user = get_user_model().objects.get(email="drsmith@example.com")
         practice = Practice.objects.get(name="NuviaMy Wellness")
         therapist = TherapistProfile.objects.get(user=user)
@@ -132,7 +132,7 @@ class PracticeSignupViewTests(TestCase):
 
         response = self.client.post(reverse("signup"), data=self.valid_payload())
 
-        self.assertRedirects(response, reverse("billing:subscribe", args=["solo", "monthly"]), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
         user = get_user_model().objects.get(email="drsmith@example.com")
         self.assertEqual(user.username, "drsmith-2")
 

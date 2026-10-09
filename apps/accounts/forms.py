@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
@@ -5,12 +7,14 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.crypto import get_random_string
+from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.practices.models import Practice, TherapistProfile
 
 
 class PracticeSignupForm(forms.Form):
+    invitation = forms.CharField(required=False, widget=forms.HiddenInput, max_length=200)
     practice_name = forms.CharField(max_length=140)
     practice_type = forms.ChoiceField(choices=Practice.PracticeType.choices)
     practice_email = forms.EmailField(required=False)
@@ -65,10 +69,17 @@ class PracticeSignupForm(forms.Form):
         ).exists():
             self.add_error("license_number", "A therapist profile with this license already exists in that state.")
 
+        if cleaned_data.get("invitation"):
+            from apps.practices.early_access import invitation_for
+            invitation_for(cleaned_data["invitation"], cleaned_data.get("email"))
         return cleaned_data
 
     @transaction.atomic
     def save(self):
+        invitation = None
+        if self.cleaned_data.get("invitation"):
+            from apps.practices.early_access import invitation_for
+            invitation = invitation_for(self.cleaned_data["invitation"], self.cleaned_data["email"], lock=True)
         User = get_user_model()
         user = User.objects.create_user(
             username=self.build_username(),
@@ -77,13 +88,26 @@ class PracticeSignupForm(forms.Form):
             first_name=self.cleaned_data["first_name"],
             last_name=self.cleaned_data["last_name"],
         )
+        trial_started = timezone.now()
         practice = Practice.objects.create(
             name=self.cleaned_data["practice_name"],
             subscription_required=True,
+            free_trial_started_at=trial_started,
+            free_trial_ends_at=trial_started + timedelta(days=15),
             practice_type=self.cleaned_data["practice_type"],
             email=self.cleaned_data.get("practice_email", ""),
             phone=self.cleaned_data.get("practice_phone", ""),
         )
+        if invitation:
+            try:
+                practice.free_trial_ends_at = trial_started.replace(year=trial_started.year + 1)
+            except ValueError:
+                practice.free_trial_ends_at = trial_started.replace(year=trial_started.year + 1, day=28)
+            practice.free_access_kind = "early_access"
+            practice.save(update_fields=["free_trial_ends_at", "free_access_kind"])
+            invitation.practice = practice
+            invitation.redeemed_at = trial_started
+            invitation.save(update_fields=["practice", "redeemed_at"])
         TherapistProfile.objects.create(
             user=user,
             practice=practice,
@@ -169,6 +193,8 @@ class TeamMemberCreateForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        from apps.practices.early_access import assert_free_seat_available
+        assert_free_seat_available(self.practice)
         role = cleaned_data.get("role")
         license_number = cleaned_data.get("license_number")
         license_state = cleaned_data.get("license_state")
@@ -198,6 +224,9 @@ class TeamMemberCreateForm(forms.Form):
 
     @transaction.atomic
     def save(self):
+        from apps.practices.early_access import assert_free_seat_available
+        self.practice = Practice.objects.select_for_update().get(pk=self.practice.pk)
+        assert_free_seat_available(self.practice)
         User = get_user_model()
         self.temporary_password = self.cleaned_data.get('password') if self.cleaned_data.get('password_mode') == 'custom' else get_random_string(14)
         user = User.objects.create_user(
