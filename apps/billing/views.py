@@ -625,7 +625,10 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
                         _sync_subscription_from_stripe(stripe.Subscription.retrieve(previous.subscription), practice=practice, allow_replacement=True)
                     return redirect('billing:subscription_access')
                 if previous.status == 'open':
-                    if subscription.stripe_price_id == price_id and (getattr(previous, 'metadata', {}) or {}).get('billing_policy') == 'cardless-v1':
+                    previous_metadata = getattr(previous, 'metadata', {}) or {}
+                    if (subscription.stripe_price_id == price_id
+                            and previous_metadata.get('billing_policy') == 'cardless-v1'
+                            and previous_metadata.get('active_user_count') == str(quantity)):
                         return redirect(previous.url)
                     stripe.checkout.Session.expire(previous.id)
             except stripe.error.StripeError:
@@ -638,7 +641,7 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
             'success_url': request.build_absolute_uri(reverse('billing:subscribe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url': request.build_absolute_uri(reverse('billing:subscribe_cancel')),
             'client_reference_id': str(practice.pk),
-            'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v1'},
+            'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v1', 'active_user_count': str(quantity)},
             'subscription_data': {
                 'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v1'},
             },

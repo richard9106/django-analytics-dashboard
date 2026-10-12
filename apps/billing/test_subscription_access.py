@@ -123,7 +123,7 @@ class SubscriptionAccessTests(TestCase):
     def test_pending_checkout_is_reused_instead_of_creating_duplicate(self, create, retrieve):
         from types import SimpleNamespace
         self.subscription('incomplete', stripe_price_id='price_current', stripe_checkout_session_id='cs_pending')
-        retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending', metadata={'billing_policy': 'cardless-v1'})
+        retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending', metadata={'billing_policy': 'cardless-v1', 'active_user_count': '1'})
         response=self.client.post(reverse('billing:subscribe',args=['solo','monthly']))
         self.assertEqual(response.url, 'https://checkout.stripe.test/pending')
         create.assert_not_called()
@@ -160,6 +160,42 @@ class SubscriptionAccessTests(TestCase):
         form = PracticeSignupForm(data={'practice_name':'New practice','practice_type':'solo','first_name':'Test','last_name':'Owner','email':'new-owner@example.invalid','password1':'ValidPasswordForTest2026!','password2':'ValidPasswordForTest2026!','license_number':'test-signup','license_state':'CA'})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertTrue(form.save().nuvia_profile.practice.subscription_required)
+
+
+    @override_settings(STRIPE_SECRET_KEY='test-placeholder', STRIPE_PRICE_IDS={'solo': {'monthly': 'price_current'}})
+    @patch('apps.billing.views.stripe.checkout.Session.expire')
+    @patch('apps.billing.views.stripe.checkout.Session.retrieve')
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    def test_pending_checkout_is_replaced_when_active_user_count_changes(self, create, retrieve, expire):
+        from types import SimpleNamespace
+        self.subscription('incomplete', stripe_price_id='price_current', stripe_checkout_session_id='cs_pending')
+        retrieve.return_value = SimpleNamespace(id='cs_pending', status='open', url='https://checkout.stripe.test/old', metadata={'billing_policy': 'cardless-v1', 'active_user_count': '1'})
+        create.return_value = SimpleNamespace(id='cs_updated', url='https://checkout.stripe.test/updated')
+        admin = get_user_model().objects.create_user(username='checkout-admin')
+        UserProfile.objects.create(user=admin, practice=self.practice, role=UserProfile.Role.ADMIN)
+        response = self.client.post(reverse('billing:subscribe', args=['solo', 'monthly']))
+        self.assertEqual(response.url, 'https://checkout.stripe.test/updated')
+        expire.assert_called_once_with('cs_pending')
+        self.assertEqual(create.call_args.kwargs['line_items'], [{'price': 'price_current', 'quantity': 2}])
+        self.assertEqual(create.call_args.kwargs['metadata']['active_user_count'], '2')
+
+    def test_free_access_checkout_is_consistent_across_workspace_pages(self):
+        self.practice.free_trial_ends_at = timezone.now()+timedelta(days=15)
+        self.practice.save(update_fields=['free_trial_ends_at'])
+        routes = ['dashboard', 'appointments:list', 'clients:list', 'billing:list',
+                  'clinical:list', 'clinical:treatment_plans', 'intake:list',
+                  'documents:list', 'profile_settings', 'team_management', 'billing:payment_create']
+        for route in routes:
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertContains(response, 'class="trial-toolbar-notice"', count=1)
+                self.assertContains(response, reverse('billing:subscribe', args=['solo', 'monthly']))
+                self.assertNotContains(response, 'class="subscription-banner"')
+        self.practice.free_trial_ends_at = timezone.now()-timedelta(seconds=1)
+        self.practice.save(update_fields=['free_trial_ends_at'])
+        response = self.client.get(reverse('clients:list'))
+        self.assertContains(response, 'Your practice is in read-only mode')
+        self.assertNotContains(response, 'class="trial-toolbar-notice"')
 
 
 class CardlessTrialTests(TestCase):

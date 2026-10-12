@@ -14,14 +14,14 @@
     {% include 'partials/sidebar.html' with card_title='Secure scheduling' card_text='Only clients and therapists from your practice can be selected.' %}
 
     <main class="app-main">
-      {% include 'partials/breadcrumbs.html' %}
+      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clients.create %}<a class="btn btn-soft" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>{% endif %}
           {% if workspace_permissions.appointments.create %}<a class="btn btn-primary" href="{% url 'appointments:create' %}?next={{ calendar_return_url|urlencode }}">+ New appointment</a>{% endif %}
           {% if workspace_permissions.clients.view %}<a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>{% endif %}
         </div>
-        {% include 'partials/message_bell.html' %}<details class="profile-menu">
+        {% include 'partials/message_bell.html' %}{% include 'partials/trial_toolbar_notice.html' %}<details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">
             <a href="{% url 'profile_settings' %}">Profile settings</a>

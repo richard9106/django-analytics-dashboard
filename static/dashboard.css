@@ -1592,18 +1592,18 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
 .pricing-seat-note strong { display:block; margin-bottom:8px; }
 .pricing-page .pricing-seat-note p { font-size:13px; }
 
-/* Keep free access status in the dashboard toolbar without a separate panel. */
+/* Keep free access status in workspace action bars without a separate panel. */
 .dashboard-page .app-main { gap: 12px; }
-.dashboard-page .action-bar { flex-wrap: wrap; }
-.dashboard-page .action-bar .quick-actions { flex: 1; min-width: 0; }
-.dashboard-page .action-bar .profile-menu { flex: 0 0 auto; }
+.app-main .action-bar { flex-wrap: wrap; }
+.app-main .action-bar .quick-actions { flex: 1; min-width: 0; }
+.app-main .action-bar .profile-menu { flex: 0 0 auto; }
 .trial-toolbar-notice { display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 0 10px; border: 1px solid #fed7aa; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: 12px; line-height: 1.4; min-height: 38px; }
 .trial-toolbar-icon { display: inline-grid; place-items: center; flex: 0 0 18px; width: 18px; height: 18px; border: 1px solid currentColor; border-radius: 50%; font-weight: 800; }
 .trial-toolbar-notice a { display: inline-flex; align-items: center; min-height: 44px; color: #9a3412; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .trial-toolbar-notice a:hover { color: #7c2d12; }
 .trial-toolbar-notice a:focus-visible { outline: 2px solid #9a3412; outline-offset: 2px; border-radius: 3px; }
 @media (max-width: 600px) {
-  .dashboard-page .action-bar .trial-toolbar-notice { width: 100%; margin-left: 0; flex-wrap: wrap; padding: 6px 10px; box-sizing: border-box; }
+  .action-bar .trial-toolbar-notice { width: 100%; margin-left: 0; flex-wrap: wrap; padding: 6px 10px; box-sizing: border-box; }
   .trial-toolbar-notice a { margin-left: 26px; }
 }
 
@@ -1618,3 +1618,5 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
   .calendar-availability-actions .btn:only-child { grid-column: 1 / -1; }
   .calendar-availability-actions .btn, .calendar-period-nav .btn { min-height: 44px; margin: 0; font-size: 12px; }
 }
+
+.subscription-status-bar .trial-toolbar-notice { margin-left: 0; }
