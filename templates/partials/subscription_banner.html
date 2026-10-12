@@ -1,4 +1,4 @@
-{% if request.subscription_access.free_access and request.subscription_access.mode == 'full' %}
+{% if request.subscription_access.free_access and request.subscription_access.mode == 'full' and not hide_free_trial %}
 <aside class="subscription-banner" role="status"><p><strong>{% if request.subscription_access.free_access == 'early_access' %}Invited access{% else %}Free trial{% endif %} ends {{ request.subscription_access.until|date:"M j, Y" }}.</strong> No card required. No automatic charge.</p>{% if request.subscription_manager %}<a href="{% url 'billing:subscription_access' %}">Choose subscription</a>{% else %}<p>Contact your practice owner for billing.</p>{% endif %}</aside>
 {% endif %}
 {% if request.subscription_access.mode == 'readonly' or request.subscription_access.mode == 'grace' %}

@@ -14,15 +14,7 @@
     {% include 'partials/sidebar.html' with card_title='Your daily workspace' card_text='Keep clients, sessions, notes, and billing together.' %}
 
     <main class="app-main" data-tour-target="workspace">
-      {% include 'partials/breadcrumbs.html' %}
-      {% if dashboard_onboarding_steps %}
-      <section class="onboarding-panel dashboard-setup" aria-label="Recommended first steps" data-tour-target="setup">
-        <div><p class="eyebrow">First steps</p><h2>Finish setting up your practice</h2><p>Only the steps you still need to complete.</p></div>
-        <div class="onboarding-steps">
-          {% for step in dashboard_onboarding_steps %}<a href="{{ step.url }}"><strong>{{ forloop.counter }}</strong><span>{{ step.label }}</span><span aria-hidden="true">→</span></a>{% endfor %}
-        </div>
-      </section>
-      {% endif %}
+      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clients.create %}<a class="btn btn-primary" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>{% endif %}
@@ -30,6 +22,7 @@
           {% if workspace_permissions.tasks.create %}<a class="btn btn-soft" href="{% url 'tasks_list' %}">+ New task</a>{% endif %}
           {% if workspace_permissions.clients.view %}<a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>{% endif %}
         </div>
+        {% include 'partials/trial_toolbar_notice.html' %}
         {% include 'partials/message_bell.html' %}<details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">
@@ -44,6 +37,15 @@
           </div>
         </details>
       </section>
+      {% if dashboard_onboarding_steps %}
+      <section class="onboarding-panel dashboard-setup" aria-label="Recommended first steps" data-tour-target="setup">
+        <div><p class="eyebrow">First steps</p><h2>Finish setting up your practice</h2><p>Only the steps you still need to complete.</p></div>
+        <div class="onboarding-steps">
+          {% for step in dashboard_onboarding_steps %}<a href="{{ step.url }}"><strong>{{ forloop.counter }}</strong><span>{{ step.label }}</span><span aria-hidden="true">→</span></a>{% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
 
       <section class="welcome-panel" data-tour-target="welcome">
         <div>
