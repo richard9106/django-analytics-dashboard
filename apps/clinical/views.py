@@ -700,8 +700,16 @@ class SessionNoteSignView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
 
     def get(self, request, pk):
         note = self.get_note(request, pk)
+        responsible = note.therapist.user_id == request.user.pk and has_practice_permission(request.user, 'clinical', 'edit')
+        blocked_reason = ''
+        if not note.content.strip():
+            blocked_reason = 'Add note content before signing.'
+        elif note.appointment and note.appointment.ends_at > timezone.now():
+            blocked_reason = 'Signing becomes available after this session ends.'
         return render(request, 'clinical/sign.html', {'note': note, 'review_digest': note.review_digest(),
-            'next_url': session_return_url(request), 'can_sign': not note.signed_at and note.therapist.user_id == request.user.pk and has_practice_permission(request.user, 'clinical', 'edit')})
+            'next_url': session_return_url(request), 'can_sign': responsible and not note.signed_at and not blocked_reason,
+            'signature_blocked_reason': blocked_reason if responsible else '',
+            'can_edit_draft': not note.is_locked and has_practice_permission(request.user, 'clinical', 'edit')})
 
     def post(self, request, pk):
         note = self.get_note(request, pk)

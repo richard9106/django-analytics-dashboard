@@ -155,7 +155,8 @@ class SessionNote(models.Model):
             raise ValidationError('This note has already been signed.')
         if not note.content.strip():
             raise ValidationError('Write the clinical note before signing it.')
-        if not secrets.compare_digest(note.review_digest(), reviewed_digest):
+        if (not isinstance(reviewed_digest, str) or not reviewed_digest.isascii()
+                or not secrets.compare_digest(note.review_digest(), reviewed_digest)):
             raise ValidationError('The note changed after review. Review the current version before signing.')
         if note.appointment and note.appointment.ends_at > timezone.now():
             raise ValidationError('The session must end before its note is signed.')

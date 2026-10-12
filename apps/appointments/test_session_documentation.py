@@ -94,6 +94,8 @@ class SessionDocumentationTests(TestCase):
         self.client.force_login(self.therapist_user)
         self.client.post(url, {'review_digest':note.review_digest()})
         note.refresh_from_db(); self.assertIsNone(note.signed_at)
+        self.client.post(url, {'confirm_signature': 'on', 'review_digest': 'ñ'*64})
+        note.refresh_from_db(); self.assertIsNone(note.signed_at)
         digest = note.review_digest()
         note.content='Updated fictional documentation'; note.save()
         self.client.post(url, {'confirm_signature':'on','review_digest':digest})
