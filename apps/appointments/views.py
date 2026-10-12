@@ -6,7 +6,7 @@ from datetime import date, datetime, time, timedelta
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef, Prefetch
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -22,6 +22,7 @@ from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from .google_calendar import delete_google_event_for_appointment, sync_appointment_to_google
 from .models import Appointment, PracticeAvailabilityOverride, PracticeWorkingHour
+from .access import scope_sessions, manages_sessions
 from .forms import AppointmentForm, CalendarAvailabilityEditForm, PracticeAvailabilityOverrideForm, PracticeWorkingHourForm
 
 
@@ -54,10 +55,13 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
     model = Appointment
     template_name = 'appointments/list.html'
     context_object_name = 'appointments'
-    calendar_views = {'day', 'week', 'month', 'agenda'}
+    calendar_views = {'day', 'week', 'month', 'agenda', 'list'}
     calendar_start_hour = 7
     calendar_end_hour = 20
     calendar_hour_height = 72
+
+    def get_paginate_by(self, queryset):
+        return 25 if self.get_calendar_view() == 'list' else None
 
     def get_queryset(self):
         practice = self.get_practice()
@@ -65,7 +69,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             return Appointment.objects.none()
 
         appointments = (
-            Appointment.objects.filter(practice=practice)
+            scope_sessions(Appointment.objects.filter(practice=practice), self.request.user)
             .select_related('client', 'therapist__user')
             .order_by('starts_at')
         )
@@ -84,6 +88,26 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             appointments = appointments.filter(appointment_type=filters['appointment_type'])
         if filters['sync_status'] in dict(Appointment.SyncStatus.choices):
             appointments = appointments.filter(sync_status=filters['sync_status'])
+        if self.get_calendar_view() == 'list':
+            from apps.clinical.models import SessionNote
+            notes = SessionNote.objects.filter(appointment_id=OuterRef('pk')).exclude(note_type='treatment_plan')
+            appointments = appointments.annotate(has_session_note=Exists(notes), has_signed_note=Exists(notes.filter(signature__isnull=False)))
+            ended = Q(ends_at__lte=timezone.now()) & ~Q(status__in=['cancelled', 'no_show'])
+            documentation = self.request.GET.get('documentation', '')
+            if documentation == 'needs_attention':
+                appointments = appointments.filter(ended, has_signed_note=False)
+            elif documentation == 'signed':
+                appointments = appointments.filter(has_signed_note=True)
+            from django.utils.dateparse import parse_date
+            for key, lookup in [('from', 'starts_at__date__gte'), ('to', 'starts_at__date__lte')]:
+                value = self.request.GET.get(key, '')
+                try:
+                    parsed = parse_date(value)
+                except ValueError:
+                    parsed = None
+                if parsed:
+                    appointments = appointments.filter(**{lookup: parsed})
+            appointments = appointments.prefetch_related(Prefetch('session_notes', queryset=SessionNote.objects.exclude(note_type='treatment_plan').select_related('signature').only('id', 'appointment_id', 'is_locked', 'signature__id', 'signature__note_id', 'signature__signed_at', 'signature__signed_by_id', 'signature__signer_name', 'signature__digest').order_by('-created_at'), to_attr='documentation_notes')).order_by('-starts_at', '-pk')
         return appointments
 
     def get_calendar_filters(self):
@@ -332,10 +356,32 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(self.get_calendar_context(context['appointments']))
+        context['can_manage_sessions'] = manages_sessions(self.request.user)
+        context['session_list_url'] = self.calendar_url(view='list', page=None)
+        context['session_calendar_url'] = self.calendar_url(view='week', page=None)
+        context['documentation_filter'] = self.request.GET.get('documentation', '')
+        if self.get_calendar_view() == 'list':
+            context['calendar_view'] = 'list'
+            context['calendar_grid_config'] = {'startHour': self.calendar_start_hour, 'endHour': self.calendar_end_hour, 'hourHeight': self.calendar_hour_height, 'defaultDurationMinutes': 50}
+            context['calendar_anchor_date'] = self.get_anchor_date()
+            context['calendar_filters'] = self.get_calendar_filters()
+            context['appointment_status_choices'] = Appointment.Status.choices
+            for appointment in context['appointments']:
+                appointment.documentation_due = appointment.ends_at <= timezone.now() and appointment.status not in {'cancelled', 'no_show'}
+                appointment.documentation_pending = appointment.documentation_due and not appointment.has_signed_note
+                notes = appointment.documentation_notes
+                appointment.documentation_note = next((n for n in notes if n.signed_at), notes[0] if notes else None)
+            if context.get('page_obj'):
+                page = context['page_obj']
+                if page.has_previous(): context['previous_list_url'] = self.calendar_url(page=page.previous_page_number())
+                if page.has_next(): context['next_list_url'] = self.calendar_url(page=page.next_page_number())
+        else:
+            context.update(self.get_calendar_context(context['appointments']))
         practice = self.get_practice()
         context['appointment_clients'] = practice.clients.all() if practice else []
         context['appointment_therapists'] = practice.therapists.select_related('user') if practice else []
+        if practice and not manages_sessions(self.request.user):
+            context['appointment_therapists'] = context['appointment_therapists'].filter(user=self.request.user)
         context['availability_form'] = PracticeAvailabilityOverrideForm(practice=practice)
         return context
 
@@ -368,6 +414,7 @@ class AppointmentCreateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['practice'] = self.get_practice()
+        kwargs['user'] = self.request.user
         return kwargs
 
     def get_initial(self):
@@ -444,7 +491,7 @@ class AppointmentUpdateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
         if not practice:
             return Appointment.objects.none()
 
-        return Appointment.objects.filter(practice=practice)
+        return scope_sessions(Appointment.objects.filter(practice=practice), self.request.user)
 
     def get_object(self, queryset=None):
         return get_object_or_404(self.get_queryset(), pk=self.kwargs['pk'])
@@ -452,6 +499,7 @@ class AppointmentUpdateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['practice'] = self.get_practice()
+        kwargs['user'] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -479,7 +527,7 @@ class AppointmentDeleteView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
         if not practice:
             return Appointment.objects.none()
 
-        return Appointment.objects.filter(practice=practice)
+        return scope_sessions(Appointment.objects.filter(practice=practice), self.request.user)
 
     def form_valid(self, form):
         try:
@@ -494,7 +542,7 @@ class AppointmentCancelView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
     permission_action = 'edit'
 
     def post(self, request, pk):
-        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        appointment = get_object_or_404(scope_sessions(Appointment.objects.filter(practice=self.get_practice()), self.request.user), pk=pk)
         if appointment.status != Appointment.Status.SCHEDULED:
             messages.info(request, 'Only scheduled sessions can be cancelled.')
             return redirect(self.get_success_url())
@@ -514,22 +562,22 @@ class AppointmentSeriesUpdateView(CalendarReturnMixin, LoginRequiredMixin, Pract
 
     def post(self, request, pk):
         practice = self.get_practice()
-        appointment = get_object_or_404(Appointment.objects.filter(practice=practice), pk=pk)
+        appointment = get_object_or_404(scope_sessions(Appointment.objects.filter(practice=practice), self.request.user), pk=pk)
         if not appointment.series_id:
             messages.error(request, 'This appointment is not part of a recurring series.')
             return redirect('appointments:edit', pk=appointment.pk)
         original_start = appointment.starts_at
-        form = AppointmentForm(request.POST, instance=appointment, practice=practice)
+        form = AppointmentForm(request.POST, instance=appointment, practice=practice, user=request.user)
         if not form.is_valid():
             messages.error(request, 'Review the appointment details before updating the series.')
             return redirect('appointments:edit', pk=appointment.pk)
         updated = form.save(commit=False)
         start_delta = updated.starts_at - original_start
         duration = updated.ends_at - updated.starts_at
-        future = list(Appointment.objects.filter(
+        future = list(scope_sessions(Appointment.objects.filter(
             practice=practice, series_id=appointment.series_id,
             starts_at__gte=original_start, status=Appointment.Status.SCHEDULED,
-        ))
+        ), self.request.user))
         try:
             with transaction.atomic():
                 for occurrence in future:
@@ -558,14 +606,14 @@ class AppointmentSeriesCancelView(CalendarReturnMixin, LoginRequiredMixin, Pract
     permission_action = 'edit'
 
     def post(self, request, pk):
-        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        appointment = get_object_or_404(scope_sessions(Appointment.objects.filter(practice=self.get_practice()), self.request.user), pk=pk)
         if not appointment.series_id:
             messages.error(request, 'This appointment is not part of a recurring series.')
             return redirect('appointments:edit', pk=appointment.pk)
-        future = list(Appointment.objects.filter(
+        future = list(scope_sessions(Appointment.objects.filter(
             practice=appointment.practice, series_id=appointment.series_id,
             starts_at__gte=appointment.starts_at, status=Appointment.Status.SCHEDULED,
-        ))
+        ), self.request.user))
         for occurrence in future:
             occurrence.status = Appointment.Status.CANCELLED
             occurrence.save(update_fields=['status', 'updated_at'])
@@ -581,7 +629,7 @@ class AppointmentGoogleSyncView(LoginRequiredMixin, PracticePermissionMixin, Pra
     permission_resource = 'appointments'
     permission_action = 'edit'
     def post(self, request, pk):
-        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        appointment = get_object_or_404(scope_sessions(Appointment.objects.filter(practice=self.get_practice()), self.request.user), pk=pk)
         sync_appointment_to_google(appointment)
         log_audit_event(
             request,
@@ -612,10 +660,10 @@ class CalendarSyncIssuesView(LoginRequiredMixin, PracticePermissionMixin, Practi
         if not practice:
             return Appointment.objects.none()
         return (
-            Appointment.objects.filter(
+            scope_sessions(Appointment.objects.filter(
                 practice=practice,
                 sync_status=Appointment.SyncStatus.FAILED,
-            )
+            ), self.request.user)
             .select_related('client', 'therapist__user')
             .order_by('-updated_at')
         )
@@ -625,7 +673,7 @@ class AppointmentRescheduleView(CalendarReturnMixin, LoginRequiredMixin, Practic
     permission_resource = 'appointments'
     permission_action = 'edit'
     def post(self, request, pk):
-        appointment = get_object_or_404(Appointment.objects.filter(practice=self.get_practice()), pk=pk)
+        appointment = get_object_or_404(scope_sessions(Appointment.objects.filter(practice=self.get_practice()), self.request.user), pk=pk)
         date_value = request.POST.get('date', '')
         time_value = request.POST.get('time', '')
         try:

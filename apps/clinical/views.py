@@ -1,3 +1,4 @@
+from urllib.parse import urlsplit, urlencode
 from collections import OrderedDict
 from datetime import date, timedelta
 
@@ -20,8 +21,24 @@ from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMi
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.appointments.workflow import SessionWorkflowMixin
+from apps.appointments.access import scope_sessions
 from .forms import DiagnosisForm, SessionNoteForm, TreatmentPlanForm
 from .models import Diagnosis, SessionNote, TreatmentPlan
+
+
+def session_return_url(request):
+    value = request.POST.get('next') or request.GET.get('next') or ''
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return reverse('appointments:list') + '?view=list'
+    if not parsed.scheme and not parsed.netloc and parsed.path == reverse('appointments:list') and not any(c in value for c in ('\\', '\r', '\n')):
+        return value
+    return reverse('appointments:list') + '?view=list'
+
+
+def note_review_url(request, pk):
+    return reverse('clinical:sign', args=[pk]) + '?' + urlencode({'next': session_return_url(request)})
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -35,7 +52,10 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
         if practice:
             context['note_clients'] = practice.clients.all()
             context['note_therapists'] = practice.therapists.select_related('user')
-            context['note_appointments'] = practice.appointments.select_related('client', 'therapist__user')
+            from apps.appointments.access import manages_sessions
+            if not manages_sessions(self.request.user):
+                context['note_therapists'] = context['note_therapists'].filter(user=self.request.user)
+            context['note_appointments'] = scope_sessions(practice.appointments.select_related('client', 'therapist__user'), self.request.user)
             context['note_treatment_plans'] = practice.treatment_plans.select_related('client')
         else:
             context['note_clients'] = []
@@ -87,8 +107,8 @@ class SessionNoteListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             return SessionNote.objects.none()
 
         notes = (
-            SessionNote.objects.filter(practice=practice)
-            .select_related('client', 'therapist__user', 'appointment', 'treatment_plan')
+            scope_sessions(SessionNote.objects.filter(practice=practice), self.request.user)
+            .select_related('client', 'therapist__user', 'appointment', 'treatment_plan', 'signature')
             .order_by('client__last_name', 'client__first_name', '-updated_at', '-pk')
         )
         filters = self.get_note_filters()
@@ -111,7 +131,9 @@ class SessionNoteListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         if filters['note_type'] in valid_note_types:
             notes = notes.filter(note_type=filters['note_type'])
         if filters['status'] == 'locked':
-            notes = notes.filter(is_locked=True)
+            notes = notes.filter(is_locked=True, signature__isnull=True)
+        elif filters['status'] == 'signed':
+            notes = notes.filter(signature__isnull=False)
         elif filters['status'] == 'draft':
             notes = notes.filter(is_locked=False)
         try:
@@ -145,9 +167,26 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
     template_name = 'clinical/form.html'
     success_url = reverse_lazy('clinical:list')
 
+    def get_initial(self):
+        initial = super().get_initial()
+        appointment_id = self.request.GET.get('appointment', '')
+        if appointment_id.isdigit() and len(appointment_id) < 19:
+            from apps.appointments.models import Appointment
+            appointment = scope_sessions(Appointment.objects.filter(practice=self.get_practice()), self.request.user).filter(pk=appointment_id).first()
+            if appointment:
+                initial.update(appointment=appointment.pk, client=appointment.client_id,
+                               therapist=appointment.therapist_id, note_type='progress_note')
+        return initial
+
+    def get_success_url(self):
+        if self.request.GET.get('session_list') == '1':
+            return note_review_url(self.request, self.object.pk)
+        return super().get_success_url()
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['practice'] = self.get_practice()
+        kwargs['user'] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -189,11 +228,17 @@ class SessionNoteUpdateView(LoginRequiredMixin, PracticePermissionMixin, Practic
 
         # Locked notes are finalized records. Excluding them here prevents direct
         # URL access and protects both GET and POST update attempts.
-        return SessionNote.objects.filter(practice=practice, is_locked=False)
+        return scope_sessions(SessionNote.objects.filter(practice=practice, is_locked=False), self.request.user)
+
+    def get_success_url(self):
+        if self.request.GET.get('review') == '1':
+            return note_review_url(self.request, self.object.pk)
+        return super().get_success_url()
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['practice'] = self.get_practice()
+        kwargs['user'] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -238,7 +283,7 @@ class SessionNoteDeleteView(LoginRequiredMixin, PracticePermissionMixin, Practic
         if not practice:
             return SessionNote.objects.none()
 
-        return SessionNote.objects.filter(practice=practice, is_locked=False)
+        return scope_sessions(SessionNote.objects.filter(practice=practice, is_locked=False), self.request.user)
 
     def form_valid(self, form):
         note_id = self.object.pk
@@ -644,3 +689,42 @@ class DiagnosisDeleteView(LoginRequiredMixin, PracticePermissionMixin, Treatment
             metadata=metadata,
         )
         return response
+
+
+class SessionNoteSignView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'clinical'
+    permission_action = 'view'
+
+    def get_note(self, request, pk):
+        return get_object_or_404(scope_sessions(SessionNote.objects.filter(practice=self.get_practice()), request.user).select_related('client', 'therapist__user', 'appointment', 'signature'), pk=pk)
+
+    def get(self, request, pk):
+        note = self.get_note(request, pk)
+        responsible = note.therapist.user_id == request.user.pk and has_practice_permission(request.user, 'clinical', 'edit')
+        blocked_reason = ''
+        if not note.content.strip():
+            blocked_reason = 'Add note content before signing.'
+        elif note.appointment and note.appointment.ends_at > timezone.now():
+            blocked_reason = 'Signing becomes available after this session ends.'
+        return render(request, 'clinical/sign.html', {'note': note, 'review_digest': note.review_digest(),
+            'next_url': session_return_url(request), 'can_sign': responsible and not note.signed_at and not blocked_reason,
+            'signature_blocked_reason': blocked_reason if responsible else '',
+            'can_edit_draft': not note.is_locked and has_practice_permission(request.user, 'clinical', 'edit')})
+
+    def post(self, request, pk):
+        note = self.get_note(request, pk)
+        if not has_practice_permission(request.user, 'clinical', 'edit') or note.therapist.user_id != request.user.pk:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied('Only the responsible therapist can sign.')
+        if request.POST.get('confirm_signature') != 'on':
+            messages.error(request, 'Confirm that you reviewed this note before signing.')
+            return redirect(note_review_url(request, pk))
+        try:
+            note = note.sign(request.user, request.POST.get('review_digest', ''))
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+            return redirect(note_review_url(request, pk))
+        log_audit_event(request, AuditLog.Action.UPDATE, 'clinical.SessionNote', note.pk,
+                        practice=note.practice, metadata={'event': 'signed', 'signed_by': request.user.pk, 'digest': note.signature_digest})
+        messages.success(request, 'Note signed. Its content is now read-only.')
+        return redirect(note_review_url(request, pk))

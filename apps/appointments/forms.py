@@ -31,7 +31,7 @@ class AppointmentForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 4}),
         }
 
-    def __init__(self, *args, practice=None, **kwargs):
+    def __init__(self, *args, practice=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
@@ -50,6 +50,12 @@ class AppointmentForm(forms.ModelForm):
         else:
             self.fields['client'].queryset = self.fields['client'].queryset.none()
             self.fields['therapist'].queryset = self.fields['therapist'].queryset.none()
+
+        if user:
+            from .access import manages_sessions
+            if not manages_sessions(user):
+                self.fields['therapist'].queryset = self.fields['therapist'].queryset.filter(user=user)
+                self.initial['therapist'] = self.fields['therapist'].queryset.values_list('pk', flat=True).first()
 
     def save(self, commit=True):
         appointment = super().save(commit=False)

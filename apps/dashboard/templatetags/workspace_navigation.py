@@ -25,7 +25,7 @@ ACTIONS = {
     'appointments': {'create': 'New appointment', 'edit': 'Edit appointment',
                      'reschedule': 'Reschedule appointment', 'sync_issues': 'Sync issues',
                      'availability_edit': 'Edit availability'},
-    'clinical': {'create': 'New note', 'edit': 'Edit note', 'delete': 'Delete note',
+    'clinical': {'create': 'New note', 'edit': 'Edit note', 'delete': 'Delete note', 'sign': 'Review note',
                  'treatment_plan_create': 'New treatment plan', 'treatment_plan_edit': 'Edit treatment plan',
                  'diagnosis_create': 'New diagnosis', 'diagnosis_edit': 'Edit diagnosis'},
     'billing': {'invoice_create': 'New invoice', 'invoice_edit': 'Edit invoice',

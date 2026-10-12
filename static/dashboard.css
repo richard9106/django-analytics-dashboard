@@ -1620,3 +1620,42 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
 }
 
 .subscription-status-bar .trial-toolbar-notice { margin-left: 0; }
+
+.session-list-filters { margin-bottom: 16px; }
+.session-filter-primary { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr) auto auto; align-items: end; gap: 12px; }
+.session-filter-primary > a, .session-filter-more summary { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; }
+.session-filter-more summary { cursor: pointer; color: var(--brand-700); font-weight: 700; }
+.session-more-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 12px; margin-top: 8px; }
+.session-list-filters .field { flex: 1 1 140px; min-width: 0; }
+.session-list-filters input, .session-list-filters select { width: 100%; min-height: 44px; }
+.session-table .documentation-pending { background: #fff4e8; }
+.session-table .documentation-pending td { background: inherit; }
+.session-documentation-label { color: #9a3412; font-weight: 700; }
+.session-row-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.session-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+.note-sign-form { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+.note-sign-form label { display: flex; align-items: flex-start; gap: 8px; min-height: 44px; padding-block: 8px; }
+.note-sign-form input[type=checkbox] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; }
+@media (max-width: 600px) {
+  .session-filter-primary, .session-more-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .session-table-wrap { overflow: visible; }
+  .session-table, .session-table tbody { display: block; width: 100%; }
+  .session-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .session-table tr { display: block; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+  .session-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; font-size: 12px; overflow-wrap: anywhere; }
+  .session-table td::before { content: attr(data-label); color: var(--slate-500); font-size: 11px; flex: 0 0 84px; }
+  .session-row-actions { justify-content: flex-end; gap: 8px; }
+  .session-row-actions a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+@media (max-width: 900px) { .app-main .appointment-display-switch { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; } }
+
+.session-table td { padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+.session-table td:first-child span { display: inline-block; white-space: nowrap; }
+.session-table td:first-child small { font-size: 11px; }
+@media (max-width: 600px) { .session-table td { padding: 8px 12px; font-size: 12px; } }
+@media (max-width: 600px) {
+  .app-main .session-table-wrap .session-table { min-width: 0; }
+  .app-main .session-table-wrap td { white-space: normal; min-width: 0; }
+  .session-table td > span, .session-table td > a, .session-table td > div { min-width: 0; }
+}

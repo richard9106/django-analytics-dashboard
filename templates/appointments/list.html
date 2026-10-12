@@ -39,8 +39,9 @@
       <header class="topbar compact-topbar">
         <div>
           <p class="eyebrow">Appointments</p>
-          <h1>Practice Calendar</h1>
+          <h1>{% if calendar_view == "list" %}{% if can_manage_sessions %}Practice appointments{% else %}Your appointments{% endif %}{% else %}Practice Calendar{% endif %}</h1>
         </div>
+        <nav class="calendar-view-tabs appointment-display-switch" aria-label="Appointment display"><a href="{{ session_calendar_url }}" {% if calendar_view != 'list' %}class="active" aria-current="page"{% endif %}>Calendar</a><a href="{{ session_list_url }}" {% if calendar_view == 'list' %}class="active" aria-current="page"{% endif %}>List</a></nav>
       </header>
 
       {% if messages %}
@@ -49,6 +50,9 @@
         </section>
       {% endif %}
 
+      {% if calendar_view == 'list' %}
+      {% include 'appointments/session_list.html' %}
+      {% else %}
       <section class="calendar-layout">
         <article class="panel calendar-panel">
           <div class="panel-head calendar-head">
@@ -78,7 +82,7 @@
                 <input class="calendar-search" name="q" type="search" value="{{ calendar_filters.q }}" placeholder="Name or email" aria-label="Client name or email">
                 <details class="calendar-more-filters">
                   <summary aria-controls="calendar-filter-fields">More filters</summary>
-                  <div class="calendar-filter-fields" id="calendar-filter-fields"><div class="field"><label for="calendar-filter-therapist">Therapist</label><select id="calendar-filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in appointment_therapists %}<option value="{{ therapist.pk }}" {% if calendar_filters.therapist == therapist.pk|stringformat:'s' %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-status">Status</label><select id="calendar-filter-status" name="status"><option value="">All statuses</option>{% for value,label in appointment_status_choices %}<option value="{{ value }}" {% if calendar_filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-type">Type</label><select id="calendar-filter-type" name="appointment_type"><option value="">All types</option>{% for value,label in appointment_type_choices %}<option value="{{ value }}" {% if calendar_filters.appointment_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-sync">Google sync</label><select id="calendar-filter-sync" name="sync_status"><option value="">Any sync status</option>{% for value,label in sync_status_choices %}<option value="{{ value }}" {% if calendar_filters.sync_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div>
+                  <div class="calendar-filter-fields" id="calendar-filter-fields">{% if can_manage_sessions %}<div class="field"><label for="calendar-filter-therapist">Therapist</label><select id="calendar-filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in appointment_therapists %}<option value="{{ therapist.pk }}" {% if calendar_filters.therapist == therapist.pk|stringformat:'s' %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>{% endif %}<div class="field"><label for="calendar-filter-status">Status</label><select id="calendar-filter-status" name="status"><option value="">All statuses</option>{% for value,label in appointment_status_choices %}<option value="{{ value }}" {% if calendar_filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-type">Type</label><select id="calendar-filter-type" name="appointment_type"><option value="">All types</option>{% for value,label in appointment_type_choices %}<option value="{{ value }}" {% if calendar_filters.appointment_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="field"><label for="calendar-filter-sync">Google sync</label><select id="calendar-filter-sync" name="sync_status"><option value="">Any sync status</option>{% for value,label in sync_status_choices %}<option value="{{ value }}" {% if calendar_filters.sync_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div></div>
                 </details>
                 <button class="calendar-search-submit btn btn-soft" type="submit" aria-label="Search appointments" title="Search appointments">
                   <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
@@ -180,6 +184,9 @@
 
       </section>
 
+      {% endif %}
+
+      {% if calendar_view != 'list' %}
       <details class="panel" id="availability-changes">
         <summary id="availability-changes-summary">Review availability changes · {{ calendar_period_label }} ({{ calendar_availability_overrides|length }})</summary>
         <p>Date-specific changes apply to the whole practice and override weekly hours. {% if workspace_permissions.appointments.edit %}<a class="inline-link" href="{% url 'practice_settings:availability' %}">Review weekly hours</a>.{% endif %} Changing availability does not reschedule existing appointments.</p>
@@ -197,6 +204,7 @@
           </tr>{% empty %}<tr><td colspan="5">No date-specific changes in this period. Weekly hours apply when configured. Use Set availability to add a change.</td></tr>{% endfor %}</tbody>
         </table></div>
       </details>
+      {% endif %}
 
       {% if workspace_permissions.clients.create %}<dialog class="modal-dialog" id="client-create-modal">
         <div class="modal-card">

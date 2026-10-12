@@ -65,7 +65,7 @@ class ClinicalProtectionTests(TestCase):
         for sql, params in [('UPDATE clinical_sessionnote SET is_locked = FALSE WHERE id = %s', [self.note.pk]),
                             ('UPDATE clinical_sessionnote SET content = %s WHERE id = %s', ['Replacement', self.note.pk]),
                             ('DELETE FROM clinical_sessionnote WHERE id = %s', [self.note.pk]),
-                            ('TRUNCATE clinical_sessionnote', [])]:
+                            ('TRUNCATE clinical_sessionnote CASCADE', [])]:
             with self.subTest(sql=sql), self.assertRaises(IntegrityError), transaction.atomic():
                 with connection.cursor() as cursor:
                     cursor.execute('SET CONSTRAINTS ALL IMMEDIATE')

@@ -10,7 +10,8 @@ class ProtectedRecordsTransactionTestCase(TransactionTestCase):
         if not connection.settings_dict['NAME'].startswith('test_'):
             raise RuntimeError('Protected records may only be flushed in a disposable test database.')
         guards = [('audit_auditlog', 'audit_reject_truncate'),
-                  ('clinical_sessionnote', 'clinical_reject_truncate')]
+                  ('clinical_sessionnote', 'clinical_reject_truncate'),
+                  ('clinical_sessionnotesignature', 'clinical_signature_reject_truncate')]
         with connection.cursor() as cursor:
             for table, trigger in guards:
                 cursor.execute(f'ALTER TABLE {table} DISABLE TRIGGER {trigger}')

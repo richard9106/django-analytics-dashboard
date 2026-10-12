@@ -117,6 +117,59 @@ class SessionNote(models.Model):
         if errors:
             raise ValidationError(errors)
 
+    @property
+    def signed_at(self):
+        signature = getattr(self, 'signature', None)
+        return signature.signed_at if signature else None
+
+    @property
+    def signed_by_id(self):
+        signature = getattr(self, 'signature', None)
+        return signature.signed_by_id if signature else None
+
+    @property
+    def signer_name(self):
+        signature = getattr(self, 'signature', None)
+        return signature.signer_name if signature else ''
+
+    @property
+    def signature_digest(self):
+        signature = getattr(self, 'signature', None)
+        return signature.digest if signature else ''
+
+    def review_digest(self):
+        import hashlib
+        import json
+        payload = [self.pk, self.practice_id, self.client_id, self.therapist_id,
+                   self.appointment_id, self.treatment_plan_id, self.note_type,
+                   self.content, self.treatment_progress]
+        return hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
+
+    @transaction.atomic
+    def sign(self, user, reviewed_digest):
+        import secrets
+        note = type(self).objects.select_for_update(of=('self',)).select_related('therapist__user', 'appointment', 'signature').get(pk=self.pk)
+        if note.therapist.user_id != user.pk:
+            raise ValidationError('Only the responsible therapist can sign this note.')
+        if note.signed_at:
+            raise ValidationError('This note has already been signed.')
+        if not note.content.strip():
+            raise ValidationError('Write the clinical note before signing it.')
+        if (not isinstance(reviewed_digest, str) or not reviewed_digest.isascii()
+                or not secrets.compare_digest(note.review_digest(), reviewed_digest)):
+            raise ValidationError('The note changed after review. Review the current version before signing.')
+        if note.appointment and note.appointment.ends_at > timezone.now():
+            raise ValidationError('The session must end before its note is signed.')
+        if not note.is_locked:
+            note.is_locked = True
+            note.locked_at = timezone.now()
+            note.full_clean()
+            note.save()
+        signature = SessionNoteSignature.objects.create(note=note, signed_by=user,
+            signer_name=user.get_full_name() or user.get_username(), digest=note.review_digest())
+        note.signature = signature
+        return note
+
     def lock(self):
         self.is_locked = True
         self.locked_at = timezone.now()
@@ -216,3 +269,37 @@ class TreatmentPlan(models.Model):
             and self.review_date is not None
             and self.review_date <= timezone.localdate()
         )
+
+
+class SignatureQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValidationError('Signatures are immutable.')
+
+    def delete(self):
+        raise ValidationError('Signatures cannot be deleted.')
+
+
+class SessionNoteSignature(models.Model):
+    note = models.OneToOneField(SessionNote, on_delete=models.PROTECT, related_name='signature')
+    signed_by = models.ForeignKey('auth.User', on_delete=models.PROTECT, related_name='session_note_signatures')
+    signed_at = models.DateTimeField(default=timezone.now)
+    signer_name = models.CharField(max_length=320)
+    digest = models.CharField(max_length=64)
+    objects = SignatureQuerySet.as_manager()
+
+    def clean(self):
+        if not self.note.content.strip():
+            raise ValidationError('A signature requires clinical note content.')
+        if not self.note.is_locked or self.note.therapist.user_id != self.signed_by_id:
+            raise ValidationError('The responsible therapist must attest to a finalized note.')
+        if self.digest != self.note.review_digest():
+            raise ValidationError('Signature content does not match the reviewed note.')
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError('Signatures are immutable.')
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Signatures cannot be deleted.')

@@ -1,3 +1,4 @@
+from apps.appointments.access import scope_sessions
 from datetime import date
 from decimal import Decimal, ROUND_CEILING
 
@@ -71,7 +72,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             if count:
                 tasks.append({'label': label, 'detail': f"{count} {noun}{'' if count == 1 else 's'} {detail}",
                               'tone': tone, 'href': url, 'action_label': action})
-        alert('clinical', SessionNote.objects.filter(practice=practice, is_locked=False),
+        alert('clinical', scope_sessions(SessionNote.objects.filter(practice=practice, is_locked=False), self.request.user),
               'Clinical documentation', 'note', 'ready to review or lock', 'warning',
               reverse('clinical:list') + '?status=draft', 'Review notes')
         alert('billing', Invoice.objects.filter(practice=practice, status__in=[Invoice.Status.DRAFT, Invoice.Status.SENT, Invoice.Status.OVERDUE]),
@@ -115,9 +116,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 practice=practice, status=Invoice.Status.PAID, paid_at__gte=start_at, paid_at__lt=end_at,
             ).annotate(month=TruncMonth('paid_at')).values('month').annotate(total=Sum('amount')).order_by()}
         if self.can_view('appointments'):
-            volumes = {row['month'].date(): row['total'] for row in Appointment.objects.filter(
+            volumes = {row['month'].date(): row['total'] for row in scope_sessions(Appointment.objects.filter(
                 practice=practice, starts_at__gte=start_at, starts_at__lt=end_at,
-            ).annotate(month=TruncMonth('starts_at')).values('month').annotate(total=Count('pk')).order_by()}
+            ), self.request.user).annotate(month=TruncMonth('starts_at')).values('month').annotate(total=Count('pk')).order_by()}
         for offset in range(-5, 1):
             month_start = shift_month(today.replace(day=1), offset)
             months.append({'label': month_start.strftime('%b'), 'revenue': revenues.get(month_start, 0),
@@ -174,7 +175,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         start = timezone.make_aware(timezone.datetime.combine(first, timezone.datetime.min.time()))
         end = timezone.make_aware(timezone.datetime.combine(following, timezone.datetime.min.time()))
         if self.can_view('appointments'):
-            counts = dict(Appointment.objects.filter(practice=practice, starts_at__gte=start, starts_at__lt=end)
+            counts = dict(scope_sessions(Appointment.objects.filter(practice=practice, starts_at__gte=start, starts_at__lt=end), self.request.user)
                           .values('status').annotate(total=Count('pk')).values_list('status', 'total').order_by())
             total = sum(counts.values())
             result['session_status_total'] = total
@@ -220,11 +221,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         today_appointment_count = 0
         if practice and self.can_view('appointments'):
             today_appointments = (
-                Appointment.objects.filter(
+                scope_sessions(Appointment.objects.filter(
                     practice=practice,
                     starts_at__gte=start_of_day,
                     starts_at__lte=end_of_day,
-                )
+                ), self.request.user)
                 .select_related('client', 'therapist__user')
                 .order_by('starts_at')
             )
