@@ -1,5 +1,5 @@
 {% load workspace_navigation %}
-{% include 'partials/subscription_banner.html' %}
+{% include 'partials/subscription_banner.html' with hide_free_trial=True %}
 {% workspace_breadcrumb_items as breadcrumbs %}
 {% if breadcrumbs %}
 <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -13,3 +13,5 @@
   </ol>
 </nav>
 {% endif %}
+
+{% if not hide_free_trial %}{% include 'partials/trial_status_bar.html' %}{% endif %}

@@ -14,14 +14,14 @@
     {% include 'partials/sidebar.html' with card_title='Notes & treatment' card_text='Document sessions and connect progress to active care plans.' %}
 
     <main class="app-main">
-      {% include 'partials/breadcrumbs.html' %}
+      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clinical.create %}<a class="btn btn-primary" href="{% url 'clinical:create' %}" data-modal-target="note-create-modal">+ New note</a>{% endif %}
           <a class="btn btn-secondary" href="{% url 'clinical:treatment_plans' %}">Treatment plans</a>
           <a class="btn btn-soft" href="{% url 'appointments:list' %}">Practice calendar</a>
         </div>
-        <details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
+        {% include 'partials/trial_toolbar_notice.html' %}<details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details>
       </section>
 
       <header class="topbar compact-topbar"><div><p class="eyebrow">Notes & Treatment</p><h1>Notes</h1></div></header>

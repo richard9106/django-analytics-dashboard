@@ -1,0 +1,3 @@
+{% if request.subscription_access.free_access and request.subscription_access.mode == 'full' %}
+<section class="action-bar subscription-status-bar" aria-label="Workspace subscription">{% include 'partials/trial_toolbar_notice.html' %}</section>
+{% endif %}

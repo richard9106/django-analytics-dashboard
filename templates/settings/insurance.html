@@ -13,13 +13,13 @@
   <div class="app-shell">
     {% include 'partials/sidebar.html' with card_title='Insurance setup' card_text='Configure payers and reimbursement rates by state and service.' %}
     <main class="app-main">
-      {% include 'partials/breadcrumbs.html' %}
+      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
       <section class="action-bar">
         <div class="quick-actions">
            {% if workspace_permissions.billing.create %}<a class="btn btn-primary" href="{% url 'settings:insurance_rate_create' %}" data-modal-target="rate-create-modal">+ Rate</a>
            <a class="btn btn-secondary" href="{% url 'settings:insurance_payer_create' %}" data-modal-target="payer-create-modal">+ Custom payer</a>{% endif %}
         </div>
-        <details class="profile-menu">
+        {% include 'partials/trial_toolbar_notice.html' %}<details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">
             <a href="{% url 'profile_settings' %}">Profile settings</a>

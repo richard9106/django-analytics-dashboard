@@ -2,6 +2,6 @@
 <aside class="trial-toolbar-notice" role="status" aria-label="Free access status">
   <span class="trial-toolbar-icon" aria-hidden="true">!</span>
   <span><strong>{% if request.subscription_access.free_access == 'early_access' %}Invited access{% else %}Free trial{% endif %}</strong> · Ends {{ request.subscription_access.until|date:"M j, Y" }}</span>
-  {% if request.subscription_manager %}<a href="{% url 'billing:subscription_access' %}">Choose subscription<span class="sr-only"> — no automatic charge</span></a>{% else %}<span class="trial-toolbar-help">No automatic charge</span>{% endif %}
+  {% if request.subscription_manager %}<a href="{% url 'billing:subscribe' 'solo' 'monthly' %}" title="$39 per active user/month. Payment starts when you confirm in Stripe.">Get subscription<span class="sr-only"> — $39 per active user/month; payment starts when you confirm in Stripe</span></a>{% else %}<span class="trial-toolbar-help">No automatic charge</span>{% endif %}
 </aside>
 {% endif %}

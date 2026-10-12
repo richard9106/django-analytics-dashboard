@@ -162,6 +162,25 @@ class SubscriptionAccessTests(TestCase):
         self.assertTrue(form.save().nuvia_profile.practice.subscription_required)
 
 
+    def test_free_access_checkout_is_consistent_across_workspace_pages(self):
+        self.practice.free_trial_ends_at = timezone.now()+timedelta(days=15)
+        self.practice.save(update_fields=['free_trial_ends_at'])
+        routes = ['dashboard', 'appointments:list', 'clients:list', 'billing:list',
+                  'clinical:list', 'clinical:treatment_plans', 'intake:list',
+                  'documents:list', 'profile_settings', 'team_management', 'billing:payment_create']
+        for route in routes:
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertContains(response, 'class="trial-toolbar-notice"', count=1)
+                self.assertContains(response, reverse('billing:subscribe', args=['solo', 'monthly']))
+                self.assertNotContains(response, 'class="subscription-banner"')
+        self.practice.free_trial_ends_at = timezone.now()-timedelta(seconds=1)
+        self.practice.save(update_fields=['free_trial_ends_at'])
+        response = self.client.get(reverse('clients:list'))
+        self.assertContains(response, 'Your practice is in read-only mode')
+        self.assertNotContains(response, 'class="trial-toolbar-notice"')
+
+
 class CardlessTrialTests(TestCase):
     def signup_data(self, **extra):
         return dict(practice_name='Trial practice', practice_type='solo', first_name='Test', last_name='Owner', email='owner@example.invalid', password1='TrialSecureTest2026!', password2='TrialSecureTest2026!', license_number='trial-unique', license_state='CA', **extra)
