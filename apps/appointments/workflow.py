@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from apps.accounts.access import has_practice_permission
 from .models import Appointment
+from .access import scope_sessions
 
 
 class SessionWorkflowMixin:
@@ -17,7 +18,7 @@ class SessionWorkflowMixin:
                 if not value.isascii() or not value.isdigit() or len(value) > 18:
                     raise Http404
                 self._workflow_appointment = get_object_or_404(
-                    Appointment.objects.select_related('client', 'therapist__user'),
+                    scope_sessions(Appointment.objects.select_related('client', 'therapist__user'), self.request.user),
                     pk=value, practice=self.get_practice(),
                 )
         return self._workflow_appointment

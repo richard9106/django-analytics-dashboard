@@ -1,3 +1,4 @@
+from apps.appointments.access import scope_sessions
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.db.models.deletion import ProtectedError
@@ -50,7 +51,7 @@ class ClientListView(LoginRequiredMixin, PracticePermissionMixin, PracticeContex
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
         context['client_therapists'] = practice.therapists.select_related('user') if practice else []
-        context['note_appointments'] = practice.appointments.select_related('client', 'therapist__user') if practice else []
+        context['note_appointments'] = scope_sessions(practice.appointments.select_related('client', 'therapist__user'), self.request.user) if practice else []
         context['billing_templates'] = practice.session_package_templates.filter(active=True) if practice else []
         context['billing_today'] = timezone.localdate()
         return context
@@ -85,7 +86,7 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
         if has_practice_permission(self.request.user, 'clients', 'edit'):
             context['client_therapists'] = client.practice.therapists.select_related('user')
         if permissions['appointments']:
-            appointments = Appointment.objects.filter(client=client, practice=client.practice).select_related('therapist__user')
+            appointments = scope_sessions(Appointment.objects.filter(client=client, practice=client.practice), self.request.user).select_related('therapist__user')
             now = timezone.now()
             context['recent_appointments'] = appointments.filter(starts_at__lt=now).order_by('-starts_at')[:8]
             context['upcoming_appointments'] = appointments.filter(starts_at__gte=now, status=Appointment.Status.SCHEDULED).order_by('starts_at')[:5]
@@ -102,7 +103,7 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
         if active_tab == 'documents':
             context['documents'] = ClientDocument.objects.filter(client=client, practice=client.practice).order_by('-created_at')[:20]
         if active_tab == 'clinical':
-            context['notes'] = SessionNote.objects.filter(client=client, practice=client.practice).select_related('therapist__user', 'treatment_plan').order_by('-updated_at')[:8]
+            context['notes'] = scope_sessions(SessionNote.objects.filter(client=client, practice=client.practice), self.request.user).select_related('therapist__user', 'treatment_plan').order_by('-updated_at')[:8]
             context['treatment_plans'] = TreatmentPlan.objects.filter(client=client, practice=client.practice).prefetch_related('diagnoses').order_by('-updated_at')[:8]
             diagnoses = list(Diagnosis.objects.filter(client=client, practice=client.practice))
             context['diagnoses'] = diagnoses

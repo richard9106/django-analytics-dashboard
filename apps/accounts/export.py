@@ -11,7 +11,7 @@ from apps.appointments.models import Appointment
 from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, Payment, ServicePackage
 from apps.clients.models import Client
-from apps.clinical.models import Diagnosis, SessionNote, TreatmentPlan
+from apps.clinical.models import Diagnosis, SessionNote, SessionNoteSignature, TreatmentPlan
 from apps.dashboard.models import Task
 from apps.documents.models import ClientDocument
 from apps.portal.models import ClientPortalAccess
@@ -29,6 +29,7 @@ def build_export_data(practice, scope):
         data['diagnoses'] = _rows(Diagnosis.objects.filter(practice=practice), 'id', 'client_id', 'code', 'label', 'diagnosed_at', 'active', 'created_at')
         data['treatment_plans'] = _rows(TreatmentPlan.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'title', 'status', 'goals', 'objectives', 'interventions', 'start_date', 'review_date', 'completed_at', 'created_at', 'updated_at')
         data['session_notes'] = _rows(SessionNote.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'appointment_id', 'treatment_plan_id', 'note_type', 'content', 'treatment_progress', 'is_locked', 'locked_at', 'created_at', 'updated_at')
+        data['session_note_signatures'] = _rows(SessionNoteSignature.objects.filter(note__practice=practice), 'id', 'note_id', 'signed_by_id', 'signer_name', 'signed_at', 'digest')
         data['documents'] = _rows(ClientDocument.objects.filter(practice=practice), 'id', 'client_id', 'title', 'document_type', 'file', 'visible_to_client', 'created_at')
         data['portal_access'] = _rows(ClientPortalAccess.objects.filter(practice=practice), 'id', 'client_id', 'user_id', 'is_active', 'created_at', 'updated_at')
     if scope in {'all', 'billing'}:

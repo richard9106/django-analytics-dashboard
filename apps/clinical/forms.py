@@ -18,12 +18,13 @@ class SessionNoteForm(forms.ModelForm):
             'treatment_progress',
             'is_locked',
         ]
+        labels = {'is_locked': 'Lock without signing'}
         widgets = {
             'content': forms.Textarea(attrs={'rows': 8}),
             'treatment_progress': forms.Textarea(attrs={'rows': 4}),
         }
 
-    def __init__(self, *args, practice=None, **kwargs):
+    def __init__(self, *args, practice=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
@@ -38,6 +39,12 @@ class SessionNoteForm(forms.ModelForm):
             self.fields['therapist'].queryset = self.fields['therapist'].queryset.none()
             self.fields['appointment'].queryset = self.fields['appointment'].queryset.none()
             self.fields['treatment_plan'].queryset = self.fields['treatment_plan'].queryset.none()
+
+        if user:
+            from apps.appointments.access import scope_sessions, manages_sessions
+            self.fields['appointment'].queryset = scope_sessions(self.fields['appointment'].queryset, user)
+            if not manages_sessions(user):
+                self.fields['therapist'].queryset = self.fields['therapist'].queryset.filter(user=user)
 
     def clean(self):
         cleaned_data = super().clean()

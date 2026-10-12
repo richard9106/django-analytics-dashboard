@@ -40,7 +40,7 @@
               <div class="field"><label for="filter-therapist">Therapist</label><select id="filter-therapist" name="therapist"><option value="">All therapists</option>{% for therapist in note_therapists %}<option value="{{ therapist.pk }}" {% if note_filters.therapist == therapist.pk|stringformat:"s" %}selected{% endif %}>{{ therapist }}</option>{% endfor %}</select></div>
               <div class="field"><label for="filter-appointment">Session</label><select id="filter-appointment" name="appointment"><option value="">All sessions</option>{% for appointment in note_appointments %}<option value="{{ appointment.pk }}" {% if note_filters.appointment == appointment.pk|stringformat:"s" %}selected{% endif %}>{{ appointment.client }} · {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
               <div class="field"><label for="filter-note-type">Note type</label><select id="filter-note-type" name="note_type"><option value="">All types</option>{% for value,label in note_type_choices %}<option value="{{ value }}" {% if note_filters.note_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-              <div class="field"><label for="filter-status">Status</label><select id="filter-status" name="status"><option value="">All statuses</option><option value="draft" {% if note_filters.status == "draft" %}selected{% endif %}>Draft</option><option value="locked" {% if note_filters.status == "locked" %}selected{% endif %}>Locked</option></select></div>
+              <div class="field"><label for="filter-status">Status</label><select id="filter-status" name="status"><option value="">All statuses</option><option value="draft" {% if note_filters.status == "draft" %}selected{% endif %}>Draft</option><option value="locked" {% if note_filters.status == "locked" %}selected{% endif %}>Locked · unsigned</option><option value="signed" {% if note_filters.status == "signed" %}selected{% endif %}>Signed</option></select></div>
               <div class="field"><label for="filter-date-from">Updated from</label><input id="filter-date-from" name="date_from" type="date" value="{{ note_filters.date_from }}"></div>
               <div class="field"><label for="filter-date-to">Updated to</label><input id="filter-date-to" name="date_to" type="date" value="{{ note_filters.date_to }}"></div>
               <div class="filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'clinical:list' %}">Clear</a></div>
@@ -55,7 +55,7 @@
                     <article class="note-tree-item">
                       <button class="note-tree-trigger" type="button" data-modal-target="note-detail-modal-{{ note.pk }}" aria-label="Open {{ note.get_note_type_display }} for {{ note.client }}">
                         <span><strong>{{ note.get_note_type_display }}</strong><small>{{ note.updated_at|date:"M j, Y g:i A" }} with {{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</small></span>
-                        <span class="badge {% if note.is_locked %}success{% else %}brand{% endif %}">{% if note.is_locked %}Locked{% else %}Draft{% endif %}</span>
+                        <span class="badge {% if note.signed_at %}success{% else %}brand{% endif %}">{% if note.signed_at %}Signed{% elif note.is_locked %}Locked · unsigned{% else %}Draft{% endif %}</span>
                       </button>
                       <p class="note-preview">{{ note.content|default:"No content yet."|truncatechars:180 }}</p>
                       {% if note.treatment_plan %}<p class="sync-meta">Treatment plan: {{ note.treatment_plan.title }}</p>{% endif %}
@@ -84,7 +84,7 @@
                 <div class="field"><label for="note-create-type">Note type</label><select id="note-create-type" name="note_type" required><option value="progress_note">Progress Note</option><option value="intake_note">Intake Note</option><option value="treatment_plan">Treatment Plan</option><option value="general_note">General Note</option></select></div>
                 <div class="field full"><label for="note-create-content">Content</label><textarea id="note-create-content" name="content" rows="8"></textarea></div>
                 <div class="field full"><label for="note-create-treatment-progress">Treatment plan progress</label><textarea id="note-create-treatment-progress" name="treatment_progress" rows="4" placeholder="Document progress against plan goals or objectives."></textarea></div>
-                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox"> Lock note</label></div>
+                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox"> Lock without signing</label></div>
               </div>
             <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create note</button></div>
           </form>
@@ -100,13 +100,15 @@
               <div><span class="sync-meta">Client</span><strong>{{ note.client }}</strong></div>
               <div><span class="sync-meta">Therapist</span><strong>{{ note.therapist.user.get_full_name|default:note.therapist.user.username }}</strong></div>
               <div><span class="sync-meta">Updated</span><strong>{{ note.updated_at|date:"M j, Y g:i A" }}</strong></div>
-              <div><span class="sync-meta">Status</span><strong>{% if note.is_locked %}Locked{% else %}Draft{% endif %}</strong></div>
+              <div><span class="sync-meta">Status</span><strong>{% if note.signed_at %}Signed{% elif note.is_locked %}Locked · unsigned{% else %}Draft{% endif %}</strong></div>
             </div>
             {% if note.appointment %}<p class="sync-panel"><strong>Session</strong><span>{{ note.appointment.starts_at|date:"M j, Y g:i A" }}</span></p>{% endif %}
             {% if note.treatment_plan %}<p class="sync-panel"><strong>Treatment plan</strong><span>{{ note.treatment_plan.title }}</span></p>{% endif %}
             <section class="note-detail-section" aria-label="Note content"><h3>Content</h3><p>{{ note.content|default:"No content yet."|linebreaksbr }}</p></section>
             {% if note.treatment_progress %}<section class="note-detail-section" aria-label="Treatment progress"><h3>Treatment plan progress</h3><p>{{ note.treatment_progress|linebreaksbr }}</p></section>{% endif %}
             {% if note.is_locked %}<p class="sync-meta" aria-label="Locked note status">Read-only clinical record. Locked {{ note.locked_at|date:"M j, Y g:i A" }}.</p>{% endif %}
+            {% if note.signed_at %}<p class="sync-meta">Signed by {{ note.signer_name }} · {{ note.signed_at|date:"M j, Y g:i A" }}</p>{% endif %}
+            <p><a class="inline-link" href="{% url 'clinical:sign' note.pk %}">{% if note.signed_at %}View signed note{% else %}Review note &amp; signature{% endif %}</a></p>
             <div class="form-actions split-actions">
               <a class="btn btn-secondary" href="{% url 'clients:detail' note.client.pk %}">Open client</a>
               <div class="form-actions">
@@ -132,7 +134,7 @@
                 <div class="field"><label for="note-type-{{ note.pk }}">Note type</label><select id="note-type-{{ note.pk }}" name="note_type" required><option value="progress_note" {% if note.note_type == 'progress_note' %}selected{% endif %}>Progress Note</option><option value="intake_note" {% if note.note_type == 'intake_note' %}selected{% endif %}>Intake Note</option><option value="treatment_plan" {% if note.note_type == 'treatment_plan' %}selected{% endif %}>Treatment Plan</option><option value="general_note" {% if note.note_type == 'general_note' %}selected{% endif %}>General Note</option></select></div>
                 <div class="field full"><label for="note-content-{{ note.pk }}">Content</label><textarea id="note-content-{{ note.pk }}" name="content" rows="8">{{ note.content }}</textarea></div>
                 <div class="field full"><label for="note-treatment-progress-{{ note.pk }}">Treatment plan progress</label><textarea id="note-treatment-progress-{{ note.pk }}" name="treatment_progress" rows="4">{{ note.treatment_progress }}</textarea></div>
-                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock note</label></div>
+                <div class="field checkbox-field"><label><input name="is_locked" type="checkbox" {% if note.is_locked %}checked{% endif %}> Lock without signing</label></div>
               </div>
               <div class="form-actions split-actions">{% if workspace_permissions.clinical.delete %}<button class="btn btn-danger" type="submit" formaction="{% url 'clinical:delete' note.pk %}" data-confirm-message="Delete this clinical note? This cannot be undone.">Delete note</button>{% endif %}<div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save changes</button></div></div>
             </form>
