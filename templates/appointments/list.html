@@ -54,14 +54,18 @@
           <div class="panel-head calendar-head">
             <div>
               <h2>{{ calendar_period_label }}</h2>
-              <p>Choose a calendar view or Agenda for a readable session list. Shaded time is outside practice availability.</p>
+              <p>Shaded time is outside practice availability. Choose Agenda for a session list.</p>
             </div>
             <div class="calendar-actions">
+              <div class="calendar-availability-actions" role="group" aria-label="Practice availability">
               {% if workspace_permissions.appointments.edit %}<button class="btn btn-soft" type="button" title="Set availability" data-modal-target="availability-modal" data-availability-date="{{ calendar_anchor_date|date:'Y-m-d' }}">Set availability</button>{% endif %}
               <a class="btn btn-soft" href="#availability-changes" data-availability-review>Review availability</a>
+              </div>
+              <nav class="calendar-period-nav" aria-label="Calendar period">
               <a class="btn btn-secondary" href="{{ previous_period_url }}">Previous</a>
               <a class="btn btn-soft" href="{{ today_period_url }}">Today</a>
               <a class="btn btn-secondary" href="{{ next_period_url }}">Next</a>
+              </nav>
             </div>
           </div>
 
