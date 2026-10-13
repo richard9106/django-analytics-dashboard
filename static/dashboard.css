@@ -1659,3 +1659,11 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
   .app-main .session-table-wrap td { white-space: normal; min-width: 0; }
   .session-table td > span, .session-table td > a, .session-table td > div { min-width: 0; }
 }
+
+/* Agenda uses the same documentation warning as the session list. */
+.agenda-session.documentation-pending { background: #fff0df; box-shadow: inset 3px 0 #ea8a36; }
+.agenda-session-status { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+@media (max-width: 700px) {
+  .agenda-session-status { grid-column: 2; justify-content: flex-start; }
+  .agenda-session-status .badge { grid-column: auto; }
+}

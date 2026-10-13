@@ -88,10 +88,11 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             appointments = appointments.filter(appointment_type=filters['appointment_type'])
         if filters['sync_status'] in dict(Appointment.SyncStatus.choices):
             appointments = appointments.filter(sync_status=filters['sync_status'])
-        if self.get_calendar_view() == 'list':
+        if self.get_calendar_view() in {'list', 'agenda'}:
             from apps.clinical.models import SessionNote
             notes = SessionNote.objects.filter(appointment_id=OuterRef('pk')).exclude(note_type='treatment_plan')
             appointments = appointments.annotate(has_session_note=Exists(notes), has_signed_note=Exists(notes.filter(signature__isnull=False)))
+        if self.get_calendar_view() == 'list':
             ended = Q(ends_at__lte=timezone.now())
             documentation = self.request.GET.get('documentation', '')
             if documentation == 'needs_attention':
@@ -360,6 +361,11 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         context['session_list_url'] = self.calendar_url(view='list', page=None)
         context['session_calendar_url'] = self.calendar_url(view='week', page=None)
         context['documentation_filter'] = self.request.GET.get('documentation', '')
+        if self.get_calendar_view() in {'list', 'agenda'}:
+            now = timezone.now()
+            for appointment in context['appointments']:
+                appointment.documentation_due = appointment.ends_at <= now
+                appointment.documentation_pending = appointment.documentation_due and not appointment.has_signed_note
         if self.get_calendar_view() == 'list':
             context['calendar_view'] = 'list'
             context['calendar_grid_config'] = {'startHour': self.calendar_start_hour, 'endHour': self.calendar_end_hour, 'hourHeight': self.calendar_hour_height, 'defaultDurationMinutes': 50}
@@ -367,8 +373,6 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             context['calendar_filters'] = self.get_calendar_filters()
             context['appointment_status_choices'] = Appointment.Status.choices
             for appointment in context['appointments']:
-                appointment.documentation_due = appointment.ends_at <= timezone.now()
-                appointment.documentation_pending = appointment.documentation_due and not appointment.has_signed_note
                 notes = appointment.documentation_notes
                 appointment.documentation_note = next((n for n in notes if n.signed_at), notes[0] if notes else None)
             if context.get('page_obj'):
