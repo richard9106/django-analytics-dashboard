@@ -1,3 +1,4 @@
+from .billing_test_data import PROFESSIONAL_BILLING_DATA
 from datetime import timedelta
 from decimal import Decimal
 from types import SimpleNamespace
@@ -858,7 +859,7 @@ class BillingViewTests(TestCase):
         user, _practice, _therapist, _client, _appointment = self.create_practice_user()
 
         self.client.force_login(user)
-        response = self.client.get(reverse("billing:subscribe", args=["solo", "monthly"]))
+        response = self.client.post(reverse("billing:subscribe", args=["solo", "monthly"]), PROFESSIONAL_BILLING_DATA)
 
         self.assertRedirects(response, reverse("pricing"))
 
@@ -1022,7 +1023,7 @@ class BillingViewTests(TestCase):
         mock_create.return_value = SimpleNamespace(url="https://checkout.stripe.test/session")
 
         self.client.force_login(user)
-        response = self.client.get(reverse("billing:subscribe", args=["solo", "monthly"]))
+        response = self.client.post(reverse("billing:subscribe", args=["solo", "monthly"]), PROFESSIONAL_BILLING_DATA)
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "https://checkout.stripe.test/session")

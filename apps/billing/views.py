@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta, timezone as dt_timezone
 
 import stripe
+import hashlib
+import json
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -19,7 +21,7 @@ from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.appointments.workflow import SessionWorkflowMixin
 from apps.practices.models import Practice
-from .forms import InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, PaymentForm, ServicePackageForm, SessionPackageTemplateForm
+from .forms import ProfessionalBillingForm, InsurancePayerForm, InsuranceRateForm, InvoiceForm, PackageUsageForm, PaymentForm, ServicePackageForm, SessionPackageTemplateForm
 from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Payment, PracticeSubscription, ServicePackage, SessionPackageTemplate
 
 
@@ -632,19 +634,31 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
         }:
             messages.info(request, 'Manage your existing subscription to update payment details or change billing.')
             return redirect('billing:subscription_access')
+        saved_details = {**request.session.get(f'billing_details_{practice.pk}', {}), 'professional_purchase': False}
+        form = ProfessionalBillingForm(request.POST if request.method == 'POST' else None, initial=saved_details)
+        if request.method != 'POST' or not form.is_valid():
+            return render(request, 'billing/professional_details.html', {
+                'form': form, 'period': self.period,
+                'quantity': _stripe_subscription_quantity(practice),
+                'stripe_test': settings.STRIPE_SECRET_KEY.startswith('sk_test_'),
+            })
+        billing_details = dict(form.cleaned_data)
+        request.session[f'billing_details_{practice.pk}'] = billing_details
         customer_id = subscription.stripe_customer_id if subscription else ''
         template_id = settings.STRIPE_INVOICE_TEMPLATE_ID
         if template_id:
             try:
                 invoice_settings = {'rendering_options': {'template': template_id}}
                 if customer_id:
-                    stripe.Customer.modify(customer_id, invoice_settings=invoice_settings)
+                    stripe.Customer.modify(customer_id, name=billing_details['legal_name'], address=form.stripe_address(), invoice_settings=invoice_settings)
                 else:
                     customer = stripe.Customer.create(
                         email=request.user.email,
+                        name=billing_details['legal_name'],
+                        address=form.stripe_address(),
                         metadata={'practice_id': str(practice.pk)},
                         invoice_settings=invoice_settings,
-                        idempotency_key=f'nuvia-subscription-customer-{practice.pk}-{template_id}',
+                        idempotency_key=f'nuvia-subscription-customer-{practice.pk}-{template_id}-' + hashlib.sha256(json.dumps(billing_details, sort_keys=True).encode()).hexdigest()[:24],
                     )
                     customer_id = customer.id
                     subscription, _ = PracticeSubscription.objects.get_or_create(practice=practice)
@@ -653,6 +667,9 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
             except stripe.error.StripeError:
                 messages.error(request, 'We could not configure your subscription invoice. Please try again or contact support.')
                 return redirect('billing:subscription_access')
+        log_audit_event(request, AuditLog.Action.CREATE, 'subscription_billing_declaration', practice=practice,
+                        metadata={'declaration_version':'us-professional-v1', 'billing_details':billing_details,
+                                  'stripe_customer_id':customer_id})
         quantity = _stripe_subscription_quantity(practice)
         if subscription and subscription.status == PracticeSubscription.Status.INCOMPLETE and subscription.stripe_checkout_session_id:
             try:

@@ -1,3 +1,4 @@
+from .billing_test_data import PROFESSIONAL_BILLING_DATA
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -124,7 +125,7 @@ class SubscriptionAccessTests(TestCase):
         from types import SimpleNamespace
         self.subscription('incomplete', stripe_price_id='price_current', stripe_checkout_session_id='cs_pending')
         retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending', metadata={'billing_policy': 'cardless-v2-billing-info', 'active_user_count': '1'})
-        response=self.client.post(reverse('billing:subscribe',args=['solo','monthly']))
+        response=self.client.post(reverse('billing:subscribe',args=['solo','monthly']), PROFESSIONAL_BILLING_DATA)
         self.assertEqual(response.url, 'https://checkout.stripe.test/pending')
         create.assert_not_called()
 
@@ -144,7 +145,7 @@ class SubscriptionAccessTests(TestCase):
     @patch('apps.billing.views.stripe.checkout.Session.create')
     def test_active_subscription_cannot_start_duplicate_checkout(self, create):
         self.subscription('active', stripe_subscription_id='sub_current')
-        self.assertRedirects(self.client.get(reverse('billing:subscribe', args=['solo','monthly'])), reverse('billing:subscription_access'))
+        self.assertRedirects(self.client.post(reverse('billing:subscribe', args=['solo','monthly']), PROFESSIONAL_BILLING_DATA), reverse('billing:subscription_access'))
         create.assert_not_called()
 
     @override_settings(STRIPE_SECRET_KEY='test-placeholder', STRIPE_PRICE_IDS={'solo': {'monthly': 'price_current'}})
@@ -153,7 +154,7 @@ class SubscriptionAccessTests(TestCase):
         from types import SimpleNamespace
         self.subscription('canceled', stripe_subscription_id='sub_old', stripe_customer_id='cus_test')
         create.return_value = SimpleNamespace(url='https://checkout.stripe.test/session')
-        self.client.post(reverse('billing:subscribe', args=['solo','monthly']))
+        self.client.post(reverse('billing:subscribe', args=['solo','monthly']), PROFESSIONAL_BILLING_DATA)
         self.assertNotIn('trial_period_days', create.call_args.kwargs['subscription_data'])
 
     def test_signup_marks_practice_as_subscription_required(self):
@@ -173,7 +174,7 @@ class SubscriptionAccessTests(TestCase):
         create.return_value = SimpleNamespace(id='cs_updated', url='https://checkout.stripe.test/updated')
         admin = get_user_model().objects.create_user(username='checkout-admin')
         UserProfile.objects.create(user=admin, practice=self.practice, role=UserProfile.Role.ADMIN)
-        response = self.client.post(reverse('billing:subscribe', args=['solo', 'monthly']))
+        response = self.client.post(reverse('billing:subscribe', args=['solo', 'monthly']), PROFESSIONAL_BILLING_DATA)
         self.assertEqual(response.url, 'https://checkout.stripe.test/updated')
         expire.assert_called_once_with('cs_pending')
         self.assertEqual(create.call_args.kwargs['line_items'], [{'price': 'price_current', 'quantity': 2}])
