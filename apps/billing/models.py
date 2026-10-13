@@ -369,6 +369,7 @@ class PracticeSubscription(models.Model):
     cancel_at_period_end = models.BooleanField(default=False)
     cancel_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
+    cancellation_access_until = models.DateTimeField(null=True, blank=True)
     payment_failed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -387,6 +388,13 @@ class PracticeSubscription(models.Model):
     @property
     def cancellation_effective_at(self):
         return self.cancel_at or (self.current_period_end if self.cancel_at_period_end else None)
+
+    @property
+    def cancellation_access_date(self):
+        from datetime import timedelta, timezone
+        if self.cancellation_access_until:
+            return (self.cancellation_access_until.astimezone(timezone.utc) - timedelta(seconds=1)).date()
+        return None
 
     @property
     def internal_user_limit(self):
