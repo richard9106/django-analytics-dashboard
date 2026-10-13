@@ -147,6 +147,42 @@ class SessionDocumentationTests(TestCase):
         self.client.force_login(outsider)
         self.assertEqual(self.client.get(reverse('clinical:sign', args=[note.pk])).status_code, 404)
 
+    def test_note_popup_preserves_errors_and_pins_the_session(self):
+        from urllib.parse import urlencode
+        origin = reverse('appointments:list') + '?view=list&q=Fictional&page=2'
+        url = reverse('clinical:create') + '?' + urlencode({'appointment': self.own.pk, 'session_list': '1', 'next': origin})
+        self.client.force_login(self.therapist_user)
+        response = self.client.get(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertContains(response, 'data-note-popup-form')
+        self.assertNotContains(response, '<!doctype html>')
+        response = self.client.post(url, {'note_type':'invalid', 'content':'Preserve this draft'}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 422)
+        self.assertContains(response, 'Preserve this draft', status_code=422)
+        self.assertEqual(SessionNote.objects.count(), 0)
+        response = self.client.post(url, {'client': self.patient.pk, 'therapist': self.other.therapist_id, 'appointment': self.other.pk, 'note_type':'progress_note', 'content':'Fictional popup note'}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200)
+        note = SessionNote.objects.get()
+        self.assertEqual(note.appointment_id, self.own.pk)
+        self.assertEqual(note.therapist_id, self.own.therapist_id)
+        self.assertFalse(note.is_locked)
+        self.assertEqual(response.json()['redirect'], reverse('clinical:sign', args=[note.pk]) + '?' + urlencode({'next':origin}))
+        listing = self.listing(self.therapist_user)
+        self.assertContains(listing, 'data-modal-target="appointment-modal-' + str(self.own.pk) + '"')
+        self.assertContains(self.listing(self.other_user), 'data-note-popup')
+
+    def test_direct_notes_review_does_not_invent_appointments_origin(self):
+        from apps.clinical.views import note_review_url
+        from django.test import RequestFactory
+        note = self.note()
+        self.client.force_login(self.therapist_user)
+        url = reverse('clinical:sign', args=[note.pk])
+        response = self.client.get(url)
+        self.assertIsNone(response.context['navigation_next'])
+        self.assertNotContains(response, 'name="next"')
+        self.assertEqual(note_review_url(RequestFactory().get(url), note.pk), url)
+        edit = self.client.get(reverse('clinical:edit', args=[note.pk]), {'review':'1'})
+        self.assertContains(edit, 'Notes &amp; Treatment')
+
     def test_list_paginates_and_filter_links_survive(self):
         for _ in range(25): self.appointment(self.therapist_user)
         response = self.listing(self.therapist_user, documentation='needs_attention', q='Fictional')

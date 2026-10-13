@@ -1,5 +1,5 @@
 """Workspace breadcrumbs derived from routes and already-scoped view context."""
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs, urlencode
 
 from django import template
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
@@ -67,11 +67,11 @@ def _safe_existing_url(context, url):
     if not url:
         return None
     url = str(url)
-    if not url.startswith('/') or url.startswith('//'):
+    if not url.startswith('/') or url.startswith('//') or any(c in url for c in ('\\', '\r', '\n')):
         return None
     try:
         match = resolve(urlsplit(url).path)
-    except Resolver404:
+    except (Resolver404, ValueError):
         return None
     return url if _url(context, match.view_name, args=match.args or None, kwargs=match.kwargs or None) is not None else None
 
@@ -92,6 +92,28 @@ def workspace_breadcrumb_items(context):
 
     def add(label, route=None, args=None, fragment=''):
         crumbs.append({'label': label, 'url': _url(context, route, args, fragment)})
+
+    # A validated return path records the actual cross-section entry point.
+    origin = _safe_existing_url(context, request.GET.get('next'))
+    if namespace == 'clinical' and name in {'list', 'create', 'edit', 'sign'} and origin and resolve(urlsplit(origin).path).view_name == 'appointments:list':
+        add('Appointments', 'appointments:list')
+        crumbs[-1]['url'] = origin
+        display = parse_qs(urlsplit(origin).query).get('view', [''])[0]
+        if display in {'list', 'agenda'}:
+            crumbs.append({'label': 'List' if display == 'list' else 'Agenda', 'url': origin})
+        if request.GET.get('via') == 'notes' and name in {'sign', 'edit'}:
+            notes_url = _url(context, 'clinical:list')
+            crumbs.append({'label': 'Notes', 'url': notes_url + '?' + urlencode({'next': origin, 'appointment': request.GET.get('appointment', '')}) if notes_url else None})
+        if name == 'edit' and request.GET.get('review') == '1':
+            obj = _scoped(context, context.get('object'))
+            if obj:
+                review_url = _url(context, 'clinical:sign', [obj.pk])
+                params = {'next': origin}
+                if request.GET.get('via') == 'notes':
+                    params.update(via='notes', appointment=request.GET.get('appointment', ''))
+                crumbs.append({'label': 'Review note', 'url': review_url + '?' + urlencode(params) if review_url else None})
+        add(ACTIONS['clinical'].get(name, 'Notes'))
+        return crumbs
 
     # Existing patient-aware trails are produced by tenant-scoped views.
     explicit = context.get('breadcrumbs')

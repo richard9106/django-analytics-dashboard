@@ -26,19 +26,27 @@ from .forms import DiagnosisForm, SessionNoteForm, TreatmentPlanForm
 from .models import Diagnosis, SessionNote, TreatmentPlan
 
 
-def session_return_url(request):
+def session_origin_url(request):
     value = request.POST.get('next') or request.GET.get('next') or ''
     try:
         parsed = urlsplit(value)
     except ValueError:
-        return reverse('appointments:list') + '?view=list'
+        return None
     if not parsed.scheme and not parsed.netloc and parsed.path == reverse('appointments:list') and not any(c in value for c in ('\\', '\r', '\n')):
         return value
-    return reverse('appointments:list') + '?view=list'
+    return None
+
+
+def session_return_url(request):
+    return session_origin_url(request) or reverse('appointments:list') + '?view=list'
 
 
 def note_review_url(request, pk):
-    return reverse('clinical:sign', args=[pk]) + '?' + urlencode({'next': session_return_url(request)})
+    origin = session_origin_url(request)
+    params = {'next': origin} if origin else {}
+    if request.GET.get('via') == 'notes':
+        params.update(via='notes', appointment=request.GET.get('appointment', ''))
+    return reverse('clinical:sign', args=[pk]) + ('?' + urlencode(params) if params else '')
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -167,6 +175,17 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
     template_name = 'clinical/form.html'
     success_url = reverse_lazy('clinical:list')
 
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest' and self.get_workflow_appointment():
+            return ['clinical/partials/session_note_popup.html']
+        return super().get_template_names()
+
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            response.status_code = 422
+        return response
+
     def get_initial(self):
         initial = super().get_initial()
         appointment_id = self.request.GET.get('appointment', '')
@@ -187,6 +206,7 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
         kwargs = super().get_form_kwargs()
         kwargs['practice'] = self.get_practice()
         kwargs['user'] = self.request.user
+        kwargs['appointment'] = self.get_workflow_appointment()
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -210,6 +230,8 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
                 'treatment_plan_id': self.object.treatment_plan_id,
             },
         )
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'redirect': self.get_success_url()})
         return response
 
 
@@ -707,7 +729,7 @@ class SessionNoteSignView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         elif note.appointment and note.appointment.ends_at > timezone.now():
             blocked_reason = 'Signing becomes available after this session ends.'
         return render(request, 'clinical/sign.html', {'note': note, 'review_digest': note.review_digest(),
-            'next_url': session_return_url(request), 'can_sign': responsible and not note.signed_at and not blocked_reason,
+            'next_url': session_return_url(request), 'navigation_next': session_origin_url(request), 'can_sign': responsible and not note.signed_at and not blocked_reason,
             'signature_blocked_reason': blocked_reason if responsible else '',
             'can_edit_draft': not note.is_locked and has_practice_permission(request.user, 'clinical', 'edit')})
 

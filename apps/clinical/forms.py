@@ -24,7 +24,7 @@ class SessionNoteForm(forms.ModelForm):
             'treatment_progress': forms.Textarea(attrs={'rows': 4}),
         }
 
-    def __init__(self, *args, practice=None, user=None, **kwargs):
+    def __init__(self, *args, practice=None, user=None, appointment=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
@@ -45,6 +45,14 @@ class SessionNoteForm(forms.ModelForm):
             self.fields['appointment'].queryset = scope_sessions(self.fields['appointment'].queryset, user)
             if not manages_sessions(user):
                 self.fields['therapist'].queryset = self.fields['therapist'].queryset.filter(user=user)
+
+        if appointment:
+            self.fields['note_type'].choices = [(value, label) for value, label in SessionNote.NoteType.choices if value != SessionNote.NoteType.TREATMENT_PLAN]
+            for name, value in [('client', appointment.client_id), ('therapist', appointment.therapist_id), ('appointment', appointment.pk)]:
+                self.initial[name] = value
+                self.fields[name].disabled = True
+                self.fields[name].widget = forms.HiddenInput()
+            self.fields['treatment_plan'].queryset = self.fields['treatment_plan'].queryset.filter(client_id=appointment.client_id)
 
     def clean(self):
         cleaned_data = super().clean()
