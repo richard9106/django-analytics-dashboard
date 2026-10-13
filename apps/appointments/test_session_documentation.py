@@ -93,6 +93,24 @@ class SessionDocumentationTests(TestCase):
         self.own.status = 'scheduled'; self.own.save()
         self.assertContains(self.listing(self.therapist_user), 'class="documentation-pending"', count=1)
 
+    def test_agenda_marks_past_missing_and_unsigned_notes_but_not_signed_or_future(self):
+        start = timezone.now() - timedelta(days=1)
+        self.own.starts_at = start; self.own.ends_at = start + timedelta(minutes=50); self.own.status = 'scheduled'; self.own.save()
+        self.other.starts_at = start; self.other.ends_at = start + timedelta(minutes=50); self.other.save()
+        self.note(self.other, is_locked=True)
+        signed_session = self.appointment(self.owner, starts_at=start, ends_at=start+timedelta(minutes=50))
+        note = self.note(signed_session); note.sign(self.owner, note.review_digest())
+        future = self.appointment(self.owner, starts_at=timezone.now()+timedelta(hours=1), ends_at=timezone.now()+timedelta(hours=2))
+        response = self.listing(self.owner, view='agenda', date=timezone.localdate(start).isoformat())
+        self.assertContains(response, 'class="agenda-session documentation-pending"', count=2)
+        self.assertContains(response, 'Note missing', count=1)
+        self.assertContains(response, 'Signature pending', count=1)
+        self.assertContains(response, '>Signed</span>', count=1)
+        flags = {a.pk: a.documentation_pending for a in response.context['appointments']}
+        self.assertEqual(flags, {self.own.pk: True, self.other.pk: True, signed_session.pk: False, future.pk: False})
+        response = self.listing(self.therapist_user, view='agenda', date=timezone.localdate(start).isoformat())
+        self.assertContains(response, 'class="agenda-session documentation-pending"', count=1)
+
     def test_signing_requires_author_confirmation_and_current_review(self):
         note = self.note()
         url = reverse('clinical:sign', args=[note.pk])

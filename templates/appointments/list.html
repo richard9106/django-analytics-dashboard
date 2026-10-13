@@ -101,13 +101,14 @@
           </div>
 
           {% if calendar_view == 'agenda' %}
+            <p class="sync-meta">Orange sessions need a note or signature.</p>
             <div class="calendar-agenda" aria-label="Appointment agenda">
               {% for day in calendar_agenda_days %}
                 <section class="agenda-day"><div class="agenda-day-head"><h3>{{ day.date|date:"l, M j" }}</h3>{% if workspace_permissions.appointments.create %}<a class="btn btn-soft" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}&next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}">+ Appointment</a>{% endif %}</div>
-                {% for appointment in day.appointments %}<article class="agenda-session">
+                {% for appointment in day.appointments %}<article class="agenda-session{% if appointment.documentation_pending %} documentation-pending{% endif %}">
                   <div class="agenda-time"><strong>{{ appointment.starts_at|time:"g:i A" }}</strong><span>{{ appointment.ends_at|time:"g:i A" }}</span></div>
                   <div class="agenda-session-info"><strong>{% if workspace_permissions.appointments.edit %}<a href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}">{{ appointment.client }}</a>{% elif workspace_permissions.clients.view %}<a href="{% url 'clients:detail' appointment.client_id %}">{{ appointment.client }}</a>{% else %}{{ appointment.client }}{% endif %}</strong><span>{{ appointment.therapist }} · {{ appointment.get_appointment_type_display }}</span></div>
-                  <span class="badge">{{ appointment.get_status_display }}</span>
+                  <div class="agenda-session-status"><span class="badge">{{ appointment.get_status_display }}</span>{% if appointment.documentation_pending %}<span class="session-documentation-label">{% if appointment.has_session_note %}Signature pending{% else %}Note missing{% endif %}</span>{% elif appointment.has_signed_note %}<span class="badge success">Signed</span>{% endif %}</div>
                 </article>{% empty %}<p class="agenda-empty">No appointments.</p>{% endfor %}</section>
               {% endfor %}
             </div>

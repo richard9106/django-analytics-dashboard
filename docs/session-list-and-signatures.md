@@ -6,7 +6,7 @@ and owners see their practice; therapists see only their assigned appointments.
 The same scope applies to appointment URLs, recurring-session actions, note forms,
 clinical notes, dashboard session data and client-profile session summaries.
 
-Ended appointments without a signed note have a light orange row plus “Note missing”
+In both List and Calendar → Agenda, ended appointments without a signed note have a light orange row plus “Note missing”
 or “Signature pending”. The scheduled end time determines whether documentation
 is due, regardless of appointment status; future appointments are not flagged. A draft record is treated as an existing note, including an empty draft,
 so the workflow offers review rather than creating a duplicate.
