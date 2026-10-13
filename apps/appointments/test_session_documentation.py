@@ -183,6 +183,34 @@ class SessionDocumentationTests(TestCase):
         edit = self.client.get(reverse('clinical:edit', args=[note.pk]), {'review':'1'})
         self.assertContains(edit, 'Notes &amp; Treatment')
 
+    def test_note_appointment_options_are_client_and_therapist_scoped(self):
+        patient = Client.objects.create(practice=self.practice, first_name='Another', last_name='Fictional client')
+        unrelated = self.appointment(self.therapist_user, client=patient)
+        url = reverse('clinical:appointment_options', args=[self.patient.pk])
+        self.client.force_login(self.owner)
+        self.assertEqual({row['id'] for row in self.client.get(url).json()['appointments']}, {self.own.pk, self.other.pk})
+        self.client.force_login(self.therapist_user)
+        self.assertEqual([row['id'] for row in self.client.get(url).json()['appointments']], [self.own.pk])
+        self.assertEqual([row['id'] for row in self.client.get(reverse('clinical:appointment_options', args=[patient.pk])).json()['appointments']], [unrelated.pk])
+        other_practice = Practice.objects.create(name='Unrelated clinic')
+        outsider = Client.objects.create(practice=other_practice, first_name='Outside', last_name='Client')
+        self.assertEqual(self.client.get(reverse('clinical:appointment_options', args=[outsider.pk])).status_code, 404)
+
+    def test_note_form_limits_sessions_before_and_after_client_selection(self):
+        from apps.clinical.forms import SessionNoteForm
+        patient = Client.objects.create(practice=self.practice, first_name='Another', last_name='Client')
+        unrelated = self.appointment(self.therapist_user, client=patient)
+        self.assertFalse(SessionNoteForm(practice=self.practice, user=self.owner).fields['appointment'].queryset.exists())
+        form = SessionNoteForm(practice=self.practice, user=self.owner, initial={'client':self.patient.pk})
+        self.assertEqual(set(form.fields['appointment'].queryset.values_list('pk', flat=True)), {self.own.pk, self.other.pk})
+        note = self.note()
+        form = SessionNoteForm(practice=self.practice, user=self.therapist_user, instance=note)
+        self.assertEqual(list(form.fields['appointment'].queryset.values_list('pk', flat=True)), [self.own.pk])
+        form = SessionNoteForm(data={'client':self.patient.pk, 'therapist':self.own.therapist_id, 'appointment':unrelated.pk, 'note_type':'progress_note', 'content':'Fictional'}, practice=self.practice, user=self.therapist_user)
+        self.assertFalse(form.is_valid())
+        self.assertIn('appointment', form.errors)
+        self.assertNotIn(unrelated, form.fields['appointment'].queryset)
+
     def test_list_paginates_and_filter_links_survive(self):
         for _ in range(25): self.appointment(self.therapist_user)
         response = self.listing(self.therapist_user, documentation='needs_attention', q='Fictional')

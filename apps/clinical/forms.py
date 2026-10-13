@@ -46,6 +46,16 @@ class SessionNoteForm(forms.ModelForm):
             if not manages_sessions(user):
                 self.fields['therapist'].queryset = self.fields['therapist'].queryset.filter(user=user)
 
+        selected_client = appointment.client_id if appointment else (
+            self.data.get(self.add_prefix('client')) if self.is_bound else self.initial.get('client')
+        )
+        selected_client = str(getattr(selected_client, 'pk', selected_client) or '')
+        if selected_client.isascii() and selected_client.isdigit() and len(selected_client) <= 18:
+            self.fields['appointment'].queryset = self.fields['appointment'].queryset.filter(client_id=selected_client).order_by('-starts_at', '-pk')
+        else:
+            self.fields['appointment'].queryset = self.fields['appointment'].queryset.none()
+        self.fields['appointment'].empty_label = 'No appointment'
+
         if appointment:
             self.fields['note_type'].choices = [(value, label) for value, label in SessionNote.NoteType.choices if value != SessionNote.NoteType.TREATMENT_PLAN]
             for name, value in [('client', appointment.client_id), ('therapist', appointment.therapist_id), ('appointment', appointment.pk)]:

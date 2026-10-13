@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -24,7 +25,7 @@
       {% if workflow_appointment %}<p>Documenting {{ workflow_appointment.client }} · {{ workflow_appointment.starts_at|date:"M j, Y, g:i A" }}.{% if workspace_permissions.appointments.edit %} After saving, return to the session to continue with billing.{% endif %}</p>{% endif %}
       <section class="panel form-panel notes-panel">
         <div class="panel-head"><div><h2>{{ form_heading }}</h2><p>{% if is_diagnosis_form %}Record this patient's diagnosis and select it in their treatment plans.{% else %}Keep documentation concise, scoped, and ready to lock when complete.{% endif %}</p></div></div>
-        <form id="note-form" class="appointment-form" method="post" novalidate>
+        <form id="note-form" class="appointment-form" {% if form.appointment and not form.appointment.is_hidden %}data-client-session-form data-sessions-url="{% url 'clinical:appointment_options' 0 %}"{% endif %} method="post" novalidate>
           {% csrf_token %}
           {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
           <div class="field-grid two">
@@ -34,6 +35,7 @@
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {% if field.name == 'diagnoses' %}<div data-diagnosis-choices>{{ field }}</div><p data-diagnosis-status role="status">Select diagnoses for this patient.</p><button class="inline-link" type="button" data-diagnosis-reload>Reload diagnoses</button>{% else %}{{ field }}{% endif %}
                 {% endif %}
+                {% if field.name == 'appointment' %}<p class="sync-meta" data-session-picker-status role="status"></p><button class="inline-link" type="button" data-session-picker-retry hidden>Retry loading sessions</button>{% endif %}
                 {% if field.errors %}{{ field.errors }}{% endif %}
               </div>
             {% endif %}{% endfor %}
@@ -47,5 +49,6 @@
     </main>
   </div>
 <script src="/static/diagnosis-picker.js" defer></script>
+<script src="{% static 'client-session-picker.js' %}" defer></script>
 </body>
 </html>
