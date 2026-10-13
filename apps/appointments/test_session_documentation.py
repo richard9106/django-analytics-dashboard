@@ -170,6 +170,19 @@ class SessionDocumentationTests(TestCase):
         self.assertContains(listing, 'data-modal-target="appointment-modal-' + str(self.own.pk) + '"')
         self.assertContains(self.listing(self.other_user), 'data-note-popup')
 
+    def test_direct_notes_review_does_not_invent_appointments_origin(self):
+        from apps.clinical.views import note_review_url
+        from django.test import RequestFactory
+        note = self.note()
+        self.client.force_login(self.therapist_user)
+        url = reverse('clinical:sign', args=[note.pk])
+        response = self.client.get(url)
+        self.assertIsNone(response.context['navigation_next'])
+        self.assertNotContains(response, 'name="next"')
+        self.assertEqual(note_review_url(RequestFactory().get(url), note.pk), url)
+        edit = self.client.get(reverse('clinical:edit', args=[note.pk]), {'review':'1'})
+        self.assertContains(edit, 'Notes &amp; Treatment')
+
     def test_list_paginates_and_filter_links_survive(self):
         for _ in range(25): self.appointment(self.therapist_user)
         response = self.listing(self.therapist_user, documentation='needs_attention', q='Fictional')
