@@ -633,6 +633,26 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
             messages.info(request, 'Manage your existing subscription to update payment details or change billing.')
             return redirect('billing:subscription_access')
         customer_id = subscription.stripe_customer_id if subscription else ''
+        template_id = settings.STRIPE_INVOICE_TEMPLATE_ID
+        if template_id:
+            try:
+                invoice_settings = {'rendering_options': {'template': template_id}}
+                if customer_id:
+                    stripe.Customer.modify(customer_id, invoice_settings=invoice_settings)
+                else:
+                    customer = stripe.Customer.create(
+                        email=request.user.email,
+                        metadata={'practice_id': str(practice.pk)},
+                        invoice_settings=invoice_settings,
+                        idempotency_key=f'nuvia-subscription-customer-{practice.pk}-{template_id}',
+                    )
+                    customer_id = customer.id
+                    subscription, _ = PracticeSubscription.objects.get_or_create(practice=practice)
+                    subscription.stripe_customer_id = customer_id
+                    subscription.save(update_fields=['stripe_customer_id'])
+            except stripe.error.StripeError:
+                messages.error(request, 'We could not configure your subscription invoice. Please try again or contact support.')
+                return redirect('billing:subscription_access')
         quantity = _stripe_subscription_quantity(practice)
         if subscription and subscription.status == PracticeSubscription.Status.INCOMPLETE and subscription.stripe_checkout_session_id:
             try:

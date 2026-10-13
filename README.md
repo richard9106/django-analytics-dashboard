@@ -221,6 +221,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for provisioning, roles, secrets, backups and
 
 ### Payment and storage configuration
 
+SaaS invoices use the configured `STRIPE_INVOICE_TEMPLATE_ID`, assigned before Checkout to new and existing subscription customers. This is separate from patient invoices through Stripe Connect.
+
 Current per-user Stripe settings:
 
 ```env
