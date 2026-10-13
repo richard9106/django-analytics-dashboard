@@ -6,6 +6,7 @@ from .views import (
     DiagnosisDeleteView,
     DiagnosisUpdateView,
     SessionNoteCreateView,
+    SessionNoteAppointmentsView,
     SessionNoteSignView,
     SessionNoteDeleteView,
     SessionNoteListView,
@@ -20,6 +21,7 @@ from .views import (
 app_name = 'clinical'
 
 urlpatterns = [
+    path('appointment-options/<int:client_pk>/', SessionNoteAppointmentsView.as_view(), name='appointment_options'),
     path('notes/<int:pk>/sign/', SessionNoteSignView.as_view(), name='sign'),
     path('diagnosis-options/<int:client_pk>/', DiagnosisOptionsView.as_view(), name='diagnosis_options'),
     path('', SessionNoteListView.as_view(), name='list'),

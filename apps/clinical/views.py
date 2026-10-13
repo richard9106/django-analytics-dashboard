@@ -542,6 +542,26 @@ class TreatmentPlanCompleteReviewView(LoginRequiredMixin, PracticePermissionMixi
         return redirect('clinical:treatment_plans')
 
 
+class SessionNoteAppointmentsView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
+    permission_resource = 'clinical'
+    permission_action = 'view'
+
+    def get(self, request, client_pk):
+        if not 0 < client_pk <= 9223372036854775807:
+            raise Http404
+        client = get_object_or_404(Client, pk=client_pk, practice=self.get_practice())
+        from apps.appointments.models import Appointment
+        from django.utils.formats import date_format
+        appointments = scope_sessions(Appointment.objects.filter(client=client).select_related('therapist__user'), request.user).order_by('-starts_at', '-pk')
+        return JsonResponse({'appointments': [
+            {'id': appointment.pk, 'label': '{} · {} · {}'.format(
+                date_format(timezone.localtime(appointment.starts_at), 'M j, Y · g:i A'),
+                appointment.therapist.user.get_full_name() or appointment.therapist.user.username,
+                appointment.get_status_display())}
+            for appointment in appointments
+        ]})
+
+
 class DiagnosisOptionsView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, View):
     permission_resource = 'clinical'
 
