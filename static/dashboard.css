@@ -1667,3 +1667,39 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
   .agenda-session-status { grid-column: 2; justify-content: flex-start; }
   .agenda-session-status .badge { grid-column: auto; }
 }
+
+/* Clinical review: client identity first, readable content and a distinct signature. */
+.note-review-page .app-main { padding-bottom: 96px; }
+.note-review { padding: 24px; }
+.note-review-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.note-review .note-review-eyebrow { margin: 0 0 6px; color: var(--slate-500); font-size: 12px; font-weight: 700; }
+.note-review-header h1 { margin: 0; font-size: 30px; line-height: 1.25; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.note-review-header h1 a { color: var(--slate-900); text-decoration: none; }
+.note-review-header h1 a:hover { color: var(--brand-700); text-decoration: underline; text-underline-offset: 4px; }
+.note-review .note-review-subtitle { margin: 6px 0 0; font-size: 13px; color: var(--slate-500); }
+.note-review-header > .badge { flex-shrink: 0; }
+.note-review-metadata { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 20px 0 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.note-review-metadata dt { font-size: 12px; color: var(--slate-500); margin-bottom: 5px; }
+.note-review-metadata dd { margin: 0; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.note-review-metadata dd span { display: block; margin-top: 3px; font-size: 12px; font-weight: 500; color: var(--slate-600); }
+.note-review-content { padding: 22px 0; }
+.note-review-content + .note-review-content { border-top: 1px solid var(--border); }
+.note-review h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.4; }
+.note-review-text { max-width: 76ch; font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
+.note-review-text p { margin: 0 0 12px; color: var(--slate-800); }
+.note-review-text p:last-child { margin-bottom: 0; }
+.note-review .note-review-signature { margin-top: 4px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: #faf9ff; }
+.note-review-signature p { margin: 6px 0 0; font-size: 13px; line-height: 1.6; }
+.note-review-signature label { font-size: 14px; line-height: 1.6; }
+.note-review-signature .form-actions { margin-top: 16px; justify-content: flex-start; }
+.note-review .note-review-signed { background: #f2fbf7; border-color: #d6eee2; }
+@media (max-width: 600px) {
+  .note-review { padding: 16px; }
+  .note-review-header { flex-wrap: wrap; gap: 10px; }
+  .note-review-header h1 { font-size: 24px; }
+  .note-review-metadata { grid-template-columns: 1fr; gap: 12px; margin-top: 16px; }
+  .note-review-content { padding: 18px 0; }
+  .note-review .note-review-signature { padding: 14px; }
+  .note-review-signature .form-actions { display: grid; grid-template-columns: 1fr; }
+  .note-review-signature .form-actions .btn { width: 100%; min-height: 44px; }
+}
