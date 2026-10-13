@@ -366,6 +366,9 @@ class PracticeSubscription(models.Model):
     stripe_price_id = models.CharField(max_length=120, blank=True)
     stripe_checkout_session_id = models.CharField(max_length=255, blank=True)
     current_period_end = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+    cancel_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
     payment_failed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -376,6 +379,14 @@ class PracticeSubscription(models.Model):
     @property
     def is_active(self):
         return self.status == self.Status.ACTIVE
+
+    @property
+    def cancellation_scheduled(self):
+        return self.status in {self.Status.ACTIVE, self.Status.TRIALING, self.Status.PAST_DUE} and bool(self.cancel_at_period_end or self.cancel_at)
+
+    @property
+    def cancellation_effective_at(self):
+        return self.cancel_at or (self.current_period_end if self.cancel_at_period_end else None)
 
     @property
     def internal_user_limit(self):
