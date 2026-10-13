@@ -1030,6 +1030,10 @@ class BillingViewTests(TestCase):
         kwargs = mock_create.call_args.kwargs
         self.assertEqual(kwargs["line_items"], [{"price": "price_solo_monthly", "quantity": 2}])
         self.assertEqual(kwargs["payment_method_collection"], "always")
+        self.assertEqual(kwargs["billing_address_collection"], "required")
+        self.assertEqual(kwargs["tax_id_collection"], {"enabled": True})
+        self.assertNotIn("automatic_tax", kwargs)
+        self.assertNotIn("customer_update", kwargs)
         self.assertNotIn("trial_period_days", kwargs["subscription_data"])
         self.assertEqual(kwargs["metadata"]["practice_id"], str(practice.pk))
         subscription = PracticeSubscription.objects.get(practice=practice)
