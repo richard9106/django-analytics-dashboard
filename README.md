@@ -1,204 +1,234 @@
 # NuviaMy
 
-NuviaMy is a Django-based therapy practice management SaaS for solo therapists, psychologists, and multi-provider clinics. The project targets clinical use in the United States and focuses on secure client management, scheduling, clinical workflows, billing, subscriptions, document storage, Google integrations, and a client portal.
+NuviaMy is a Django-based practice management SaaS for solo therapists and multi-provider clinics. It brings clients, appointments, clinical documentation, billing, client forms and requests into one practice-scoped workspace. The intended clinical market is the United States.
 
-## Product Vision
+## Current status
 
-NuviaMy helps mental health professionals manage their practice from one calm, secure workspace:
+Last documentation review: **October 13, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
 
-- Manage solo practices and multi-therapist clinics.
-- Track clients, appointments, sessions, notes, treatment plans, invoices, subscriptions, documents, and client requests.
-- Provide clients with a portal for appointments, documents, intake, and practice communication.
-- Implement and validate the technical and operational controls required for a clinical healthcare SaaS.
+- Production uses Docker Compose, PostgreSQL, Gunicorn and host Nginx at `nuviamy.com`.
+- Stripe is currently in **test mode**. Published pricing is **USD 39 per active internal user/month** or **USD 421/user/year**.
+- New practices receive **15 days without a card**. Paid billing starts only after an explicit checkout confirmation.
+- Sign-in currently uses credentials only (`DJANGO_MFA_REQUIRED=false`). TOTP MFA and recovery controls remain available for later activation.
+- Authenticated sessions expire after **one hour of inactivity** and have an **eight-hour absolute limit**.
+- The latest functional release passed **513 PostgreSQL tests**, JavaScript interaction checks, migration/deployment checks and database role/backup-restore checks in CI. Production verification confirmed the initial consultation defaults, migrations and enabled clinical immutability guards.
 
-Production uses separate runtime and migration PostgreSQL credentials; the runtime cannot change schema or mutate audit evidence. See `DEPLOYMENT.md` for provisioning and release verification.
+The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See [Clinical readiness for the US](docs/clinical-readiness-us.md).
 
-During pre-client development, sign-in uses credentials only (`DJANGO_MFA_REQUIRED=false`). MFA is preserved for later activation and remains a clinical readiness requirement to validate before onboarding.
+## Main client workflow
 
-The product goal is real clinical use in the United States with demonstrable HIPAA compliance. The current implementation is not yet approved for real patient data: technical controls, contracts, operating policies, and independent validation remain to be completed. HHS does not certify software as HIPAA compliant. See `docs/clinical-readiness-us.md` for the readiness assessment and release criteria.
+1. Create the client and assign a therapist when appropriate.
+2. Use **Initial consultation → Schedule consultation** in the client record to arrange the brief introduction.
+3. Schedule ongoing sessions in **Appointments**, using Calendar or List.
+4. Create a session-linked note, review its content and have the responsible therapist sign it.
+5. Manage treatment plans, invoices, documents, client forms and follow-up requests as needed.
 
-## Implemented Product Areas
+Email delivery and online client payments are optional connections. Client creation and scheduling work without Gmail or Stripe Connect.
 
-The current version includes these working modules:
+### Initial consultation versus client forms
 
-- `accounts`: signup, email-based login/logout, mandatory staff TOTP MFA, single-use recovery codes, account-wide session revocation, idle/absolute session limits, sensitive-action reauthentication, password recovery, editable profiles with optional photos, role/profile model, practice ownership setup, client password-change enforcement, team management, temporary/custom-password invitations, Gmail/SMTP delivery, granular therapist permissions, and active-user billing quantity sync.
-- `practices`: practice and therapist profile models, tenant scoping, integration settings, encrypted Google OAuth tokens, and Stripe Connect payout onboarding.
-- `clients`: Odoo-style tree directory, optional client photos, tenant-scoped client records, full Client Workspace, breadcrumbs, create/edit/delete popups, add note from client, assign package from client, and create appointment popup from client workspace.
-- `appointments`: Monday-start Day/Week/Month calendar, client search, therapist/status/type/sync filters, create/edit/delete popups, today highlighting, tenant-scoped scheduling, weekly recurrence, date-based availability from the calendar, weekly baseline availability, visible unavailable blocks, Google Calendar sync, and Gmail reminder command.
-- `clinical`: clinical notes, diagnosis records, treatment plans, linked treatment progress, lock note behavior, review-due workflow.
-- `billing`: invoices, package invoices, superbills, automatic invoice numbering, prepaid service packages, package usage tracking, insurance payer/rate settings, per-active-user Stripe subscription checkout, billing-period changes with proration previews, SaaS invoice history, Stripe Customer Portal, Stripe Connect client payouts, 15-day trial, webhooks, and practice subscription persistence.
-- `documents`: client document upload/list/download/delete, file metadata, tenant-scoped downloads, Google Drive export, local storage with Cloudflare R2 production support.
-- `portal`: client-facing dashboard, portal access accounts, enforced temporary password change, secure client/practice conversations, visible documents, appointment change requests, intake packet completion, and Stripe Checkout invoice payments routed to the practice's connected account.
-- `intake`: practice intake templates, client packet assignment, client portal submission workflow.
-- `requests`: practice-side inbox for client portal requests and appointment change requests.
-- `notifications`: appointment reminder model and Gmail-based reminder delivery command.
-- `audit`: protected append-only events, actor snapshots, sensitive-module reads and access denials, alongside auth, documents, clinical, billing, portal, intake, and integration events. PostgreSQL guards protect audit events and finalized notes; privileged database administration and complete retention policies remain separate readiness work.
-- `dashboard`: operational practice dashboard with today appointments, automatic alerts, assignable team tasks, billing summary, recent invoices, six-month revenue/session charts, quick actions, a clients-first setup guide, and a contextual guided onboarding tour.
-- `settings`: session package templates, insurance settings, portal access, Google integrations, Google workspace, and legacy weekly availability baseline management.
-- `telehealth`: telehealth room model reserved for future provider integration.
-- `admin`: Django admin registration for core domain models, including subscriptions.
+These are separate workflows:
 
-## Current Workflow Summary
+| Feature | Purpose | Where it lives |
+| --- | --- | --- |
+| Initial consultation | A brief introduction carried out by the therapist; 15 minutes suggested, editable to 10 minutes or another duration | Appointments, client overview, and Requests when explicitly requested |
+| Client forms | Question templates assigned to the client, submitted through their portal and reviewed by staff | **Client forms** in the sidebar; existing `/intake/` routes are retained |
+| Intake Note | A clinical note type | Clinical notes; its name is unchanged |
 
-### Dashboard
+Initial consultation is a **session purpose**, separate from **format** (in person, video or phone). Calendar, Agenda and List identify it; short Day/Week events use compact cards. Manual duration survives start-time changes. Existing appointments remain Standard session.
 
-- Top action bar with quick create actions and profile menu.
-- Practice metrics: monthly revenue, active patients, today's sessions, pending tasks.
-- Today appointments panel.
-- Tasks panel from notes, invoices, notifications, portal requests, and treatment plan reviews.
-- Recent billing activity.
-- First-steps setup panel: add a client, open calendar availability, schedule a session, and invite a team when needed.
-- Client creation and scheduling work without Gmail or Stripe Connect. Connect these services when email delivery or online client payments are needed; payment-provider checks remain in payment flows.
-- Six-month revenue trend and appointment volume charts.
-- Contextual guided tour moves through Overview, Appointments, Clients, Notes, Billing, Documents, Intake, Requests, Settings, and setup.
-- Tour completion is stored in browser local storage and hides the launch button.
-- Permission-denied navigation is hidden when possible and direct unauthorized access returns a friendly warning/redirect instead of a raw 403 page.
+The client overview shows Not scheduled, Scheduled, Completed or the latest cancellation/no-show state. Completion is an explicit session status; cancellation is not completion. This is a visible onboarding step, without a hard block on scheduling other sessions or retrospective classification of older records.
+
+See [Initial consultations](docs/initial-consultation.md).
+
+## Workspace behavior
+
+### Overview
+
+- Conditional first steps appear at the top, only while permitted setup actions remain incomplete.
+- KPI cards summarize today's sessions, pending tasks, active clients and monthly revenue.
+- Charts come before Billing at a glance; appointments and tasks follow at the bottom.
+- Revenue line/area, session columns, session-status donut and invoice-status bars use practice-scoped data, numerical summaries and truthful empty states.
+- Tasks and appointments have independent bounded scroll regions. Assigned tasks open their records; automatic alerts link to the relevant permitted workspace.
+- Unpaid balances account for partial payments; draft and void invoices are excluded from outstanding balances.
+- The compact orange free-access notice is shared across workspace action bars, with **Get subscription** linking to the per-user checkout flow.
 
 ### Clients
 
-- `My patients` tree view with client, therapist, phone, insurance, status, and actions columns.
-- Create/edit/delete client using popups.
-- Client Workspace combines profile data, latest session, portal access, invoices, clinical notes, treatment plans, documents, and breadcrumbs back to the directory.
-- Optional client photos appear in the directory and workspace.
-- Client Directory uses a compact tree/table view with therapist, phone, insurance, status, and actions.
-- Add clinical note directly from a client card.
-- Assign a prepaid session package directly from a client card.
-- Create appointments from the clients workspace with a popup.
-- Client cards are practice-scoped.
+- Compact directory with search, therapist/contact/insurance/status columns and trailing actions.
+- Client Workspace has Overview, Clinical, Billing and Documents tabs, according to permissions.
+- Overview includes initial consultation progress, upcoming sessions, session history, client information and portal access.
+- Clinical groups diagnoses, treatment plans and notes. Diagnosis create/edit dialogs keep the client fixed; treatment plans reuse that client's diagnosis records instead of copying them.
+- Optional client photos, profile editing, appointment scheduling links, packages and document workflows remain practice-scoped.
 
 ### Appointments
 
-- Calendar page with Monday-first weeks.
-- Current day highlighted.
-- Day-level `+` opens appointment creation popup and pre-fills date/time.
-- Existing appointment opens edit popup.
-- Delete appointment from edit popup.
-- Availability is managed from the calendar through the `Set availability` action.
-- Date-specific availability can mark a day or date range as available, unavailable all day, or unavailable for a specific time range.
-- Date-specific availability can repeat weekly or monthly for a configured number of occurrences.
-- Review availability lists changes in the visible calendar period. Edit one change or remove it without changing existing appointments; edit/remove actions follow workspace permissions.
-- Clicking an unavailable calendar time prompts the user to enable that day/range before scheduling.
-- Weekly availability remains as a baseline fallback; date-specific calendar availability overrides it.
-- Unavailable time is visibly shaded in Day/Week calendar views.
-- Week is the default calendar view; Year view was removed to keep calendar navigation focused.
-- Search and compact filters preserve state while navigating the calendar.
-- Weekly recurring appointments can be generated at creation time.
-- Google Calendar sync metadata is tracked and can be repaired/synced.
-- Gmail-based appointment reminders can be sent through the management command.
-- Fallback create/edit pages remain available.
+- Primary **Calendar / List** switch. Calendar retains Monday-first Day, Week, Month and Agenda views.
+- Therapists see their assigned sessions; owners/admins see sessions across their practice. The same scope applies to direct appointment URLs, note forms and related session summaries.
+- Calendar supports search and therapist/status/format/sync filters, date navigation, create/edit dialogs, rescheduling, single-session cancellation and weekly recurrence.
+- List is paginated at 25 sessions and preserves search, filters and page context. Documentation filters include All, Needs attention and Signed.
+- **List and Agenda highlight past sessions without a signed note in orange**, using the scheduled end time regardless of appointment status. Text distinguishes Note missing from Signature pending; future and signed sessions are unflagged.
+- **Create note** and **Session details** open dialogs from List. Note creation loads on demand, fixes client/therapist/session, retains validation errors and proceeds to review after saving. Full-page links remain available without JavaScript.
+- Calendar availability supports date/range overrides, all-day or partial unavailability, repeated overrides, and review/edit/remove of individual changes. Weekly working hours remain the baseline fallback.
+- Google Calendar sync metadata and Gmail reminder delivery are supported. Session purpose appears in exports and Google event descriptions.
 
-### Clinical Notes
+See [Session documentation and signatures](docs/session-list-and-signatures.md).
 
-- Notes workspace with list and popups.
-- Notes link to client, therapist, and optional appointment.
-- Calendar sessions offer Create note / Review notes / Create invoice / Review invoices according to permissions. Session-linked create forms preselect the patient and appointment; notes also preselect the therapist. Saving returns calendar editors to the session to continue the workflow, while invoice amounts remain manually reviewed.
-- Notes can link to treatment plans and include treatment progress.
-- `Lock note` marks a note as final and sets `locked_at`.
-- Diagnosis and treatment plan records are practice-scoped.
-- Manage diagnoses from the patient workspace. Treatment plans select only that patient's diagnoses, reusing records instead of creating copies; linked inactive diagnoses are preserved when editing.
-- Treatment plans support review dates and review completion.
+### Clinical notes and signatures
 
-### Billing And Packages
+- Notes link to client, therapist and an optional appointment/treatment plan, with optional treatment progress.
+- Selecting a client loads **only that client's permitted appointments**. Changing clients clears the old appointment; valid existing selections survive editing and validation. Server-side choices reject appointments belonging to another client or outside the user's session scope.
+- Review displays the client name prominently, labeled session/therapist metadata, readable note content and a separate signature section.
+- Only the responsible therapist with clinical edit permission can sign. Signing requires confirmation, nonempty content, an ended session when linked, and a current review digest.
+- Signing locks the note and creates a separate signature record containing signer identity, name snapshot, timestamp and content/association digest.
+- **Lock without signing** is distinct from a signature. Existing locked notes remain unsigned until explicitly reviewed and signed; no historical signatures are invented.
+- Finalized notes and signature records have application and PostgreSQL protection against updates, deletion and truncation. Signature metadata is included in clinical exports.
+- Corrections require separate documentation; a dedicated addendum editor is still pending.
+- Treatment plans support goals, interventions, diagnoses, treatment progress, review dates and review completion.
 
-- Billing workspace with invoices and prepaid session packages.
-- Session package templates configured under Settings.
-- Assign package to client from Clients page.
-- Create invoices against either appointments or packages.
-- Invoice number auto-generates when blank:
+### Requests and client forms
 
-```text
-PKG-{package_id}-{YYYYMMDD}-{sequence}
+- Requests is one compact inbox for public bookings and registered-client requests, with source filters and trailing three-dot actions.
+- Public bookings retain approval/create-appointment and decline actions. Available slots follow practice availability and existing bookings.
+- Registered requests retain review/resolve actions. **Initial consultation request** provides Schedule consultation with the client and session purpose preselected; resolving the request remains explicit.
+- Client forms has a paginated assignment queue, search/status filters, review totals, form templates, question previews and permission-aware editing.
+- Clients complete assigned forms in the portal; staff review numbered responses and record review status.
+- Assigned questions are snapshotted. Editing a template affects future assignments, while existing assignments and responses retain their original content.
+
+### Billing, subscriptions and access
+
+- Invoices, partial/manual payments, balances, printable invoices/superbills, prepaid packages and package usage are implemented.
+- Insurance payer/rate configuration is available; claims submission, eligibility, ERA/EOB and denial management are separate pending scope.
+- Stripe Connect is optional for receiving client invoice payments. Signed webhooks record paid invoices; creating an invoice does not collect a payment.
+- SaaS pricing is one plan per active internal user. Active owners, admins and therapists count; client portal users and inactive staff do not.
+- Signup starts the fixed **15-day cardless period**, without creating a Stripe subscription. Cancelling checkout does not extend that deadline.
+- Expiry preserves authorized record reading and exports while restricting writes. Paid conversion requires explicit checkout confirmation and starts billing immediately, with no additional Stripe trial.
+- Get subscription uses the current internal-user quantity. Monthly/annual checkout, period-change proration previews, subscription state, invoice history and Stripe Customer Portal are supported.
+- Team changes attempt quantity synchronization. Periodic drift reconciliation remains pending.
+- **Ten private early-access invitations** each cover one internal user in a new practice for twelve calendar months. They are email-bound, one-use links with a 30-day redemption expiry, not an automatic first-ten-signups promotion. Additional internal staff require voluntary paid conversion.
+
+Private invitation command:
+
+```bash
+python manage.py issue_early_access_invitation SLOT EMAIL
 ```
 
-- Selecting a package in invoice form fills client and amount.
-- Selecting an appointment fills client.
-- Package usage tracks sessions used and remaining.
-- Expired, completed, or refunded packages cannot be used for sessions.
-- Printable invoices and superbills are available.
-- Staff can record partial or full manual payments using cash, check, ACH, insurance, card, or other methods, with balance tracking.
-- Insurance settings support common payer templates and practice-specific reimbursement rates.
-- Practice owners/admins can configure Stripe Connect from Profile Settings so client payments go to the practice.
-- Clients can pay eligible sent/overdue invoices from the portal through Stripe Checkout.
-- Signed Stripe webhooks mark client invoices as paid and record `paid_at`.
-- Stripe Checkout creates SaaS subscriptions using per-active-user pricing.
-- New signups are routed to Stripe Checkout with a 15-day free trial and card collection.
-- Active owners, admins, and therapists count as billable users; client portal users and deactivated staff do not.
-- Team create/deactivate/reactivate actions best-effort sync the Stripe subscription quantity.
-- Stripe webhooks update local `PracticeSubscription` records for checkout completion, subscription updates/deletions, and failed payments.
-- Profile Settings includes billing-period switching, Stripe proration previews, SaaS invoice history, and Stripe Customer Portal access.
+`SLOT` is 1–10. The command prints a private link and sends no email. Deployment does not issue invitations automatically. See [Cardless trial and early access](docs/cardless-trial-early-access.md).
 
-### Documents
+### Documents, portal and integrations
 
-- Upload client documents from `/documents/`.
-- Documents are scoped to practice and client.
-- Metadata stored in DB: original filename, content type, file size, portal visibility flag.
-- Downloads go through Django authorization checks.
-- Local `MEDIA_ROOT` storage works now.
-- Cloudflare R2 support is configured through env vars but must be enabled in production.
-- Documents can be exported to Google Drive when Google is connected.
+- Authorized client document upload, download, portal visibility and optional Google Drive export; local filesystem and Cloudflare R2 storage backends.
+- Portal accounts are restricted to client-facing routes; temporary passwords must be changed. Clients can view their sessions/documents, submit requests/forms, message the practice and pay eligible invoices.
+- Google OAuth supports Gmail, Calendar and Drive; tokens are encrypted through `FIELD_ENCRYPTION_KEY`. NuviaMy remains the source of truth.
+- Optional client/team photos, team invitations and granular therapist permissions are implemented.
+- Telehealth rooms are reserved for future provider integration; video appointment format is not an embedded telehealth service.
 
-### Client Portal And Intake
+### Navigation, mobile and public pages
 
-- Practice users can create client portal access accounts.
-- Client users are restricted to `/portal/` and cannot access internal practice pages.
-- Temporary-password users must change password before using the portal.
-- Clients can view upcoming appointments and visible documents.
-- Clients can submit appointment change requests.
-- Practice users manage portal requests from the request inbox.
-- Intake templates can be created and assigned to clients.
-- Clients can complete assigned intake packets from the portal.
-- Clients can pay their own open invoices; tenant and client ownership are checked before Checkout is created.
+- Consistent SVG sidebar icons, permission-aware menus, compact tables and native dialogs.
+- Shared breadcrumbs use routes and validated origin context. Moving from Appointments List/Agenda into note review and draft editing retains that origin and its filters; visiting the notes list keeps that step. Direct entry from Notes retains its own hierarchy.
+- Mobile navigation collapses into a top menu; forms/dialogs stack, period navigation stays on one row, and Messages becomes a floating circular button.
+- Pricing presents the single per-user plan centrally; mobile signup actions remain visible.
+- Public footer links to support, privacy, cookie policy and Cookie settings. The cookie choice controls optional tour storage; essential authentication/CSRF cookies remain functional. No advertising analytics are installed.
+- Help Center and support contact form are available. The privacy page is an interim notice; final operator/service terms and launch acceptance evidence remain pending.
 
-### Google Integrations
+### Technical protections and operations
 
-- A single Google OAuth connection supports Gmail, Calendar, and Drive scopes.
-- OAuth tokens are encrypted at rest using Fernet through `FIELD_ENCRYPTION_KEY`.
-- Gmail is used for appointment reminder delivery when connected.
-- Connected Gmail can send team-member invitations with temporary passwords.
-- Google Calendar sync mirrors appointment records to Google.
-- Google Drive export uploads authorized client documents.
-- NuviaMy remains the source of truth; Google is treated as an external mirror/export target.
+- Practice scoping, role/permission checks, protected audit evidence, denied-access/read events, encrypted OAuth tokens and environment-only secrets.
+- Separate PostgreSQL runtime and migration roles; runtime cannot alter schema or mutate protected audit evidence.
+- Configurable TOTP MFA, recovery codes, shared rate limits, session revocation/expiry and sensitive-action reauthentication. Current credentials-only sign-in is a development setting, not completion of clinical readiness.
+- Owner/admin practice exports include tenant-scoped JSON records, available files and signature metadata. Export actions are audited.
+- Staff monitoring covers integrations and aggregate operational state. Sentry is optional, with default PII/local-variable capture disabled.
+- Backup tooling supports encrypted PostgreSQL backups to R2 and restore verification. CI validates isolated role separation and backup/restore; complete production recovery evidence remains a launch gate.
 
-### Permissions And Team
+## Remaining work to review next
 
-- Owners/admins can configure therapist Read/Create/Edit/Delete access for each major workspace area, including Tasks.
-- Unauthorized navigation is hidden where possible; direct unauthorized URLs redirect with a friendly warning instead of showing a raw 403 page.
-- Optional photos are supported for clients and internal team members and use the configured media/R2 storage backend.
+This is a checkpoint, not a new audit or a claim that every historical finding remains open.
 
-### Team And Permissions
+### Product and usability
 
-- Team members can be therapists or practice admins.
-- Owners/admins can set therapist Read/Create/Edit/Delete permissions for Clients, Appointments, Clinical, Billing, Documents, Intake, Requests, and Tasks.
-- Team members can be activated, deactivated, invited again, assigned a custom password, or permanently deleted when safe.
-- Optional team photos appear in Team Management.
+- Walk through the complete solo/team journey with representative test users: client → consultation → ongoing session → note/signature → invoice → follow-up.
+- Therapist-specific availability; current availability is practice-wide.
+- Dedicated addendum/correction workflow for finalized notes and patient-focused record/export requests.
+- Periodic Stripe user-quantity reconciliation and visible failure/drift handling.
+- Broader insurance workflows and telehealth-provider integration, if included in the launch scope.
 
-### Help And Legal
+### Paid launch and clinical readiness
 
-- Low-cost Help Center with server-rendered FAQs and search at `/help/`.
-- Support contact form delivered through configured email.
-- Cookie Policy at `/cookie-policy/`.
-- Current cookies are limited to session, CSRF, and guided-tour local storage; no advertising analytics are installed.
+- Finalize operator/service terms, launch privacy information and acceptance records; verify support and email delivery end to end.
+- Complete a separately approved Stripe live-mode rollout and validate the payment/subscription lifecycle.
+- Confirm launch states, provider contracts/BAAs, risk assessment, retention/legal-hold policy, incident response, patient rights workflows and production recovery evidence.
+- Complete clinical workflow validation and independent security review before using real patient data.
 
-### Data Export And Monitoring
+Older audits and status documents describe their review date. Recheck their findings against current code and operational evidence rather than treating every old gap as still open. The October 9 pricing/card-collection observations, for example, predate the current cardless workflow.
 
-- Owner/admin-only practice data export at Profile Settings.
-- Exports are ZIP archives containing tenant-scoped JSON records and available document files.
-- Export requests are recorded in the audit log.
-- Staff-only operational monitoring page: `/staff/monitoring/`.
-- Monitoring checks database, email, Stripe, Google OAuth, R2, aggregate metrics, and failed notifications.
-- Sentry integration is conditional on `SENTRY_DSN` and does not send default PII.
-- PostgreSQL backups run daily, are retained locally, encrypted with GPG, copied to R2, and periodically restore-verified.
+## Documentation map
 
-### Stripe Subscriptions
+- [Deployment and operations](DEPLOYMENT.md)
+- [Architecture](docs/architecture.md)
+- [Initial consultations and client forms](docs/initial-consultation.md)
+- [Session list and signatures](docs/session-list-and-signatures.md)
+- [Cardless trial and private invitations](docs/cardless-trial-early-access.md)
+- [Cookie choices and public footer](docs/cookie-choices-2026-10-09.md)
+- [Client workspace review](docs/client-chart-ui-review.md)
+- [Mobile UI review](docs/mobile-ui-review.md)
+- [Clinical readiness assessment and release criteria](docs/clinical-readiness-us.md)
+- [Historical product status](docs/product-status.md)
+- [Stripe validation snapshot](docs/subscription-validation-2026-10-09.md)
 
-- Public pricing page uses one per-active-user plan.
-- Monthly and yearly Stripe Price IDs are configured through environment variables.
-- Signup preserves selected plan/period and redirects to Checkout after account creation.
-- Checkout uses a 15-day trial with card collection.
-- Checkout success routes users to the dashboard guided tour.
-- Webhook endpoint: `/billing/stripe/webhook/`.
-- Stripe Connect onboarding is separate from the NuviaMy SaaS subscription and is used for practice client-payment payouts.
-- Client invoice Checkout uses destination transfers to the practice's connected Stripe account; NuviaMy does not receive those funds as the final payee.
+## Development and release workflow
+
+The application uses Django 5.2, PostgreSQL, server-rendered templates, native JavaScript and SVG charts. Keep the architecture lightweight for the VPS. UX decisions should be reviewed with the specialized NuviaMy UX agent, including typography, context, dialog behavior, validation and mobile layouts.
+
+Local setup:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Configure a local database and development settings in .env.
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py collectstatic --noinput
+python manage.py runserver
+```
+
+Use a disposable PostgreSQL database for the suite that checks database roles, concurrency and immutability. Build the static manifest before running template tests:
+
+```bash
+python manage.py collectstatic --noinput
+python manage.py test --noinput
+node ops/check_cookie_choices.cjs
+node ops/check_diagnosis_picker.cjs
+node ops/check_appointments_calendar.cjs
+node ops/check_client_session_picker.cjs
+node ops/check_session_duration.cjs
+```
+
+Release process:
+
+1. Work on a `codex/` branch; run relevant local checks and review the final diff.
+2. Push and open a pull request. CI checks deployment settings, migrations, dependencies, static assets, interaction behavior, PostgreSQL tests, role separation and backup/restore.
+3. Merge only the exact pull-request head whose required checks passed.
+4. Main runs validation before the automatic VPS deployment of the tested commit.
+5. Verify health, migrations, assets and relevant behavior in production using read-only checks.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for provisioning, roles, secrets, backups and rollback. Keep `.env`, credentials and uploaded files out of Git.
+
+### Payment and storage configuration
+
+Current per-user Stripe settings:
+
+```env
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_PER_USER_MONTHLY=
+STRIPE_PRICE_PER_USER_YEARLY=
+```
+
+Legacy solo/group/clinic price variables remain compatibility fallbacks in the code; they are not separate public product tiers. SaaS subscription checkout and practice Stripe Connect invoice payments are distinct flows.
 
 Required webhook events:
 
@@ -210,151 +240,10 @@ customer.subscription.deleted
 invoice.payment_failed
 ```
 
-## Storage
+Storage uses local `MEDIA_ROOT` by default. For R2, configure `DJANGO_STORAGE_BACKEND=r2` and the `AWS_*` variables documented in `.env.example` and `DEPLOYMENT.md`. Production currently uses R2; backend support alone does not establish the required vendor/clinical operating evidence.
 
-By default, uploaded documents use local filesystem storage:
+## Design system
 
-```env
-DJANGO_STORAGE_BACKEND=
-```
+The visual language uses Iris primary, Aqua supportive accents, Coral attention accents and Slate text/backgrounds; Manrope UI text with Lora editorial accents.
 
-For Cloudflare R2, production should set:
-
-```env
-DJANGO_STORAGE_BACKEND=r2
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_STORAGE_BUCKET_NAME=nuviamy
-AWS_S3_ENDPOINT_URL=https://<account-id>.us.r2.cloudflarestorage.com
-AWS_S3_REGION_NAME=auto
-```
-
-Do not commit R2 credentials. `.env` and `media/` are ignored by Git.
-
-## Payments Configuration
-
-Stripe settings are read from environment variables and must not be committed:
-
-```env
-STRIPE_SECRET_KEY=
-STRIPE_PUBLISHABLE_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_PRICE_PER_USER_MONTHLY=
-STRIPE_PRICE_PER_USER_YEARLY=
-STRIPE_PRICE_SOLO_MONTHLY=
-STRIPE_PRICE_SOLO_YEARLY=
-STRIPE_PRICE_GROUP_MONTHLY=
-STRIPE_PRICE_GROUP_YEARLY=
-STRIPE_PRICE_CLINIC_MONTHLY=
-STRIPE_PRICE_CLINIC_YEARLY=
-```
-
-The test card for Stripe test mode is:
-
-```text
-4242 4242 4242 4242
-Any future expiration date
-Any CVC
-Any ZIP
-```
-
-## Remaining Product Roadmap
-
-- Add Stripe subscription quantity reconciliation for failed/manual team changes.
-- Continue simplifying calendar availability workflows; the calendar now includes review, single-record editing and removal for date-specific changes.
-- Add filters/search polish for remaining dense clinical/admin tables where needed.
-- Add Dropbox OAuth/export support.
-- Complete production security, legal, HIPAA/BAA, retention, and incident-response review before clinical use.
-
-## Security And Compliance Direction
-
-NuviaMy should be built with healthcare-grade habits from the beginning:
-
-- Every sensitive object belongs to a `Practice`.
-- Users must only access data from their own practice.
-- Clinical notes should never be written to logs.
-- HTTPS is required in production.
-- Secrets must live in environment variables, never in Git.
-- Stripe, Google, R2, and field encryption secrets must be set through `.env` or VPS/GitHub secret management.
-- Client users must only access portal routes.
-- OAuth tokens are encrypted at rest.
-- Production services that handle PHI should support a Business Associate Agreement (BAA).
-- Audit logging is implemented for many sensitive events, but compliance review is still required before real clinical use.
-
-## Design System
-
-NuviaMy uses a calm, modern, human visual language for mental health professionals. The design system is based on `nuvia_brand_ui_system.html`.
-
-### Brand
-
-- Product name: `NuviaMy`
-- Tone: calm, professional, modern, human, and trustworthy.
-- Avoid visual clichés such as medical crosses, literal brains, or overly clinical hospital styling.
-
-### Colors
-
-- Iris 600: `#7052D9` as the primary brand color.
-- Aqua 500: `#14B8A6` for positive/supportive accents.
-- Coral 500: `#F36F56` for editorial or attention accents.
-- Slate 800: `#1F2937` for primary text.
-- Slate 50: `#F8F9FB` for app backgrounds.
-
-### Typography
-
-- UI font: `Manrope`.
-- Editorial accent: `Lora Italic`.
-- Body text baseline: `16px`.
-- Small text: `14px`.
-- Hero/display text: `56px` to `64px` on large screens.
-
-### Layout Rules
-
-- Desktop grid: 12 columns, 24px gap, max width 1280px.
-- Tablet grid: 8 columns, 20px gap, 24px page padding.
-- Mobile grid: 4 columns, 16px gap, 16px page padding.
-- Expanded sidebar: 248px.
-- Compact sidebar: 72px.
-- Mobile internal navigation uses a sticky top menu with a collapsible primary navigation panel.
-- Topbar height: 64px to 72px.
-- Card radius: 16px.
-- Card padding: 20px to 24px.
-- Button height: 44px to 48px; large buttons 52px.
-- Inputs: 44px to 48px tall with 10px radius.
-- Spacing scale: 4, 8, 12, 16, 24, 32, 48, 64.
-
-### Accessibility Rules
-
-- Target WCAG AA contrast.
-- All form controls must have labels.
-- Focus states must be visible.
-- Interfaces must be keyboard-accessible.
-- Do not communicate status using color alone.
-
-## Local Development
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py test
-python manage.py runserver
-```
-
-Open `http://127.0.0.1:8000/` and sign in.
-
-## Deployment
-
-The project is configured for Docker-based deployment with PostgreSQL, Gunicorn, Nginx, and GitHub Actions.
-
-See `DEPLOYMENT.md` for VPS setup, environment variables, Nginx, and GitHub Actions secrets.
-
-## Make Commands
-
-- `make install`
-- `make migrate`
-- `make seed`
-- `make superuser`
-- `make test`
-- `make run`
+Prefer compact operational rows, clear client identity, labeled metadata, bounded lists, full-width workspaces and native dialogs. Use readable clinical text, visible focus, keyboard controls, mobile touch targets and text labels alongside status colors. Preserve current protections while improving usability.
