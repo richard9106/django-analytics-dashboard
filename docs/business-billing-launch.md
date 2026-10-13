@@ -49,3 +49,9 @@ Before publishing paid terms: complete the above tax decisions, purchaser declar
 - [Stripe — US sales tax, nexus and jurisdiction differences](https://docs.stripe.com/tax/supported-countries/united-states)
 
 Validation: 71 relevant Django/PostgreSQL tests passed, including existing-customer collection and replacing legacy pending sessions. These tests do not establish fiscal compliance or exercise a live payment.
+
+## Automatic invoice template assignment
+
+`STRIPE_INVOICE_TEMPLATE_ID` selects a template from the same Stripe environment as the API key. When configured, SaaS Checkout assigns it to the existing subscription customer or creates and persists a customer with that template before opening Checkout, so the first subscription invoice uses it. Customer creation uses an idempotency key. Template assignment errors block Checkout with a retry/support message. When the setting is blank, the existing Stripe default behavior remains available for development.
+
+This setting does not apply to Stripe Connect patient invoices. Existing SaaS subscription customers can receive the same customer-level setting without rewriting finalized invoices. Higher-priority invoice/subscription overrides in Stripe still take precedence. Updating this setting does not automatically bulk-update existing customers; the rollout must explicitly synchronize them. A test template ID must be replaced with the correct live-environment ID during a separately approved live rollout.

@@ -35,3 +35,33 @@ class BusinessBillingTests(TestCase):
         self.client.get(reverse('billing:subscribe',args=['solo','monthly']))
         expire.assert_called_once_with('cs_old')
         self.assertEqual(create.call_args.kwargs['metadata']['billing_policy'],'cardless-v2-billing-info')
+
+    @override_settings(STRIPE_INVOICE_TEMPLATE_ID='inrtem_fictional')
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    @patch('apps.billing.views.stripe.Customer.create')
+    def test_new_customer_has_template_before_checkout(self, customer_create, checkout_create):
+        customer_create.return_value = SimpleNamespace(id='cus_template')
+        checkout_create.return_value = SimpleNamespace(id='cs_template', url='https://checkout.stripe.test/template')
+        self.client.post(reverse('billing:subscribe', args=['solo', 'monthly']))
+        self.assertEqual(customer_create.call_args.kwargs['invoice_settings'], {'rendering_options': {'template': 'inrtem_fictional'}})
+        self.assertEqual(checkout_create.call_args.kwargs['customer'], 'cus_template')
+        self.assertEqual(PracticeSubscription.objects.get(practice=self.practice).stripe_customer_id, 'cus_template')
+
+    @override_settings(STRIPE_INVOICE_TEMPLATE_ID='inrtem_fictional')
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    @patch('apps.billing.views.stripe.Customer.modify')
+    def test_existing_customer_gets_template(self, modify, checkout_create):
+        PracticeSubscription.objects.create(practice=self.practice, status='canceled', stripe_customer_id='cus_existing')
+        checkout_create.return_value = SimpleNamespace(id='cs_template', url='https://checkout.stripe.test/template')
+        self.client.post(reverse('billing:subscribe', args=['solo', 'monthly']))
+        modify.assert_called_once_with('cus_existing', invoice_settings={'rendering_options': {'template': 'inrtem_fictional'}})
+
+    @override_settings(STRIPE_INVOICE_TEMPLATE_ID='inrtem_fictional')
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    @patch('apps.billing.views.stripe.Customer.modify')
+    def test_template_error_blocks_checkout(self, modify, checkout_create):
+        import stripe
+        PracticeSubscription.objects.create(practice=self.practice, status='canceled', stripe_customer_id='cus_existing')
+        modify.side_effect = stripe.error.InvalidRequestError('Invalid template', 'invoice_settings')
+        self.client.post(reverse('billing:subscribe', args=['solo', 'monthly']))
+        checkout_create.assert_not_called()
