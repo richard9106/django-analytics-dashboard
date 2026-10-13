@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 import stripe
 from django.conf import settings
@@ -97,6 +97,20 @@ def _sync_subscription_from_stripe(stripe_subscription, practice=None, allow_rep
         'cancel_at': datetime.fromtimestamp(stripe_subscription['cancel_at'], tz=dt_timezone.utc) if stripe_subscription.get('cancel_at') else None,
         'ended_at': datetime.fromtimestamp(stripe_subscription['ended_at'], tz=dt_timezone.utc) if stripe_subscription.get('ended_at') else None,
     }
+    # Extend application access for the remainder of the cancellation date.
+    # Do not alter Stripe's period or cancel_at: that could create another invoice.
+    cutoff = defaults['cancel_at'] or (defaults['current_period_end'] if defaults['cancel_at_period_end'] else None)
+    defaults['cancellation_access_until'] = None
+    if defaults['status'] in {PracticeSubscription.Status.ACTIVE, PracticeSubscription.Status.TRIALING} and cutoff:
+        defaults['cancellation_access_until'] = cutoff.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    elif (defaults['status'] == PracticeSubscription.Status.CANCELED and existing
+          and existing.stripe_subscription_id == stripe_subscription.get('id')
+          and existing.status in {PracticeSubscription.Status.ACTIVE, PracticeSubscription.Status.TRIALING, PracticeSubscription.Status.CANCELED}
+          and not existing.payment_failed_at and existing.cancellation_access_until):
+        until = existing.cancellation_access_until
+        if defaults['ended_at']:
+            until = min(until, defaults['ended_at'].replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1))
+        defaults['cancellation_access_until'] = until
     defaults['payment_failed_at'] = (
         (existing.payment_failed_at if existing else None) or timezone.now()
         if defaults['status'] == PracticeSubscription.Status.PAST_DUE else None

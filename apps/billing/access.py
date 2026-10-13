@@ -27,6 +27,9 @@ def subscription_access(practice):
         return {'mode': 'pending'}
     if sub.status in {PracticeSubscription.Status.ACTIVE, PracticeSubscription.Status.TRIALING}:
         return {'mode': 'full'}
+    if (sub.status == PracticeSubscription.Status.CANCELED and sub.cancellation_access_until
+            and timezone.now() < sub.cancellation_access_until):
+        return {'mode': 'full', 'cancellation_extension': True, 'until': sub.cancellation_access_until}
     if sub.status == PracticeSubscription.Status.PAST_DUE and sub.payment_failed_at:
         until = sub.payment_failed_at + timedelta(days=7)
         if timezone.now() < until:
@@ -65,6 +68,9 @@ class SubscriptionAccessMiddleware(MiddlewareMixin):
             request.user.is_authenticated and not is_client_user(request.user)
             and getattr(getattr(request.user, 'nuvia_profile', None), 'role', None)
             in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN})
+        subscription = getattr(practice, 'subscription', None) if practice and request.subscription_manager else None
+        request.subscription_cancellation = subscription if subscription and (
+            subscription.cancellation_scheduled or state.get('cancellation_extension')) else None
         if state['mode'] in {'full', 'grace'}:
             return None
         if name in self.always_available or name.startswith(('security_', 'mfa_', 'password_reset')):

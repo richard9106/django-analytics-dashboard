@@ -5,3 +5,10 @@
   {% if request.subscription_manager %}<a href="{% url 'billing:subscribe' 'solo' 'monthly' %}" title="$39 per active user/month. Payment starts when you confirm in Stripe.">Get subscription<span class="sr-only"> — $39 per active user/month; payment starts when you confirm in Stripe</span></a>{% else %}<span class="trial-toolbar-help">No automatic charge</span>{% endif %}
 </aside>
 {% endif %}
+{% if request.resolver_match.url_name == 'dashboard' and request.subscription_manager and request.subscription_cancellation %}
+<aside class="trial-toolbar-notice cancellation-toolbar-notice" role="status" aria-label="Subscription cancellation">
+  <span class="trial-toolbar-icon" aria-hidden="true">!</span>
+  <span><strong>{% if request.subscription_access.cancellation_extension %}Subscription ended{% else %}Cancellation scheduled{% endif %}</strong>{% if request.subscription_cancellation.cancellation_access_date %} · Access through {{ request.subscription_cancellation.cancellation_access_date|date:"M j, Y" }} (full day, UTC){% else %} · Check Stripe for the end date{% endif %}</span>
+  <a href="{% url 'profile_settings' %}">Manage subscription</a>
+</aside>
+{% endif %}
