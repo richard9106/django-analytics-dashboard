@@ -1628,9 +1628,9 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
 .session-more-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 12px; margin-top: 8px; }
 .session-list-filters .field { flex: 1 1 140px; min-width: 0; }
 .session-list-filters input, .session-list-filters select { width: 100%; min-height: 44px; }
-.session-table .documentation-pending { background: #fff4e8; }
-.session-table .documentation-pending td { background: inherit; }
-.session-documentation-label { color: #9a3412; font-weight: 700; }
+.session-table .documentation-pending, .session-table .documentation-pending td { background: #fff0df; }
+.session-table .documentation-pending td:first-child { box-shadow: inset 3px 0 #ea8a36; }
+.session-documentation-label { color: #9a3412; background: #ffe4bf; border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 700; }
 .session-row-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .session-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
 .note-sign-form { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }

@@ -72,6 +72,7 @@ class SessionDocumentationTests(TestCase):
         self.assertEqual(note.signed_by_id, self.therapist_user.pk)
         response = self.listing(self.therapist_user)
         self.assertFalse(response.context['appointments'][0].documentation_pending)
+        self.assertNotContains(response, 'class="documentation-pending"')
         self.assertEqual(self.listing(self.therapist_user, documentation='needs_attention').context['paginator'].count, 0)
         with self.assertRaises(ValidationError):
             note.content = 'Changed'
@@ -79,12 +80,18 @@ class SessionDocumentationTests(TestCase):
         with self.assertRaises(ValidationError):
             SessionNote.objects.filter(pk=note.pk).update(content='Changed')
 
-    def test_future_cancelled_and_no_show_are_not_documentation_alerts(self):
+    def test_past_sessions_are_flagged_regardless_of_status_and_future_are_not(self):
         self.own.status='cancelled'; self.own.save()
         self.other.status='no_show'; self.other.save()
         self.appointment(self.owner, starts_at=timezone.now()+timedelta(hours=1), ends_at=timezone.now()+timedelta(hours=2), status='scheduled')
         response = self.listing(self.owner)
-        self.assertFalse(any(a.documentation_pending for a in response.context['appointments']))
+        pending = {a.pk for a in response.context['appointments'] if a.documentation_pending}
+        self.assertEqual(pending, {self.own.pk, self.other.pk})
+        self.assertContains(response, 'class="documentation-pending"', count=2)
+        filtered = self.listing(self.owner, documentation='needs_attention')
+        self.assertEqual({a.pk for a in filtered.context['appointments']}, pending)
+        self.own.status = 'scheduled'; self.own.save()
+        self.assertContains(self.listing(self.therapist_user), 'class="documentation-pending"', count=1)
 
     def test_signing_requires_author_confirmation_and_current_review(self):
         note = self.note()
@@ -102,6 +109,9 @@ class SessionDocumentationTests(TestCase):
         note.refresh_from_db(); self.assertIsNone(note.signed_at)
         self.client.post(url, {'confirm_signature':'on','review_digest':note.review_digest()})
         note.refresh_from_db(); self.assertIsNotNone(note.signed_at)
+        self.assertTrue(note.is_locked)
+        with self.assertRaises(ValidationError):
+            SessionNote.objects.filter(pk=note.pk).update(content='Changed after signing')
         self.assertContains(self.client.get(url), 'Signed by')
         first_signed_at = note.signed_at
         self.client.post(url, {'confirm_signature':'on','review_digest':note.review_digest()})

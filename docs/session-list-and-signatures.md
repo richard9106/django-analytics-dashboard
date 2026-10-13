@@ -7,8 +7,8 @@ The same scope applies to appointment URLs, recurring-session actions, note form
 clinical notes, dashboard session data and client-profile session summaries.
 
 Ended appointments without a signed note have a light orange row plus “Note missing”
-or “Signature pending”. Future appointments, cancellations and no-shows are not
-flagged. A draft record is treated as an existing note, including an empty draft,
+or “Signature pending”. The scheduled end time determines whether documentation
+is due, regardless of appointment status; future appointments are not flagged. A draft record is treated as an existing note, including an empty draft,
 so the workflow offers review rather than creating a duplicate.
 
 Create note from the list preselects the session, client and therapist. After saving,
