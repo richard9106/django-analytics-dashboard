@@ -25,7 +25,7 @@ def build_export_data(practice, scope):
     data = {'scope': scope, 'practice': {'id': practice.pk, 'name': practice.name, 'email': practice.email}}
     if scope in {'all', 'clinical'}:
         data['clients'] = _rows(Client.objects.filter(practice=practice), 'id', 'public_id', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'status', 'insurance_provider', 'insurance_member_id', 'created_at', 'updated_at')
-        data['appointments'] = _rows(Appointment.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'starts_at', 'ends_at', 'status', 'appointment_type', 'location', 'meeting_url', 'created_at')
+        data['appointments'] = _rows(Appointment.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'starts_at', 'ends_at', 'status', 'session_kind', 'appointment_type', 'location', 'meeting_url', 'created_at')
         data['diagnoses'] = _rows(Diagnosis.objects.filter(practice=practice), 'id', 'client_id', 'code', 'label', 'diagnosed_at', 'active', 'created_at')
         data['treatment_plans'] = _rows(TreatmentPlan.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'title', 'status', 'goals', 'objectives', 'interventions', 'start_date', 'review_date', 'completed_at', 'created_at', 'updated_at')
         data['session_notes'] = _rows(SessionNote.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'appointment_id', 'treatment_plan_id', 'note_type', 'content', 'treatment_progress', 'is_locked', 'locked_at', 'created_at', 'updated_at')

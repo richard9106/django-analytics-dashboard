@@ -106,6 +106,10 @@ class Appointment(models.Model):
         CANCELLED = "cancelled", "Cancelled"
         NO_SHOW = "no_show", "No Show"
 
+    class SessionKind(models.TextChoices):
+        STANDARD = 'standard', 'Standard session'
+        INITIAL_CONSULTATION = 'initial_consultation', 'Initial consultation'
+
     class AppointmentType(models.TextChoices):
         IN_PERSON = "in_person", "In Person"
         VIDEO = "video", "Video Call"
@@ -151,6 +155,7 @@ class Appointment(models.Model):
         choices=Status.choices,
         default=Status.SCHEDULED,
     )
+    session_kind = models.CharField(max_length=30, choices=SessionKind.choices, default=SessionKind.STANDARD)
     appointment_type = models.CharField(
         max_length=20,
         choices=AppointmentType.choices,

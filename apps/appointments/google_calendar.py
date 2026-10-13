@@ -23,6 +23,7 @@ def build_event_payload(appointment):
         'NuviaMy appointment.',
         f'Client: {appointment.client}',
         f'Therapist: {appointment.therapist}',
+        f'Session: {appointment.get_session_kind_display()}',
     ]
     if appointment.meeting_url:
         description_parts.append(f'Meeting URL: {appointment.meeting_url}')

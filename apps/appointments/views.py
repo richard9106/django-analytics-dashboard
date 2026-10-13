@@ -84,6 +84,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             appointments = appointments.filter(therapist_id=filters['therapist'])
         if filters['status'] in dict(Appointment.Status.choices):
             appointments = appointments.filter(status=filters['status'])
+        if filters['session_kind'] in Appointment.SessionKind.values:
+            appointments = appointments.filter(session_kind=filters['session_kind'])
         if filters['appointment_type'] in dict(Appointment.AppointmentType.choices):
             appointments = appointments.filter(appointment_type=filters['appointment_type'])
         if filters['sync_status'] in dict(Appointment.SyncStatus.choices):
@@ -116,6 +118,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             'q': self.request.GET.get('q', '').strip(),
             'therapist': self.request.GET.get('therapist', ''),
             'status': self.request.GET.get('status', ''),
+            'session_kind': self.request.GET.get('session_kind', ''),
             'appointment_type': self.request.GET.get('appointment_type', ''),
             'sync_status': self.request.GET.get('sync_status', ''),
         }
@@ -168,7 +171,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         local_start = timezone.localtime(appointment.starts_at)
         local_end = timezone.localtime(appointment.ends_at)
         start_minutes = max(0, (local_start.hour - self.calendar_start_hour) * 60 + local_start.minute)
-        duration_minutes = max(25, int((local_end - local_start).total_seconds() // 60))
+        duration_minutes = max(1, int((local_end - local_start).total_seconds() // 60))
         top = int(start_minutes * (self.calendar_hour_height / 60))
         height = int(duration_minutes * (self.calendar_hour_height / 60))
         max_height = (self.calendar_end_hour - self.calendar_start_hour + 1) * self.calendar_hour_height
@@ -176,7 +179,8 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             top = max_height - 28
         return {
             'appointment': appointment,
-            'style': f'top: {top}px; min-height: {max(34, height)}px;',
+            'compact': duration_minutes <= 20,
+            'style': (f'top: {top}px; height: {max(12, height)}px; min-height: {max(12, height)}px;' if duration_minutes <= 20 else f'top: {top}px; min-height: {max(34, height)}px;'),
         }
 
     def get_calendar_context(self, appointments):
@@ -357,6 +361,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['session_kind_choices'] = Appointment.SessionKind.choices
         context['can_manage_sessions'] = manages_sessions(self.request.user)
         context['session_list_url'] = self.calendar_url(view='list', page=None)
         context['session_calendar_url'] = self.calendar_url(view='week', page=None)
@@ -430,6 +435,9 @@ class AppointmentCreateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
                 initial['client'] = client.pk
                 if client.primary_therapist_id:
                     initial['therapist'] = client.primary_therapist_id
+        session_kind = self.request.GET.get('session_kind')
+        if session_kind in Appointment.SessionKind.values:
+            initial['session_kind'] = session_kind
         date_value = self.request.GET.get('date')
         if date_value:
             try:
@@ -438,7 +446,7 @@ class AppointmentCreateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
                 return initial
             starts_at = timezone.make_aware(datetime.combine(selected_date, time(hour=9)))
             initial['starts_at'] = starts_at
-            initial['ends_at'] = starts_at + timedelta(minutes=50)
+            initial['ends_at'] = starts_at + timedelta(minutes=15 if initial.get('session_kind') == Appointment.SessionKind.INITIAL_CONSULTATION else 50)
         return initial
 
     def get_context_data(self, **kwargs):
@@ -454,7 +462,7 @@ class AppointmentCreateView(CalendarReturnMixin, LoginRequiredMixin, PracticePer
         first = form.save(commit=False)
         first.series_id = series_id
         occurrences = [first]
-        fields = ('practice', 'client', 'therapist', 'status', 'appointment_type',
+        fields = ('practice', 'client', 'therapist', 'status', 'session_kind', 'appointment_type',
                   'location', 'meeting_url', 'notes', 'series_id')
         for index in range(1, repeat_count):
             occurrences.append(Appointment(
@@ -589,6 +597,7 @@ class AppointmentSeriesUpdateView(CalendarReturnMixin, LoginRequiredMixin, Pract
                     occurrence.therapist = updated.therapist
                     occurrence.starts_at = occurrence.starts_at + start_delta
                     occurrence.ends_at = occurrence.starts_at + duration
+                    occurrence.session_kind = updated.session_kind
                     occurrence.appointment_type = updated.appointment_type
                     occurrence.status = updated.status
                     occurrence.location = updated.location

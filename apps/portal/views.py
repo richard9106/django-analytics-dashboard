@@ -868,7 +868,7 @@ class IntakeTemplateCreateView(PracticePermissionMixin, PracticeContextMixin, Vi
             return TemplateResponse(request, 'intake/template_form.html', {'form': form, 'intake_template': None})
         template = form.save()
         log_audit_event(request, AuditLog.Action.CREATE, 'portal.IntakePacketTemplate', template.pk, practice=practice, metadata={'name': template.name})
-        messages.success(request, 'Intake template created.')
+        messages.success(request, 'Form template created.')
         return redirect('intake:list')
 
 
@@ -908,7 +908,7 @@ class ClientIntakeAssignView(PracticePermissionMixin, PracticeContextMixin, View
         assignment = form.save()
         log_audit_event(request, AuditLog.Action.CREATE, 'portal.ClientIntakeAssignment', assignment.pk,
                         practice=practice, metadata={'client_id': assignment.client_id, 'template_id': assignment.template_id})
-        messages.success(request, 'Intake packet assigned. The patient can complete it in their portal.')
+        messages.success(request, 'Client form assigned. The patient can complete it in their portal.')
         return redirect('intake:list')
 
 
@@ -945,7 +945,7 @@ class ClientIntakeReviewView(PracticePermissionMixin, PracticeContextMixin, View
                 assignment.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'updated_at'])
                 log_audit_event(request, AuditLog.Action.UPDATE, 'portal.ClientIntakeAssignment', assignment.pk,
                                 practice=practice, metadata={'client_id': assignment.client_id, 'status': assignment.status})
-                messages.success(request, 'Intake responses marked as reviewed.')
+                messages.success(request, 'Form responses marked as reviewed.')
         return redirect('intake:list')
 
 

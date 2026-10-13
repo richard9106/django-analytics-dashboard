@@ -99,9 +99,10 @@
       const dialog = document.getElementById('appointment-create-modal');
       if (!dialog || typeof dialog.showModal !== 'function') return;
       const selectedTime = timeFromPointer(event, column);
-      const values = datetimeFor(column.dataset.dropDate, selectedTime);
+      const duration = dialog.querySelector('[name="session_kind"]')?.value === 'initial_consultation' ? 15 : calendarGridConfig.defaultDurationMinutes;
+      const values = datetimeFor(column.dataset.dropDate, selectedTime, duration);
       const feedback = dialog.querySelector('[data-scheduling-feedback]');
-      if (feedback) feedback.hidden = isAvailable(column, selectedTime);
+      if (feedback) feedback.hidden = isAvailable(column, selectedTime, duration);
       dialog.querySelector('[name="starts_at"]').value = values.start;
       dialog.querySelector('[name="ends_at"]').value = values.end;
       dialog._returnFocus = column.querySelector('[data-modal-target="appointment-create-modal"]');
@@ -121,7 +122,7 @@
         const start = dialog.querySelector('[name="starts_at"]');
         const end = dialog.querySelector('[name="ends_at"]');
         start.value = `${trigger.dataset.appointmentDate}T09:00`;
-        end.value = `${trigger.dataset.appointmentDate}T09:50`;
+        end.value = `${trigger.dataset.appointmentDate}T${dialog.querySelector('[name="session_kind"]')?.value === 'initial_consultation' ? '09:15' : '09:50'}`;
       }
       if (trigger.dataset.availabilityDate) {
         dialog.querySelector('[name="date"]').value = trigger.dataset.availabilityDate;
@@ -158,6 +159,7 @@
     });
 
     document.querySelectorAll('form.appointment-form').forEach((form) => {
+      if (form.querySelector('[name="session_kind"]')) return;
       const start = form.querySelector('[name="starts_at"]');
       const end = form.querySelector('[name="ends_at"]');
       if (!start || !end) return;

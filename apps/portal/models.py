@@ -30,6 +30,7 @@ class ClientPortalAccess(models.Model):
 
 class ClientPortalRequest(models.Model):
     class Category(models.TextChoices):
+        INITIAL_CONSULTATION = 'initial_consultation', 'Initial consultation request'
         RESCHEDULE = "reschedule", "I need to reschedule"
         CANCELLATION = "cancellation", "I need to cancel"
         BILLING = "billing", "Billing question"

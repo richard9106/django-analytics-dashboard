@@ -67,6 +67,8 @@ jobs:
         run: python -m pip check
       - name: Check patient diagnosis picker
         run: node ops/check_diagnosis_picker.cjs
+      - name: Check initial consultation duration
+        run: node ops/check_session_duration.cjs
       - name: Check client session picker
         run: node ops/check_client_session_picker.cjs
       - name: Check appointment calendar interactions
