@@ -41,7 +41,7 @@ def subscription_access(practice):
 
 class SubscriptionAccessMiddleware(MiddlewareMixin):
     always_available = {
-        'home', 'pricing', 'features', 'help_center', 'support_contact', 'cookie_policy', 'privacy_policy',
+        'home', 'pricing', 'features', 'help_center', 'support_contact', 'cookie_policy', 'privacy_policy', 'terms_of_service', 'legal_notice',
         'login', 'logout', 'force_password_change', 'profile_settings', 'practice_data_export',
         'billing:subscription_access', 'billing:subscribe', 'billing:subscribe_success',
         'billing:subscribe_cancel', 'billing:customer_portal', 'billing:change_plan',

@@ -68,6 +68,8 @@ urlpatterns = [
     path('help/contact/', SupportContactView.as_view(), name='support_contact'),
     path('cookie-policy/', TemplateView.as_view(template_name='marketing/cookie_policy.html'), name='cookie_policy'),
     path('privacy/', TemplateView.as_view(template_name='marketing/privacy_policy.html'), name='privacy_policy'),
+    path('terms/', TemplateView.as_view(template_name='marketing/terms.html'), name='terms_of_service'),
+    path('legal/', TemplateView.as_view(template_name='marketing/legal_notice.html'), name='legal_notice'),
     path('therapy-practice-management-software/', TherapyPracticeManagementPageView.as_view(), name='therapy_practice_management'),
     path('therapy-scheduling-software/', TherapySchedulingPageView.as_view(), name='therapy_scheduling_software'),
     path('clinical-notes-software-for-therapists/', ClinicalNotesSoftwarePageView.as_view(), name='clinical_notes_software'),

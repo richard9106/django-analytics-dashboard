@@ -85,6 +85,7 @@ TEMPLATES = [
             'apps.portal.context_processors.portal_request_badge',
             'apps.accounts.access.permission_context',
             'apps.accounts.context_processors.security_context',
+            'apps.accounts.legal.legal_context',
         ]},
     },
 ]
@@ -200,6 +201,7 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'false').lower() == 'true'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'false').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'NuviaMy <noreply@nuviamy.com>')
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@nuviamy.com')
+OPERATOR_TAX_ID = os.getenv('OPERATOR_TAX_ID', '')
 
 if DJANGO_ENVIRONMENT == 'production':
     validate_production_settings(globals())
