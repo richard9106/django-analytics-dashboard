@@ -103,6 +103,7 @@ See [Session documentation and signatures](docs/session-list-and-signatures.md).
 - SaaS pricing is one plan per active internal user. Active owners, admins and therapists count; client portal users and inactive staff do not.
 - Signup starts the fixed **15-day cardless period**, without creating a Stripe subscription. Cancelling checkout does not extend that deadline.
 - Expiry preserves authorized record reading and exports while restricting writes. Paid conversion requires explicit checkout confirmation and starts billing immediately, with no additional Stripe trial.
+- Subscription checkout requests a billing address and offers business tax ID collection; collecting these details does not calculate tax or enforce a US-only professional purchase.
 - Get subscription uses the current internal-user quantity. Monthly/annual checkout, period-change proration previews, subscription state, invoice history and Stripe Customer Portal are supported.
 - Team changes attempt quantity synchronization. Periodic drift reconciliation remains pending.
 - **Ten private early-access invitations** each cover one internal user in a new practice for twelve calendar months. They are email-bound, one-use links with a 30-day redemption expiry, not an automatic first-ten-signups promotion. Additional internal staff require voluntary paid conversion.
@@ -171,6 +172,7 @@ Older audits and status documents describe their review date. Recheck their find
 - [Cardless trial and private invitations](docs/cardless-trial-early-access.md)
 - [Cookie choices and public footer](docs/cookie-choices-2026-10-09.md)
 - [Professional-preview legal notices](docs/preview-legal-notices.md)
+- [US professional billing preparation and draft commercial conditions](docs/business-billing-launch.md)
 - [Client workspace review](docs/client-chart-ui-review.md)
 - [Mobile UI review](docs/mobile-ui-review.md)
 - [Clinical readiness assessment and release criteria](docs/clinical-readiness-us.md)

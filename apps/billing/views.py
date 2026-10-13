@@ -644,7 +644,7 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
                 if previous.status == 'open':
                     previous_metadata = getattr(previous, 'metadata', {}) or {}
                     if (subscription.stripe_price_id == price_id
-                            and previous_metadata.get('billing_policy') == 'cardless-v1'
+                            and previous_metadata.get('billing_policy') == 'cardless-v2-billing-info'
                             and previous_metadata.get('active_user_count') == str(quantity)):
                         return redirect(previous.url)
                     stripe.checkout.Session.expire(previous.id)
@@ -654,17 +654,20 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
         session_kwargs = {
             'mode': 'subscription',
             'payment_method_collection': 'always',
+            'billing_address_collection': 'required',
+            'tax_id_collection': {'enabled': True},
             'line_items': [{'price': price_id, 'quantity': quantity}],
             'success_url': request.build_absolute_uri(reverse('billing:subscribe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url': request.build_absolute_uri(reverse('billing:subscribe_cancel')),
             'client_reference_id': str(practice.pk),
-            'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v1', 'active_user_count': str(quantity)},
+            'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v2-billing-info', 'active_user_count': str(quantity)},
             'subscription_data': {
-                'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v1'},
+                'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v2-billing-info'},
             },
         }
         if customer_id:
             session_kwargs['customer'] = customer_id
+            session_kwargs['customer_update'] = {'address': 'auto', 'name': 'auto'}
         else:
             session_kwargs['customer_email'] = request.user.email
 
