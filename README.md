@@ -11,7 +11,7 @@ Last documentation review: **October 13, 2026**. The latest functional release i
 - New practices receive **15 days without a card**. Paid billing starts only after an explicit checkout confirmation.
 - Sign-in currently uses credentials only (`DJANGO_MFA_REQUIRED=false`). TOTP MFA and recovery controls remain available for later activation.
 - Authenticated sessions expire after **one hour of inactivity** and have an **eight-hour absolute limit**.
-- The latest functional release passed **513 PostgreSQL tests**, JavaScript interaction checks, migration/deployment checks and database role/backup-restore checks in CI. Production verification confirmed the initial consultation defaults, migrations and enabled clinical immutability guards.
+- The latest functional release passed **527 PostgreSQL tests**, JavaScript interaction checks, migration/deployment checks and database role/backup-restore checks in CI. Production verification confirmed the initial consultation defaults, migrations and enabled clinical immutability guards.
 
 The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See [Clinical readiness for the US](docs/clinical-readiness-us.md).
 
@@ -130,7 +130,7 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 - Mobile navigation collapses into a top menu; forms/dialogs stack, period navigation stays on one row, and Messages becomes a floating circular button.
 - Pricing presents the single per-user plan centrally; mobile signup actions remain visible.
 - Public footer links to support, privacy, cookie policy and Cookie settings. The cookie choice controls optional tour storage; essential authentication/CSRF cookies remain functional. No advertising analytics are installed.
-- Help Center and support contact form are available. The privacy page is an interim notice; final operator/service terms and launch acceptance evidence remain pending.
+- Help Center and support contact form are available. Versioned professional-preview terms, privacy and operator legal notice are published in the footer. Signup requires explicit terms acceptance, recorded in append-only audit with the actor, timestamp and notice versions. The preview permits fictional records only; paid-launch documents, provider contracts and clinical readiness evidence remain pending.
 
 ### Technical protections and operations
 
@@ -155,7 +155,7 @@ This is a checkpoint, not a new audit or a claim that every historical finding r
 
 ### Paid launch and clinical readiness
 
-- Finalize operator/service terms, launch privacy information and acceptance records; verify support and email delivery end to end.
+- Complete paid-launch terms/taxes, retention and provider agreements; preview notices and versioned signup acceptance are implemented. SMTP, support forwarding and password reset have been verified with the operator.
 - Complete a separately approved Stripe live-mode rollout and validate the payment/subscription lifecycle.
 - Confirm launch states, provider contracts/BAAs, risk assessment, retention/legal-hold policy, incident response, patient rights workflows and production recovery evidence.
 - Complete clinical workflow validation and independent security review before using real patient data.
@@ -170,6 +170,7 @@ Older audits and status documents describe their review date. Recheck their find
 - [Session list and signatures](docs/session-list-and-signatures.md)
 - [Cardless trial and private invitations](docs/cardless-trial-early-access.md)
 - [Cookie choices and public footer](docs/cookie-choices-2026-10-09.md)
+- [Professional-preview legal notices](docs/preview-legal-notices.md)
 - [Client workspace review](docs/client-chart-ui-review.md)
 - [Mobile UI review](docs/mobile-ui-review.md)
 - [Clinical readiness assessment and release criteria](docs/clinical-readiness-us.md)

@@ -22,8 +22,8 @@
         </span>
         <span>NuviaMy</span>
       </a>
-      <p class="eyebrow">Start your workspace</p>
-      <h1>Create your therapy practice account.</h1>
+      <p class="eyebrow">Professional preview</p>
+      <h1>Create your professional preview workspace.</h1>
       <p>NuviaMy creates your practice, owner account, therapist profile, and secure workspace in one guided flow. {% if form.invitation.value %}Private invitation: 12 months free for one internal user. No card required.{% else %}Your 15-day free trial starts immediately. No card required.{% endif %}</p>
       <div class="trust-list dark">
         <span>{{ selected_plan_label }}</span>
@@ -46,6 +46,7 @@
 
         <div class="sync-panel">
           <strong>Free access — no payment commitment</strong>
+          <p>Evaluate with fictional data only. Do not enter identifiable patient or client information.</p>
           <p>No card required. You won’t be charged automatically. At the end of your free access, choose a paid subscription or keep read-only access to existing records. Authorized users can export practice data.</p>
         </div>
 
@@ -127,6 +128,11 @@
           </div>
         </fieldset>
 
+        <div class="signup-terms">
+          <label class="signup-terms-check" for="id_accept_terms">{{ form.accept_terms }} <span>I agree to the <a href="{% url 'terms_of_service' %}" target="_blank" rel="noopener">professional preview terms (opens a new tab)</a>.</span></label>
+          <div id="terms-errors">{{ form.accept_terms.errors }}</div>
+          <p id="terms-help">This preview is for evaluation with test data. Do not enter identifiable client or patient information. Read our <a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">privacy notice (opens a new tab)</a>.</p>
+        </div>
         <button class="btn btn-primary signup-submit" type="submit">Create account and start free access</button>
         <p class="signup-footnote">Already have an account? <a href="{% url 'login' %}">Sign in</a>.</p>
       </form>

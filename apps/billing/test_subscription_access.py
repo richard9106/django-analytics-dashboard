@@ -157,7 +157,7 @@ class SubscriptionAccessTests(TestCase):
         self.assertNotIn('trial_period_days', create.call_args.kwargs['subscription_data'])
 
     def test_signup_marks_practice_as_subscription_required(self):
-        form = PracticeSignupForm(data={'practice_name':'New practice','practice_type':'solo','first_name':'Test','last_name':'Owner','email':'new-owner@example.invalid','password1':'ValidPasswordForTest2026!','password2':'ValidPasswordForTest2026!','license_number':'test-signup','license_state':'CA'})
+        form = PracticeSignupForm(data={'accept_terms':True,'practice_name':'New practice','practice_type':'solo','first_name':'Test','last_name':'Owner','email':'new-owner@example.invalid','password1':'ValidPasswordForTest2026!','password2':'ValidPasswordForTest2026!','license_number':'test-signup','license_state':'CA'})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertTrue(form.save().nuvia_profile.practice.subscription_required)
 
@@ -200,7 +200,7 @@ class SubscriptionAccessTests(TestCase):
 
 class CardlessTrialTests(TestCase):
     def signup_data(self, **extra):
-        return dict(practice_name='Trial practice', practice_type='solo', first_name='Test', last_name='Owner', email='owner@example.invalid', password1='TrialSecureTest2026!', password2='TrialSecureTest2026!', license_number='trial-unique', license_state='CA', **extra)
+        return dict(accept_terms=True, practice_name='Trial practice', practice_type='solo', first_name='Test', last_name='Owner', email='owner@example.invalid', password1='TrialSecureTest2026!', password2='TrialSecureTest2026!', license_number='trial-unique', license_state='CA', **extra)
 
     def test_signup_starts_fifteen_days_without_checkout(self):
         form = PracticeSignupForm(self.signup_data())
