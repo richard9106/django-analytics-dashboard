@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
+  {% load static %}<link rel="stylesheet" href="{% static 'subscription-status.css' %}">
 </head>
 <body class="app-page profile-settings-page">
   <div class="app-shell">
@@ -73,6 +74,13 @@
                <span class="badge {% if subscription.status == 'active' or subscription.status == 'trialing' %}success{% elif subscription.status == 'past_due' %}warning{% else %}brand{% endif %}">{{ subscription.status|title }}</span>
                <h3>Per-user subscription</h3>
                <p>{{ subscription.get_billing_period_display }} billing · {{ subscription.internal_user_count }} active user{{ subscription.internal_user_count|pluralize }}</p>
+               {% if subscription.status == 'canceled' %}
+                 <div class="subscription-end-notice"><strong>Your subscription has ended.</strong>{% if subscription.ended_at %}<p>Ended {{ subscription.ended_at|date:"M j, Y, g:i A T" }}.</p>{% endif %}<p>You can read and export existing records according to your permissions. A paid subscription is required to resume editing.</p></div>
+               {% elif subscription.cancellation_scheduled %}
+                 <div class="subscription-end-notice"><span class="badge warning">Cancellation scheduled</span>{% if subscription.cancellation_effective_at %}<p>Your subscription is scheduled to end on <strong>{{ subscription.cancellation_effective_at|date:"M j, Y, g:i A T" }}</strong>. It will not renew.</p>{% else %}<p>Your subscription is scheduled to end. Check Stripe for the confirmed end date.</p>{% endif %}{% if subscription.status == 'active' or subscription.status == 'trialing' %}<p>Your access remains active until then.</p>{% elif request.subscription_access.mode == 'grace' %}<p>Your payment grace period still applies.</p>{% else %}<p>Your current access is read-only because payment is overdue.</p>{% endif %}</div>
+               {% elif subscription.current_period_end and subscription.status == 'active' %}
+                 <p>Renews on {{ subscription.current_period_end|date:"M j, Y" }}.</p>
+               {% endif %}
              </div>
              {% if subscription.stripe_customer_id %}
                <form method="post" action="{% url 'billing:customer_portal' %}" class="profile-billing-actions">

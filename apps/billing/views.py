@@ -93,6 +93,9 @@ def _sync_subscription_from_stripe(stripe_subscription, practice=None, allow_rep
         'stripe_subscription_id': stripe_subscription.get('id', ''),
         'stripe_price_id': price_id,
         'current_period_end': _period_end_from_subscription(stripe_subscription),
+        'cancel_at_period_end': bool(stripe_subscription.get('cancel_at_period_end', False)),
+        'cancel_at': datetime.fromtimestamp(stripe_subscription['cancel_at'], tz=dt_timezone.utc) if stripe_subscription.get('cancel_at') else None,
+        'ended_at': datetime.fromtimestamp(stripe_subscription['ended_at'], tz=dt_timezone.utc) if stripe_subscription.get('ended_at') else None,
     }
     defaults['payment_failed_at'] = (
         (existing.payment_failed_at if existing else None) or timezone.now()
