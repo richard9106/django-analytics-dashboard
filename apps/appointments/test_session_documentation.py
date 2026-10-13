@@ -211,6 +211,45 @@ class SessionDocumentationTests(TestCase):
         self.assertIn('appointment', form.errors)
         self.assertNotIn(unrelated, form.fields['appointment'].queryset)
 
+    def test_initial_consultation_keeps_format_duration_and_client_progress(self):
+        self.client.force_login(self.owner)
+        date = (timezone.localdate()+timedelta(days=1)).isoformat()
+        response = self.client.get(reverse('appointments:create'), {'client':self.patient.pk, 'session_kind':'initial_consultation', 'date':date})
+        initial = response.context['form'].initial
+        self.assertEqual(initial['session_kind'], 'initial_consultation')
+        self.assertEqual(initial['ends_at']-initial['starts_at'], timedelta(minutes=15))
+        self.assertEqual(initial['client'], self.patient.pk)
+        self.assertContains(response, 'Initial consultation')
+        response = self.client.get(reverse('clients:detail', args=[self.patient.pk]))
+        self.assertIsNone(response.context['initial_consultation'])
+        self.assertContains(response, 'Schedule consultation')
+        consultation = self.appointment(self.therapist_user, session_kind='initial_consultation', appointment_type='video', starts_at=initial['starts_at'], ends_at=initial['ends_at'], status='scheduled')
+        self.assertEqual(consultation.duration_minutes, 15)
+        self.assertEqual(consultation.appointment_type, 'video')
+        response = self.listing(self.owner, view='day', date=date)
+        event = next(item for item in response.context['calendar_day_timed_events'] if item['appointment'].pk == consultation.pk)
+        self.assertTrue(event['compact'])
+        self.assertIn('height: 18px', event['style'])
+        self.assertContains(response, 'gcal-event-compact')
+        self.assertEqual(self.client.get(reverse('clients:detail', args=[self.patient.pk])).context['initial_consultation'], consultation)
+        consultation.status='cancelled'; consultation.save()
+        self.assertContains(self.client.get(reverse('clients:detail', args=[self.patient.pk])), 'Schedule consultation')
+        consultation.status='completed'; consultation.save()
+        self.assertNotContains(self.client.get(reverse('clients:detail', args=[self.patient.pk])), 'Schedule consultation')
+        self.client.force_login(self.other_user)
+        self.assertIsNone(self.client.get(reverse('clients:detail', args=[self.patient.pk])).context['initial_consultation'])
+        self.assertEqual(self.own.session_kind, 'standard')
+
+    def test_initial_consultation_request_is_classified_in_registered_requests(self):
+        from apps.portal.models import ClientPortalRequest
+        self.client.force_login(self.owner)
+        request = ClientPortalRequest.objects.create(practice=self.practice, client=self.patient, category='initial_consultation', subject='Fictional introduction request', message='Please arrange an introduction.')
+        response = self.client.get(reverse('portal_requests:list'))
+        self.assertContains(response, 'Initial consultation request')
+        self.assertContains(response, 'session_kind=initial_consultation')
+        request.status='resolved'; request.save()
+        self.assertNotContains(self.client.get(reverse('portal_requests:list')), '>Schedule consultation</a>')
+
     def test_list_paginates_and_filter_links_survive(self):
         for _ in range(25): self.appointment(self.therapist_user)
         response = self.listing(self.therapist_user, documentation='needs_attention', q='Fictional')

@@ -19,12 +19,14 @@ class AppointmentForm(forms.ModelForm):
             'therapist',
             'starts_at',
             'ends_at',
+            'session_kind',
             'appointment_type',
             'status',
             'location',
             'meeting_url',
             'notes',
         ]
+        labels = {'session_kind': 'Session', 'appointment_type': 'Format'}
         widgets = {
             'starts_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'ends_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
@@ -33,6 +35,7 @@ class AppointmentForm(forms.ModelForm):
 
     def __init__(self, *args, practice=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['session_kind'].required = False
         self.practice = practice
         self.instance.practice = practice
         if self.instance.pk:
@@ -56,6 +59,9 @@ class AppointmentForm(forms.ModelForm):
             if not manages_sessions(user):
                 self.fields['therapist'].queryset = self.fields['therapist'].queryset.filter(user=user)
                 self.initial['therapist'] = self.fields['therapist'].queryset.values_list('pk', flat=True).first()
+
+    def clean_session_kind(self):
+        return self.cleaned_data.get('session_kind') or self.instance.session_kind or Appointment.SessionKind.STANDARD
 
     def save(self, commit=True):
         appointment = super().save(commit=False)

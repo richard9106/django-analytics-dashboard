@@ -107,7 +107,7 @@
                 <section class="agenda-day"><div class="agenda-day-head"><h3>{{ day.date|date:"l, M j" }}</h3>{% if workspace_permissions.appointments.create %}<a class="btn btn-soft" href="{% url 'appointments:create' %}?date={{ day.date|date:'Y-m-d' }}&next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-create-modal" data-appointment-date="{{ day.date|date:'Y-m-d' }}">+ Appointment</a>{% endif %}</div>
                 {% for appointment in day.appointments %}<article class="agenda-session{% if appointment.documentation_pending %} documentation-pending{% endif %}">
                   <div class="agenda-time"><strong>{{ appointment.starts_at|time:"g:i A" }}</strong><span>{{ appointment.ends_at|time:"g:i A" }}</span></div>
-                  <div class="agenda-session-info"><strong>{% if workspace_permissions.appointments.edit %}<a href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}">{{ appointment.client }}</a>{% elif workspace_permissions.clients.view %}<a href="{% url 'clients:detail' appointment.client_id %}">{{ appointment.client }}</a>{% else %}{{ appointment.client }}{% endif %}</strong><span>{{ appointment.therapist }} · {{ appointment.get_appointment_type_display }}</span></div>
+                  <div class="agenda-session-info">{% if appointment.session_kind == "initial_consultation" %}<span class="badge brand">Initial consultation</span>{% endif %}<strong>{% if workspace_permissions.appointments.edit %}<a href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}">{{ appointment.client }}</a>{% elif workspace_permissions.clients.view %}<a href="{% url 'clients:detail' appointment.client_id %}">{{ appointment.client }}</a>{% else %}{{ appointment.client }}{% endif %}</strong><span>{{ appointment.therapist }} · {{ appointment.get_appointment_type_display }}</span></div>
                   <div class="agenda-session-status"><span class="badge">{{ appointment.get_status_display }}</span>{% if appointment.documentation_pending %}<span class="session-documentation-label">{% if appointment.has_session_note %}Signature pending{% else %}Note missing{% endif %}</span>{% elif appointment.has_signed_note %}<span class="badge success">Signed</span>{% endif %}</div>
                 </article>{% empty %}<p class="agenda-empty">No appointments.</p>{% endfor %}</section>
               {% endfor %}
@@ -123,8 +123,8 @@
                 {% if calendar_show_current_time and calendar_anchor_date == calendar_today %}<div class="gcal-now-line" style="top: calc(64px + {{ calendar_current_time_top }}px);"><span>Now</span></div>{% endif %}
                 {% for event in calendar_day_timed_events %}
                   {% with appointment=event.appointment %}
-                    <a class="gcal-event" style="{{ event.style }}" {% if workspace_permissions.appointments.edit %}href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true"{% elif workspace_permissions.clients.view %}href="{% url 'clients:detail' appointment.client_id %}"{% endif %} {% if workspace_permissions.appointments.edit %}data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-appointment-duration="{{ appointment.duration_minutes }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"{% endif %}>
-                      <strong>{{ appointment.client }}</strong><span>{{ appointment.starts_at|time:"g:i A" }} - {{ appointment.ends_at|time:"g:i A" }}</span><small>{{ appointment.get_appointment_type_display }}</small>
+                    <a class="gcal-event{% if event.compact %} gcal-event-compact{% endif %}" style="{{ event.style }}" title="{{ appointment.client }} · {{ appointment.get_session_kind_display }} · {{ appointment.starts_at|time:'g:i A' }}–{{ appointment.ends_at|time:'g:i A' }} · {{ appointment.get_appointment_type_display }}" aria-label="{{ appointment.client }} · {{ appointment.get_session_kind_display }} · {{ appointment.starts_at|time:'g:i A' }}–{{ appointment.ends_at|time:'g:i A' }} · {{ appointment.get_appointment_type_display }}" {% if workspace_permissions.appointments.edit %}href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true"{% elif workspace_permissions.clients.view %}href="{% url 'clients:detail' appointment.client_id %}"{% endif %} {% if workspace_permissions.appointments.edit %}data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-appointment-duration="{{ appointment.duration_minutes }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"{% endif %}>
+                      {% if event.compact %}<strong>{{ appointment.client }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span>{% else %}<strong>{{ appointment.client }}</strong>{% if appointment.session_kind == "initial_consultation" %}<small>Initial consultation</small>{% endif %}<span>{{ appointment.starts_at|time:"g:i A" }} - {{ appointment.ends_at|time:"g:i A" }}</span><small>{{ appointment.get_appointment_type_display }}</small>{% endif %}
                     </a>
                   {% endwith %}
                 {% empty %}
@@ -145,8 +145,8 @@
                     {% if calendar_show_current_time and day.date == calendar_today %}<div class="gcal-now-line" style="top: calc(64px + {{ calendar_current_time_top }}px);"><span>Now</span></div>{% endif %}
                     {% for event in day.timed_events %}
                       {% with appointment=event.appointment %}
-                        <a class="gcal-event" style="{{ event.style }}" {% if workspace_permissions.appointments.edit %}href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true"{% elif workspace_permissions.clients.view %}href="{% url 'clients:detail' appointment.client_id %}"{% endif %} {% if workspace_permissions.appointments.edit %}data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-appointment-duration="{{ appointment.duration_minutes }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"{% endif %}>
-                          <strong>{{ appointment.client }}</strong><span>{{ appointment.starts_at|time:"g:i A" }}</span>
+                        <a class="gcal-event{% if event.compact %} gcal-event-compact{% endif %}" style="{{ event.style }}" title="{{ appointment.client }} · {{ appointment.get_session_kind_display }} · {{ appointment.starts_at|time:'g:i A' }}–{{ appointment.ends_at|time:'g:i A' }} · {{ appointment.get_appointment_type_display }}" aria-label="{{ appointment.client }} · {{ appointment.get_session_kind_display }} · {{ appointment.starts_at|time:'g:i A' }}–{{ appointment.ends_at|time:'g:i A' }} · {{ appointment.get_appointment_type_display }}" {% if workspace_permissions.appointments.edit %}href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true"{% elif workspace_permissions.clients.view %}href="{% url 'clients:detail' appointment.client_id %}"{% endif %} {% if workspace_permissions.appointments.edit %}data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-appointment-duration="{{ appointment.duration_minutes }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"{% endif %}>
+                          <strong>{{ appointment.client }}</strong>{% if appointment.session_kind == "initial_consultation" %}<small>Initial consultation</small>{% endif %}<span>{{ appointment.starts_at|time:"g:i A" }}</span>
                         </a>
                       {% endwith %}
                     {% endfor %}
@@ -173,7 +173,7 @@
                       {% for appointment in day.appointments %}
                         <a class="calendar-event" {% if workspace_permissions.appointments.edit %}href="{% url 'appointments:edit' appointment.pk %}?next={{ request.get_full_path|urlencode }}" data-modal-target="appointment-modal-{{ appointment.pk }}" draggable="true"{% elif workspace_permissions.clients.view %}href="{% url 'clients:detail' appointment.client_id %}"{% endif %} {% if workspace_permissions.appointments.edit %}data-draggable-appointment data-appointment-title="{{ appointment.client }}" data-appointment-time="{{ appointment.starts_at|date:'H:i' }}" data-appointment-duration="{{ appointment.duration_minutes }}" data-reschedule-url="{% url 'appointments:reschedule' appointment.pk %}"{% endif %}>
                           <span>{{ appointment.starts_at|time:"g:i A" }}</span>
-                          {{ appointment.client }}
+                          {{ appointment.client }}{% if appointment.session_kind == "initial_consultation" %} · Initial consultation{% endif %}
                         </a>
                       {% endfor %}
                     </div>
@@ -279,8 +279,9 @@
                 <label for="appointment-create-end">Ends at</label>
                 <input id="appointment-create-end" name="ends_at" type="datetime-local" required>
               </div>
-              <div class="field">
-                <label for="appointment-create-type">Appointment type</label>
+              <div class="field"><label for="session-kind-create">Session</label><select id="session-kind-create" name="session_kind">{% for value,label in session_kind_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+<div class="field">
+                <label for="appointment-create-type">Format</label>
                 <select id="appointment-create-type" name="appointment_type" required>
                   <option value="video">Video Call</option>
                   <option value="in_person">In Person</option>
@@ -384,8 +385,9 @@
                   <label for="appointment-end-{{ appointment.pk }}">Ends at</label>
                   <input id="appointment-end-{{ appointment.pk }}" name="ends_at" type="datetime-local" value="{{ appointment.ends_at|date:'Y-m-d\TH:i' }}" required>
                 </div>
-                <div class="field">
-                  <label for="appointment-type-{{ appointment.pk }}">Appointment type</label>
+                <div class="field"><label for="session-kind-{{ appointment.pk }}">Session</label><select id="session-kind-{{ appointment.pk }}" name="session_kind">{% for value,label in session_kind_choices %}<option value="{{ value }}" {% if value == appointment.session_kind %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+<div class="field">
+                  <label for="appointment-type-{{ appointment.pk }}">Format</label>
                   <select id="appointment-type-{{ appointment.pk }}" name="appointment_type" required>
                     <option value="in_person" {% if appointment.appointment_type == 'in_person' %}selected{% endif %}>In Person</option>
                     <option value="video" {% if appointment.appointment_type == 'video' %}selected{% endif %}>Video Call</option>
@@ -460,7 +462,8 @@
     </main>
   </div>
   {{ calendar_grid_config|json_script:"calendar-grid-config" }}
-  <script src="/static/appointments-calendar.js" defer></script>
+  <script src="{% static 'appointments-calendar.js' %}" defer></script>
+  <script src="{% static 'session-duration.js' %}" defer></script>
   <script src="{% static 'session-note-popup.js' %}" defer></script>
 </body>
 </html>

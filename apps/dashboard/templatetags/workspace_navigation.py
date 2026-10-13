@@ -17,7 +17,7 @@ SECTIONS = {
     'clinical': ('Notes & Treatment', None),
     'billing': ('Billing', 'billing:list'),
     'documents': ('Documents', 'documents:list'),
-    'intake': ('Intake', 'intake:list'),
+    'intake': ('Client forms', 'intake:list'),
     'portal_requests': ('Requests', 'portal_requests:list'),
 }
 ACTIONS = {
@@ -33,7 +33,7 @@ ACTIONS = {
                 'usage_create': 'Record package usage', 'payment_create': 'Record payment'},
     'documents': {'create': 'Upload document'},
     'intake': {'template_create': 'New template', 'template_edit': 'Edit template',
-               'assign': 'Assign intake', 'responses': 'Responses'},
+               'assign': 'Assign form', 'responses': 'Responses'},
 }
 
 
@@ -163,7 +163,7 @@ def workspace_breadcrumb_items(context):
                     add(f'Note #{obj.pk}')
         elif namespace == 'intake':
             if name.startswith('template_'):
-                add('Template library', 'intake:list', fragment='#intake-template-library')
+                add('Form templates', 'intake:list', fragment='#intake-template-library')
                 intake_template = _scoped(context, context.get('intake_template'))
                 if intake_template:
                     add(intake_template.name)

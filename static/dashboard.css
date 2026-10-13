@@ -1703,3 +1703,7 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
   .note-review-signature .form-actions { display: grid; grid-template-columns: 1fr; }
   .note-review-signature .form-actions .btn { width: 100%; min-height: 44px; }
 }
+
+.gcal-event.gcal-event-compact { display: flex; align-items: center; gap: 4px; padding: 0 4px; border-radius: 4px; box-shadow: none; }
+.gcal-event-compact strong { min-width: 0; flex: 1; font-size: 11px; line-height: 12px; }
+.gcal-event-compact span { flex-shrink: 0; font-size: 10px; line-height: 12px; }

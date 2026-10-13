@@ -72,7 +72,7 @@ class WorkspaceBreadcrumbTests(TestCase):
             'clinical:list': ['Overview', 'Notes & Treatment', 'Notes'],
             'clinical:treatment_plans': ['Overview', 'Notes & Treatment', 'Treatment plans'],
             'billing:list': ['Overview', 'Billing'], 'documents:list': ['Overview', 'Documents'],
-            'intake:list': ['Overview', 'Intake'], 'portal_requests:list': ['Overview', 'Requests'],
+            'intake:list': ['Overview', 'Client forms'], 'portal_requests:list': ['Overview', 'Requests'],
             'portal_requests:conversations': ['Overview', 'Requests', 'Messages'],
             'settings:insurance': ['Overview', 'Settings', 'Insurance'],
             'settings:package_templates': ['Overview', 'Settings', 'Session packages'],
@@ -96,7 +96,7 @@ class WorkspaceBreadcrumbTests(TestCase):
         context = self.context('intake:template_edit', [self.template.pk], intake_template=self.template)
         with self.assertNumQueries(0):
             crumbs = workspace_breadcrumb_items(context)
-        self.assertEqual([crumb['label'] for crumb in crumbs], ['Overview', 'Intake', 'Template library', 'Admission form', 'Edit template'])
+        self.assertEqual([crumb['label'] for crumb in crumbs], ['Overview', 'Client forms', 'Form templates', 'Admission form', 'Edit template'])
         self.assertEqual(crumbs[2]['url'], reverse('intake:list') + '#intake-template-library')
 
     def test_patient_trail_and_existing_portal_links_remain_clickable(self):

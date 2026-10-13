@@ -87,6 +87,13 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
             context['client_therapists'] = client.practice.therapists.select_related('user')
         if permissions['appointments']:
             appointments = scope_sessions(Appointment.objects.filter(client=client, practice=client.practice), self.request.user).select_related('therapist__user')
+            consultations = appointments.filter(session_kind=Appointment.SessionKind.INITIAL_CONSULTATION)
+            consultation = (consultations.filter(status=Appointment.Status.COMPLETED).order_by('-ends_at').first()
+                            or consultations.filter(status=Appointment.Status.SCHEDULED).order_by('starts_at').first()
+                            or consultations.order_by('-starts_at').first())
+            context['initial_consultation'] = consultation
+            if consultation and permissions['clinical']:
+                context['initial_consultation_note'] = SessionNote.objects.filter(practice=client.practice, client=client, appointment=consultation).exclude(note_type='treatment_plan').order_by('-created_at').first()
             now = timezone.now()
             context['recent_appointments'] = appointments.filter(starts_at__lt=now).order_by('-starts_at')[:8]
             context['upcoming_appointments'] = appointments.filter(starts_at__gte=now, status=Appointment.Status.SCHEDULED).order_by('starts_at')[:5]

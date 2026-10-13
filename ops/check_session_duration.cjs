@@ -1,0 +1,21 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+function field(value) { return {value, handlers:{}, addEventListener(name, handler) { this.handlers[name]=handler; }}; }
+const kind=field('standard'), start=field('2026-10-13T10:00'), end=field('2026-10-13T10:50');
+const form={querySelector: selector=>({'[name="session_kind"]':kind,'[name="starts_at"]':start,'[name="ends_at"]':end}[selector]), closest:()=>({id:'appointment-create-modal'})};
+const clicks=[];
+vm.runInNewContext(fs.readFileSync('static/session-duration.js','utf8'), {document:{querySelectorAll:()=>[form],addEventListener:(name,handler)=>clicks.push(handler)}, Date, Number, String, queueMicrotask:handler=>handler()});
+kind.value='initial_consultation'; kind.handlers.change();
+assert.equal(end.value,'2026-10-13T10:15');
+start.value='2026-10-13T23:55'; start.handlers.change();
+assert.equal(end.value,'2026-10-14T00:10');
+end.value='2026-10-14T00:05'; end.handlers.input();
+kind.value='standard'; kind.handlers.change();
+assert.equal(end.value,'2026-10-14T00:05');
+start.value='2026-10-14T11:00'; start.handlers.change();
+assert.equal(end.value,'2026-10-14T11:10');
+kind.value='initial_consultation';
+clicks[0]({target:{closest:selector=>selector.includes('data-modal-target') ? {} : null}});
+assert.equal(end.value,'2026-10-14T11:15');
+console.log('Session duration checks passed: 15 minute default, midnight rollover, manual duration preserved.');
