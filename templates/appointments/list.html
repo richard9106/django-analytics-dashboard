@@ -433,6 +433,7 @@
         </dialog>
       {% endfor %}
 
+      {% if workspace_permissions.clinical.create %}<dialog class="modal-dialog" id="session-note-popup" aria-labelledby="session-note-popup-title"><div class="modal-card"><div class="modal-head"><h2 id="session-note-popup-title">Create session note</h2><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div><div data-note-popup-content aria-live="polite"></div></div></dialog>{% endif %}
       <dialog class="modal-dialog" id="reschedule-modal">
         <div class="modal-card">
           <div class="modal-head">
@@ -460,5 +461,6 @@
   </div>
   {{ calendar_grid_config|json_script:"calendar-grid-config" }}
   <script src="/static/appointments-calendar.js" defer></script>
+  <script src="{% static 'session-note-popup.js' %}" defer></script>
 </body>
 </html>

@@ -33,6 +33,38 @@ class WorkspaceBreadcrumbTests(TestCase):
         context.update(extra)
         return Context(context)
 
+    def test_note_breadcrumbs_preserve_appointments_origin_and_filters(self):
+        from urllib.parse import urlencode
+        for display, label in [('list', 'List'), ('agenda', 'Agenda')]:
+            origin = reverse('appointments:list') + '?' + urlencode({'view':display, 'q':'Maya', 'page':2})
+            for action, args in [('sign', [42]), ('create', None)]:
+                context = self.context('clinical:'+action, args)
+                context['request'].GET = RequestFactory().get('/', {'next':origin}).GET
+                crumbs = workspace_breadcrumb_items(context)
+                self.assertEqual([c['label'] for c in crumbs], ['Overview', 'Appointments', label, 'Review note' if action=='sign' else 'New note'])
+                self.assertEqual(crumbs[1]['url'], origin)
+                self.assertEqual(crumbs[2]['url'], origin)
+        context = self.context('clinical:edit', [42], object=SimpleNamespace(pk=42, practice_id=self.practice.pk))
+        context['request'].GET = RequestFactory().get('/', {'next':origin, 'review':'1'}).GET
+        crumbs = workspace_breadcrumb_items(context)
+        self.assertEqual([c['label'] for c in crumbs], ['Overview', 'Appointments', 'Agenda', 'Review note', 'Edit note'])
+        self.assertIn('next=', crumbs[-2]['url'])
+        for invalid in ['https://example.com/appointments/', '//example.com/appointments/', '/appointments/\\evil', '/[invalid', '/clients/']:
+            context = self.context('clinical:sign', [42])
+            context['request'].GET = RequestFactory().get('/', {'next':invalid}).GET
+            self.assertEqual([c['label'] for c in workspace_breadcrumb_items(context)], ['Overview', 'Notes & Treatment', 'Notes', 'Review note'])
+
+    def test_appointments_notes_list_keeps_visited_notes_step(self):
+        origin = reverse('appointments:list') + '?view=list&status=completed'
+        context = self.context('clinical:list')
+        context['request'].GET = RequestFactory().get('/', {'next':origin}).GET
+        self.assertEqual([c['label'] for c in workspace_breadcrumb_items(context)], ['Overview', 'Appointments', 'List', 'Notes'])
+        context = self.context('clinical:sign', [42])
+        context['request'].GET = RequestFactory().get('/', {'next':origin, 'via':'notes', 'appointment':'42'}).GET
+        crumbs = workspace_breadcrumb_items(context)
+        self.assertEqual([c['label'] for c in crumbs], ['Overview', 'Appointments', 'List', 'Notes', 'Review note'])
+        self.assertIn('appointment=42', crumbs[-2]['url'])
+
     def test_menu_sections_have_current_page_and_real_parent_links(self):
         cases = {
             'dashboard': ['Overview'], 'clients:list': ['Overview', 'Clients'],

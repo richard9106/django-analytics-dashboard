@@ -1,0 +1,17 @@
+<p>{{ workflow_appointment.client }} · {{ workflow_appointment.starts_at|date:"M j, Y, g:i A" }}</p>
+<form method="post" action="{{ request.get_full_path }}" data-note-popup-form>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+  <div class="field-grid two">
+    {% for field in form.visible_fields %}{% if field.name != 'treatment_plan' and field.name != 'is_locked' %}
+      <div class="field {% if field.name == 'content' or field.name == 'treatment_progress' %}full{% endif %}{% if field.name == 'is_locked' %} checkbox-field diagnosis-checkbox{% endif %}">
+        {% if field.name == 'is_locked' %}<label for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+        {% if field.errors %}<div class="form-error" role="alert">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endif %}{% endfor %}
+  </div>
+  <details class="session-filter-more" {% if form.treatment_plan.errors or form.is_locked.errors %}open{% endif %}><summary>Additional options</summary><div class="field"><label for="{{ form.treatment_plan.id_for_label }}">Treatment plan</label>{{ form.treatment_plan }}{{ form.treatment_plan.errors }}</div><div class="field checkbox-field diagnosis-checkbox"><label for="{{ form.is_locked.id_for_label }}">{{ form.is_locked }} <span>{{ form.is_locked.label }}</span></label>{{ form.is_locked.errors }}</div></details>
+  <p class="sync-meta">Save the note, then review it before signing.</p>
+  <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save and review</button></div>
+</form>

@@ -108,7 +108,7 @@
             {% if note.treatment_progress %}<section class="note-detail-section" aria-label="Treatment progress"><h3>Treatment plan progress</h3><p>{{ note.treatment_progress|linebreaksbr }}</p></section>{% endif %}
             {% if note.is_locked %}<p class="sync-meta" aria-label="Locked note status">Read-only clinical record. Locked {{ note.locked_at|date:"M j, Y g:i A" }}.</p>{% endif %}
             {% if note.signed_at %}<p class="sync-meta">Signed by {{ note.signer_name }} · {{ note.signed_at|date:"M j, Y g:i A" }}</p>{% endif %}
-            <p><a class="inline-link" href="{% url 'clinical:sign' note.pk %}">{% if note.signed_at %}View signed note{% else %}Review note &amp; signature{% endif %}</a></p>
+            <p><a class="inline-link" href="{% url 'clinical:sign' note.pk %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}&amp;via=notes&amp;appointment={{ note.appointment_id|default:'' }}{% endif %}">{% if note.signed_at %}View signed note{% else %}Review note &amp; signature{% endif %}</a></p>
             <div class="form-actions split-actions">
               <a class="btn btn-secondary" href="{% url 'clients:detail' note.client.pk %}">Open client</a>
               <div class="form-actions">

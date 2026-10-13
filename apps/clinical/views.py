@@ -38,7 +38,10 @@ def session_return_url(request):
 
 
 def note_review_url(request, pk):
-    return reverse('clinical:sign', args=[pk]) + '?' + urlencode({'next': session_return_url(request)})
+    params = {'next': session_return_url(request)}
+    if request.GET.get('via') == 'notes':
+        params.update(via='notes', appointment=request.GET.get('appointment', ''))
+    return reverse('clinical:sign', args=[pk]) + '?' + urlencode(params)
 
 
 class PracticeContextMixin(ClientPortalRedirectMixin):
@@ -167,6 +170,17 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
     template_name = 'clinical/form.html'
     success_url = reverse_lazy('clinical:list')
 
+    def get_template_names(self):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest' and self.get_workflow_appointment():
+            return ['clinical/partials/session_note_popup.html']
+        return super().get_template_names()
+
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            response.status_code = 422
+        return response
+
     def get_initial(self):
         initial = super().get_initial()
         appointment_id = self.request.GET.get('appointment', '')
@@ -187,6 +201,7 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
         kwargs = super().get_form_kwargs()
         kwargs['practice'] = self.get_practice()
         kwargs['user'] = self.request.user
+        kwargs['appointment'] = self.get_workflow_appointment()
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -210,6 +225,8 @@ class SessionNoteCreateView(LoginRequiredMixin, PracticePermissionMixin, Session
                 'treatment_plan_id': self.object.treatment_plan_id,
             },
         )
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'redirect': self.get_success_url()})
         return response
 
 
