@@ -254,3 +254,27 @@ class PackageUsageForm(forms.ModelForm):
         else:
             self.fields['package'].queryset = self.fields['package'].queryset.none()
             self.fields['appointment'].queryset = self.fields['appointment'].queryset.none()
+
+
+class ProfessionalBillingForm(forms.Form):
+    legal_name = forms.CharField(label='Legal billing name', max_length=200, help_text='Your business or professional name as it should appear on invoices.')
+    line1 = forms.CharField(label='Address line 1', max_length=200)
+    line2 = forms.CharField(label='Address line 2', max_length=200, required=False)
+    city = forms.CharField(max_length=100)
+    state = forms.ChoiceField(choices=[('', 'Select state')] + [(code, name) for code, name in [
+        ('AL','Alabama'),('AK','Alaska'),('AZ','Arizona'),('AR','Arkansas'),('CA','California'),('CO','Colorado'),('CT','Connecticut'),('DE','Delaware'),('DC','District of Columbia'),('FL','Florida'),('GA','Georgia'),('HI','Hawaii'),('ID','Idaho'),('IL','Illinois'),('IN','Indiana'),('IA','Iowa'),('KS','Kansas'),('KY','Kentucky'),('LA','Louisiana'),('ME','Maine'),('MD','Maryland'),('MA','Massachusetts'),('MI','Michigan'),('MN','Minnesota'),('MS','Mississippi'),('MO','Missouri'),('MT','Montana'),('NE','Nebraska'),('NV','Nevada'),('NH','New Hampshire'),('NJ','New Jersey'),('NM','New Mexico'),('NY','New York'),('NC','North Carolina'),('ND','North Dakota'),('OH','Ohio'),('OK','Oklahoma'),('OR','Oregon'),('PA','Pennsylvania'),('RI','Rhode Island'),('SC','South Carolina'),('SD','South Dakota'),('TN','Tennessee'),('TX','Texas'),('UT','Utah'),('VT','Vermont'),('VA','Virginia'),('WA','Washington'),('WV','West Virginia'),('WI','Wisconsin'),('WY','Wyoming')]])
+    postal_code = forms.RegexField(label='ZIP code', regex=r'^\d{5}(-\d{4})?$', max_length=10, error_messages={'invalid':'Enter a five-digit ZIP code or ZIP+4.'})
+    country = forms.ChoiceField(choices=[('US', 'United States')], initial='US', widget=forms.HiddenInput)
+    professional_purchase = forms.BooleanField(label='I am purchasing NuviaMy for my business or professional practice in the United States and am authorized to make this purchase.')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        autocomplete = {'legal_name':'organization','line1':'address-line1','line2':'address-line2','city':'address-level2','state':'address-level1','postal_code':'postal-code'}
+        for name, field in self.fields.items():
+            field.widget.attrs['aria-describedby'] = f'{name}-help {name}-errors'
+            if name in autocomplete:
+                field.widget.attrs['autocomplete'] = autocomplete[name]
+        self.fields['postal_code'].widget.attrs['inputmode'] = 'numeric'
+
+    def stripe_address(self):
+        return {key:self.cleaned_data[key] for key in ('line1','line2','city','state','postal_code','country')}
