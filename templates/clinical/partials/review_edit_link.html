@@ -1,0 +1,1 @@
+<a class="btn btn-secondary" href="{% url 'clinical:edit' note.pk %}?review=1{% if navigation_next %}&amp;next={{ navigation_next|urlencode }}{% endif %}{% if request.GET.via == 'notes' %}&amp;via=notes&amp;appointment={{ note.appointment_id|default:'' }}{% endif %}">Edit draft</a>
