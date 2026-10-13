@@ -92,7 +92,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             from apps.clinical.models import SessionNote
             notes = SessionNote.objects.filter(appointment_id=OuterRef('pk')).exclude(note_type='treatment_plan')
             appointments = appointments.annotate(has_session_note=Exists(notes), has_signed_note=Exists(notes.filter(signature__isnull=False)))
-            ended = Q(ends_at__lte=timezone.now()) & ~Q(status__in=['cancelled', 'no_show'])
+            ended = Q(ends_at__lte=timezone.now())
             documentation = self.request.GET.get('documentation', '')
             if documentation == 'needs_attention':
                 appointments = appointments.filter(ended, has_signed_note=False)
@@ -367,7 +367,7 @@ class AppointmentListView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
             context['calendar_filters'] = self.get_calendar_filters()
             context['appointment_status_choices'] = Appointment.Status.choices
             for appointment in context['appointments']:
-                appointment.documentation_due = appointment.ends_at <= timezone.now() and appointment.status not in {'cancelled', 'no_show'}
+                appointment.documentation_due = appointment.ends_at <= timezone.now()
                 appointment.documentation_pending = appointment.documentation_due and not appointment.has_signed_note
                 notes = appointment.documentation_notes
                 appointment.documentation_note = next((n for n in notes if n.signed_at), notes[0] if notes else None)
