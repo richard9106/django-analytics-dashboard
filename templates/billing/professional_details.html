@@ -1,16 +1,16 @@
 {% load static %}<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Billing details | NuviaMy</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="{% static 'dashboard.css' %}"><link rel="stylesheet" href="{% static 'professional-billing.css' %}"></head>
 <body class="signup-page"><main class="professional-billing"><section class="login-card">
 <a class="brand" href="{% url 'dashboard' %}">NuviaMy</a><h1>Billing details</h1>
-<p>For professionals and practices established in the United States.</p>
+<p>Enter the billing details for your business or professional practice.</p>
 <p class="billing-summary">{{ quantity }} active user{{ quantity|pluralize }} · {% if period == 'yearly' %}$421 per user/year{% else %}$39 per user/month{% endif %}</p>
 {% if stripe_test %}<p class="billing-summary">Test checkout — no real payment. Use fictional billing details.</p>{% endif %}
-<form method="post">{% csrf_token %}{{ form.country }}
+<form method="post">{% csrf_token %}
 {% if form.errors %}<p role="alert">Please check the fields below.</p>{{ form.country.errors }}{% endif %}
 <div class="professional-billing-fields">
 {% for field in form.visible_fields %}<div class="billing-field billing-field-{{ field.name }}">
 {% if field.name == 'professional_purchase' %}<label class="professional-declaration">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} (optional){% endif %}</label>{{ field }}{% endif %}
 <small id="{{ field.name }}-help">{{ field.help_text }}</small><div id="{{ field.name }}-errors">{{ field.errors }}</div></div>{% endfor %}
-</div><p>Country: <strong>United States</strong></p>
+</div>
 <div class="hero-actions"><a class="btn btn-secondary" href="{% url 'billing:subscription_access' %}">Back</a><button class="btn btn-primary" type="submit">Continue to secure checkout</button></div>
 <p class="muted">Stripe will show your final total before you confirm payment. Billing starts after confirmation.</p>
-</form></section></main></body></html>
+</form></section></main><script src="{% static 'professional-billing.js' %}" defer></script></body></html>
