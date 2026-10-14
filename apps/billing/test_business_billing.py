@@ -109,3 +109,23 @@ class BusinessBillingTests(TestCase):
         form = ProfessionalBillingForm({**PROFESSIONAL_BILLING_DATA,'country':'US','state':'New York'})
         self.assertTrue(form.is_valid(),form.errors)
         self.assertEqual(form.cleaned_data['state'],'NY')
+
+    @override_settings(STRIPE_WEBHOOK_SECRET='whsec_international_test')
+    @patch('apps.billing.views.stripe.Subscription.retrieve')
+    def test_paid_checkout_with_final_non_us_address_still_activates(self, retrieve):
+        import hashlib
+        import hmac
+        import json
+        import time
+        from .access import subscription_access
+        self.practice.subscription_required = True
+        self.practice.save(update_fields=['subscription_required'])
+        PracticeSubscription.objects.create(practice=self.practice,plan='solo',billing_period='monthly',stripe_checkout_session_id='cs_international')
+        retrieve.return_value = {'id':'sub_international','customer':'cus_international','status':'active','metadata':{'practice_id':str(self.practice.pk)},'items':{'data':[{'price':{'id':'price_fictional'}}]}}
+        event = {'type':'checkout.session.completed','data':{'object':{'id':'cs_international','subscription':'sub_international','payment_status':'paid','metadata':{'practice_id':str(self.practice.pk)},'customer_details':{'address':{'country':'ES'}}}}}
+        body = json.dumps(event).encode()
+        timestamp = str(int(time.time()))
+        digest = hmac.new(b'whsec_international_test',timestamp.encode()+b'.'+body,hashlib.sha256).hexdigest()
+        response = self.client.post(reverse('billing:stripe_webhook'),body,content_type='application/json',HTTP_STRIPE_SIGNATURE=f't={timestamp},v1={digest}')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(subscription_access(Practice.objects.get(pk=self.practice.pk))['mode'],'full')
