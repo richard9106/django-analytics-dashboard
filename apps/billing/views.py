@@ -668,7 +668,7 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
                 messages.error(request, 'We could not configure your subscription invoice. Please try again or contact support.')
                 return redirect('billing:subscription_access')
         log_audit_event(request, AuditLog.Action.CREATE, 'subscription_billing_declaration', practice=practice,
-                        metadata={'declaration_version':'us-professional-v1', 'billing_details':billing_details,
+                        metadata={'declaration_version':'international-professional-v1', 'billing_details':billing_details,
                                   'stripe_customer_id':customer_id})
         quantity = _stripe_subscription_quantity(practice)
         if subscription and subscription.status == PracticeSubscription.Status.INCOMPLETE and subscription.stripe_checkout_session_id:

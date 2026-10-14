@@ -1,4 +1,7 @@
+import re
+
 from django import forms
+from .countries import BILLING_COUNTRIES
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -261,11 +264,12 @@ class ProfessionalBillingForm(forms.Form):
     line1 = forms.CharField(label='Address line 1', max_length=200)
     line2 = forms.CharField(label='Address line 2', max_length=200, required=False)
     city = forms.CharField(max_length=100)
-    state = forms.ChoiceField(choices=[('', 'Select state')] + [(code, name) for code, name in [
-        ('AL','Alabama'),('AK','Alaska'),('AZ','Arizona'),('AR','Arkansas'),('CA','California'),('CO','Colorado'),('CT','Connecticut'),('DE','Delaware'),('DC','District of Columbia'),('FL','Florida'),('GA','Georgia'),('HI','Hawaii'),('ID','Idaho'),('IL','Illinois'),('IN','Indiana'),('IA','Iowa'),('KS','Kansas'),('KY','Kentucky'),('LA','Louisiana'),('ME','Maine'),('MD','Maryland'),('MA','Massachusetts'),('MI','Michigan'),('MN','Minnesota'),('MS','Mississippi'),('MO','Missouri'),('MT','Montana'),('NE','Nebraska'),('NV','Nevada'),('NH','New Hampshire'),('NJ','New Jersey'),('NM','New Mexico'),('NY','New York'),('NC','North Carolina'),('ND','North Dakota'),('OH','Ohio'),('OK','Oklahoma'),('OR','Oregon'),('PA','Pennsylvania'),('RI','Rhode Island'),('SC','South Carolina'),('SD','South Dakota'),('TN','Tennessee'),('TX','Texas'),('UT','Utah'),('VT','Vermont'),('VA','Virginia'),('WA','Washington'),('WV','West Virginia'),('WI','Wisconsin'),('WY','Wyoming')]])
-    postal_code = forms.RegexField(label='ZIP code', regex=r'^\d{5}(-\d{4})?$', max_length=10, error_messages={'invalid':'Enter a five-digit ZIP code or ZIP+4.'})
-    country = forms.ChoiceField(choices=[('US', 'United States')], initial='US', widget=forms.HiddenInput)
-    professional_purchase = forms.BooleanField(label='I am purchasing NuviaMy for my business or professional practice in the United States and am authorized to make this purchase.')
+    US_STATES = [('', 'Select state')] + [(code, name) for code, name in [
+        ('AL','Alabama'),('AK','Alaska'),('AZ','Arizona'),('AR','Arkansas'),('CA','California'),('CO','Colorado'),('CT','Connecticut'),('DE','Delaware'),('DC','District of Columbia'),('FL','Florida'),('GA','Georgia'),('HI','Hawaii'),('ID','Idaho'),('IL','Illinois'),('IN','Indiana'),('IA','Iowa'),('KS','Kansas'),('KY','Kentucky'),('LA','Louisiana'),('ME','Maine'),('MD','Maryland'),('MA','Massachusetts'),('MI','Michigan'),('MN','Minnesota'),('MS','Mississippi'),('MO','Missouri'),('MT','Montana'),('NE','Nebraska'),('NV','Nevada'),('NH','New Hampshire'),('NJ','New Jersey'),('NM','New Mexico'),('NY','New York'),('NC','North Carolina'),('ND','North Dakota'),('OH','Ohio'),('OK','Oklahoma'),('OR','Oregon'),('PA','Pennsylvania'),('RI','Rhode Island'),('SC','South Carolina'),('SD','South Dakota'),('TN','Tennessee'),('TX','Texas'),('UT','Utah'),('VT','Vermont'),('VA','Virginia'),('WA','Washington'),('WV','West Virginia'),('WI','Wisconsin'),('WY','Wyoming')]]
+    country = forms.ChoiceField(label='Country', choices=BILLING_COUNTRIES, initial='US')
+    state = forms.CharField(label='State, province or region', max_length=100, required=False)
+    postal_code = forms.CharField(label='Postal code', max_length=20, required=False)
+    professional_purchase = forms.BooleanField(label='I am purchasing NuviaMy for my business or professional practice and am authorized to make this purchase.')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -274,7 +278,32 @@ class ProfessionalBillingForm(forms.Form):
             field.widget.attrs['aria-describedby'] = f'{name}-help {name}-errors'
             if name in autocomplete:
                 field.widget.attrs['autocomplete'] = autocomplete[name]
-        self.fields['postal_code'].widget.attrs['inputmode'] = 'numeric'
+        self.order_fields(['legal_name','country','line1','line2','city','state','postal_code','professional_purchase'])
+        country = self.data.get('country') if self.is_bound else self.initial.get('country', 'US')
+        if country == 'US':
+            self.fields['state'].required = True
+            self.fields['state'].label = 'State'
+            self.fields['state'].help_text = 'Enter the state name or its two-letter abbreviation.'
+            self.fields['postal_code'].required = True
+            self.fields['postal_code'].label = 'ZIP code'
+        else:
+            self.fields['state'].help_text = 'Optional where your billing address does not use a region.'
+            self.fields['postal_code'].help_text = 'Optional where your billing address does not use a postal code.'
+
+    def clean(self):
+        data = super().clean()
+        if data.get('country') == 'US':
+            state = data.get('state', '')
+            states = dict(self.US_STATES)
+            code = next((code for code, name in states.items() if name.lower() == state.lower()), state.upper())
+            if state and code not in states:
+                self.add_error('state', 'Enter a valid United States state or District of Columbia.')
+            else:
+                data['state'] = code
+            postal = data.get('postal_code', '')
+            if postal and not re.fullmatch(r'\d{5}(-\d{4})?', postal):
+                self.add_error('postal_code', 'Enter a five-digit ZIP code or ZIP+4.')
+        return data
 
     def stripe_address(self):
         return {key:self.cleaned_data[key] for key in ('line1','line2','city','state','postal_code','country')}

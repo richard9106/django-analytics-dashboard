@@ -77,8 +77,8 @@ class BusinessBillingTests(TestCase):
         checkout_create.assert_not_called()
 
     @patch('apps.billing.views.stripe.checkout.Session.create')
-    def test_invalid_country_or_missing_declaration_blocks_checkout(self, checkout_create):
-        for changes in ({'country':'ES'}, {'professional_purchase':''}, {'state':'XX'}, {'postal_code':'bad'}):
+    def test_invalid_address_or_missing_declaration_blocks_checkout(self, checkout_create):
+        for changes in ({'country':'ZZ'}, {'professional_purchase':''}, {'state':'XX'}, {'postal_code':'bad'}):
             with self.subTest(changes=changes):
                 response = self.client.post(reverse('billing:subscribe', args=['solo','monthly']), {**PROFESSIONAL_BILLING_DATA, **changes})
                 self.assertContains(response, 'Please check the fields below')
@@ -93,3 +93,39 @@ class BusinessBillingTests(TestCase):
         self.assertEqual(event.practice, self.practice)
         self.assertEqual(event.metadata['billing_details']['country'], 'US')
         self.assertTrue(event.metadata['billing_details']['professional_purchase'])
+
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    def test_international_professional_can_continue_to_checkout(self, checkout_create):
+        checkout_create.return_value = SimpleNamespace(id='cs_spain', url='https://checkout.stripe.test/spain')
+        response = self.client.post(reverse('billing:subscribe', args=['solo','monthly']), {**PROFESSIONAL_BILLING_DATA, 'country':'ES','state':'Zaragoza','postal_code':'50019'})
+        self.assertEqual(response.status_code,302)
+        checkout_create.assert_called_once()
+
+    def test_international_postal_codes_and_missing_regions_are_allowed(self):
+        from .forms import ProfessionalBillingForm
+        for country, postal in [('GB','SW1A 1AA'), ('IE',''), ('ES','50019')]:
+            form = ProfessionalBillingForm({**PROFESSIONAL_BILLING_DATA,'country':country,'state':'','postal_code':postal})
+            self.assertTrue(form.is_valid(),form.errors)
+        form = ProfessionalBillingForm({**PROFESSIONAL_BILLING_DATA,'country':'US','state':'New York'})
+        self.assertTrue(form.is_valid(),form.errors)
+        self.assertEqual(form.cleaned_data['state'],'NY')
+
+    @override_settings(STRIPE_WEBHOOK_SECRET='whsec_international_test')
+    @patch('apps.billing.views.stripe.Subscription.retrieve')
+    def test_paid_checkout_with_final_non_us_address_still_activates(self, retrieve):
+        import hashlib
+        import hmac
+        import json
+        import time
+        from .access import subscription_access
+        self.practice.subscription_required = True
+        self.practice.save(update_fields=['subscription_required'])
+        PracticeSubscription.objects.create(practice=self.practice,plan='solo',billing_period='monthly',stripe_checkout_session_id='cs_international')
+        retrieve.return_value = {'id':'sub_international','customer':'cus_international','status':'active','metadata':{'practice_id':str(self.practice.pk)},'items':{'data':[{'price':{'id':'price_fictional'}}]}}
+        event = {'type':'checkout.session.completed','data':{'object':{'id':'cs_international','subscription':'sub_international','payment_status':'paid','metadata':{'practice_id':str(self.practice.pk)},'customer_details':{'address':{'country':'ES'}}}}}
+        body = json.dumps(event).encode()
+        timestamp = str(int(time.time()))
+        digest = hmac.new(b'whsec_international_test',timestamp.encode()+b'.'+body,hashlib.sha256).hexdigest()
+        response = self.client.post(reverse('billing:stripe_webhook'),body,content_type='application/json',HTTP_STRIPE_SIGNATURE=f't={timestamp},v1={digest}')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(subscription_access(Practice.objects.get(pk=self.practice.pk))['mode'],'full')
