@@ -35,9 +35,9 @@ from django.conf import settings
 from apps.billing.models import PracticeSubscription
 from apps.audit.models import AuditLog
 rows=list(PracticeSubscription.objects.order_by('pk').values())
-proof=list(AuditLog.objects.filter(object_type='stripe_live_webhook_verification',metadata__probe_id=NONCE).values_list('metadata',flat=True))
-print('PROBE_JSON='+json.dumps({'test_mode':settings.STRIPE_SECRET_KEY.startswith(('sk_test_','rk_test_')),'verifier_enabled':bool(settings.STRIPE_LIVE_VERIFY_WEBHOOK_SECRET and settings.STRIPE_LIVE_VERIFY_NONCE==NONCE),'subscriptions_sha256':hashlib.sha256(json.dumps(rows,default=str,sort_keys=True).encode()).hexdigest(),'receipts':proof}))
-'''.replace('NONCE', repr(nonce))
+proof=list(AuditLog.objects.filter(object_type='stripe_live_webhook_verification',metadata__probe_id=PROBE_NONCE_VALUE).values_list('metadata',flat=True))
+print('PROBE_JSON='+json.dumps({'test_mode':settings.STRIPE_SECRET_KEY.startswith(('sk_test_','rk_test_')),'verifier_enabled':bool(settings.STRIPE_LIVE_VERIFY_WEBHOOK_SECRET and settings.STRIPE_LIVE_VERIFY_NONCE==PROBE_NONCE_VALUE),'subscriptions_sha256':hashlib.sha256(json.dumps(rows,default=str,sort_keys=True).encode()).hexdigest(),'receipts':proof}))
+'''.replace('PROBE_NONCE_VALUE', repr(nonce))
     result = subprocess.run(['docker', 'compose', 'exec', '-T', 'web', 'python', 'manage.py', 'shell'],
                             cwd=SERVICE, input=code, text=True, capture_output=True, check=True)
     return json.loads(next(line[11:] for line in result.stdout.splitlines() if line.startswith('PROBE_JSON=')))
