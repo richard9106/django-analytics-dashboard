@@ -7,7 +7,7 @@ NuviaMy is a Django-based practice management SaaS for solo therapists and multi
 Last documentation review: **October 13, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
 
 - Production uses Docker Compose, PostgreSQL, Gunicorn and host Nginx at `nuviamy.com`.
-- Stripe is currently in **test mode**. Published pricing is **USD 39 per active internal user/month** or **USD 421/user/year**.
+- Stripe mode follows the protected deployment credentials; the operator has authorized **live subscription billing**. Published pricing (excluding applicable taxes) is **USD 39 per active internal user/month** or **USD 421/user/year**.
 - New practices receive **15 days without a card**. Paid billing starts only after an explicit checkout confirmation.
 - Sign-in currently uses credentials only (`DJANGO_MFA_REQUIRED=false`). TOTP MFA and recovery controls remain available for later activation.
 - Authenticated sessions expire after **one hour of inactivity** and have an **eight-hour absolute limit**.
@@ -254,3 +254,5 @@ The visual language uses Iris primary, Aqua supportive accents, Coral attention 
 Prefer compact operational rows, clear client identity, labeled metadata, bounded lists, full-width workspaces and native dialogs. Use readable clinical text, visible focus, keyboard controls, mobile touch targets and text labels alongside status colors. Preserve current protections while improving usability.
 
 New professional workspace registrations send an operator email after the account transaction commits. `SIGNUP_NOTIFICATION_EMAIL` defaults to `support@nuviamy.com` in Compose (set it empty to disable); notifications contain the registrant name, email, practice and registration date, never passwords or clinical data. SMTP failures are logged without blocking registration. Patient and team invitations do not trigger this signup alert.
+
+Live billing rollout: use the separately validated live prices, invoice template, API keys and endpoint signing secret. Archive and detach sandbox subscription/customer/session references before switching; do not carry a sandbox payment status into live access. Preserve existing local trial/invitation entitlements. Commercial availability does not authorize identifiable clinical records.
