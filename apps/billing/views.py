@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
 from apps.accounts.access import ClientPortalRedirectMixin, PracticePermissionMixin, get_practice_for_user
+from apps.accounts.legal import BILLING_TERMS_VERSION, TERMS_VERSION
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.appointments.workflow import SessionWorkflowMixin
@@ -634,7 +635,7 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
         }:
             messages.info(request, 'Manage your existing subscription to update payment details or change billing.')
             return redirect('billing:subscription_access')
-        saved_details = {**request.session.get(f'billing_details_{practice.pk}', {}), 'professional_purchase': False}
+        saved_details = {**request.session.get(f'billing_details_{practice.pk}', {}), 'professional_purchase': False, 'accept_billing_terms': False, 'billing_terms_version': BILLING_TERMS_VERSION}
         form = ProfessionalBillingForm(request.POST if request.method == 'POST' else None, initial=saved_details)
         if request.method != 'POST' or not form.is_valid():
             return render(request, 'billing/professional_details.html', {
@@ -671,6 +672,10 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
                         metadata={'declaration_version':'international-professional-v1', 'billing_details':billing_details,
                                   'stripe_customer_id':customer_id})
         quantity = _stripe_subscription_quantity(practice)
+        log_audit_event(request, AuditLog.Action.CREATE, 'service_agreement', practice=practice,
+                        metadata={'event':'subscription_terms_accepted', 'billing_terms_version':BILLING_TERMS_VERSION,
+                                  'terms_version':TERMS_VERSION, 'plan':self.plan, 'period':self.period,
+                                  'active_user_count':quantity, 'test_mode':settings.STRIPE_SECRET_KEY.startswith('sk_test_')})
         if subscription and subscription.status == PracticeSubscription.Status.INCOMPLETE and subscription.stripe_checkout_session_id:
             try:
                 previous = stripe.checkout.Session.retrieve(subscription.stripe_checkout_session_id)
@@ -682,7 +687,8 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
                     previous_metadata = getattr(previous, 'metadata', {}) or {}
                     if (subscription.stripe_price_id == price_id
                             and previous_metadata.get('billing_policy') == 'cardless-v2-billing-info'
-                            and previous_metadata.get('active_user_count') == str(quantity)):
+                            and previous_metadata.get('active_user_count') == str(quantity)
+                            and previous_metadata.get('billing_terms_version') == BILLING_TERMS_VERSION):
                         return redirect(previous.url)
                     stripe.checkout.Session.expire(previous.id)
             except stripe.error.StripeError:
@@ -697,9 +703,9 @@ class StripeSubscribeView(LoginRequiredMixin, PracticePermissionMixin, ClientPor
             'success_url': request.build_absolute_uri(reverse('billing:subscribe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url': request.build_absolute_uri(reverse('billing:subscribe_cancel')),
             'client_reference_id': str(practice.pk),
-            'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v2-billing-info', 'active_user_count': str(quantity)},
+            'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v2-billing-info', 'active_user_count': str(quantity), 'billing_terms_version': BILLING_TERMS_VERSION},
             'subscription_data': {
-                'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v2-billing-info'},
+                'metadata': {'practice_id': str(practice.pk), 'plan': self.plan, 'period': self.period, 'billing_policy': 'cardless-v2-billing-info', 'billing_terms_version': BILLING_TERMS_VERSION},
             },
         }
         if customer_id:

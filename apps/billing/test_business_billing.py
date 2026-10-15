@@ -129,3 +129,42 @@ class BusinessBillingTests(TestCase):
         response = self.client.post(reverse('billing:stripe_webhook'),body,content_type='application/json',HTTP_STRIPE_SIGNATURE=f't={timestamp},v1={digest}')
         self.assertEqual(response.status_code,200)
         self.assertEqual(subscription_access(Practice.objects.get(pk=self.practice.pk))['mode'],'full')
+
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    def test_missing_acceptance_and_old_terms_version_cannot_start_checkout(self, create):
+        from apps.audit.models import AuditLog
+        for changes in ({'accept_billing_terms':''}, {'billing_terms_version':'outdated'}, {'billing_terms_version':''}):
+            with self.subTest(changes=changes):
+                response=self.client.post(reverse('billing:subscribe',args=['solo','monthly']), {**PROFESSIONAL_BILLING_DATA,**changes})
+                self.assertEqual(response.status_code,200)
+                if changes.get('billing_terms_version') == 'outdated':
+                    self.assertFalse(response.context['form']['accept_billing_terms'].value())
+        create.assert_not_called()
+        self.assertFalse(AuditLog.objects.filter(object_type='service_agreement').exists())
+
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    def test_acceptance_records_version_actor_and_checkout_metadata(self, create):
+        from apps.accounts.legal import BILLING_TERMS_VERSION
+        from apps.audit.models import AuditLog
+        create.return_value=SimpleNamespace(id='cs_terms',url='https://checkout.stripe.test/terms')
+        self.client.post(reverse('billing:subscribe',args=['solo','monthly']),PROFESSIONAL_BILLING_DATA)
+        agreement=AuditLog.objects.get(object_type='service_agreement')
+        self.assertEqual(agreement.metadata['event'],'subscription_terms_accepted')
+        self.assertEqual(agreement.metadata['billing_terms_version'],BILLING_TERMS_VERSION)
+        self.assertTrue(agreement.metadata['test_mode'])
+        self.assertEqual(agreement.actor_id_snapshot,self.practice.user_profiles.get().user_id)
+        self.assertEqual(create.call_args.kwargs['metadata']['billing_terms_version'],BILLING_TERMS_VERSION)
+        response=self.client.get(reverse('billing:subscribe',args=['solo','monthly']))
+        self.assertNotContains(response,' checked')
+        self.assertContains(response,'#subscription-conditions')
+
+    @patch('apps.billing.views.stripe.checkout.Session.create')
+    @patch('apps.billing.views.stripe.checkout.Session.expire')
+    @patch('apps.billing.views.stripe.checkout.Session.retrieve')
+    def test_pending_checkout_from_previous_terms_is_replaced(self, retrieve, expire, create):
+        PracticeSubscription.objects.create(practice=self.practice,status='incomplete',stripe_price_id='price_fictional',stripe_checkout_session_id='cs_old_terms')
+        retrieve.return_value=SimpleNamespace(id='cs_old_terms',status='open',metadata={'billing_policy':'cardless-v2-billing-info','active_user_count':'1','billing_terms_version':'old'})
+        create.return_value=SimpleNamespace(id='cs_new_terms',url='https://checkout.stripe.test/new')
+        self.client.post(reverse('billing:subscribe',args=['solo','monthly']),PROFESSIONAL_BILLING_DATA)
+        expire.assert_called_once_with('cs_old_terms')
+        create.assert_called_once()

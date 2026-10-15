@@ -4,11 +4,11 @@
 <p>Enter the billing details for your business or professional practice.</p>
 <p class="billing-summary">{{ quantity }} active user{{ quantity|pluralize }} · {% if period == 'yearly' %}$421 per user/year{% else %}$39 per user/month{% endif %}</p>
 {% if stripe_test %}<p class="billing-summary">Test checkout — no real payment. Use fictional billing details.</p>{% endif %}
-<form method="post">{% csrf_token %}
-{% if form.errors %}<p role="alert">Please check the fields below.</p>{{ form.country.errors }}{% endif %}
+<form method="post">{% csrf_token %}<input type="hidden" name="billing_terms_version" value="{{ billing_terms_version }}">
+{% if form.errors %}<p role="alert">Please check the fields below.</p>{{ form.country.errors }}{{ form.billing_terms_version.errors }}{% endif %}
 <div class="professional-billing-fields">
 {% for field in form.visible_fields %}<div class="billing-field billing-field-{{ field.name }}">
-{% if field.name == 'professional_purchase' %}<label class="professional-declaration">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} (optional){% endif %}</label>{{ field }}{% endif %}
+{% if field.name == 'accept_billing_terms' %}<label class="professional-declaration">{{ field }}<span>I have read and accept the <a href="{% url 'terms_of_service' %}#subscription-conditions" target="_blank" rel="noopener">subscription terms<span class="sr-only"> (opens in a new tab)</span></a>.</span></label>{% elif field.name == 'professional_purchase' %}<label class="professional-declaration">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} (optional){% endif %}</label>{{ field }}{% endif %}
 <small id="{{ field.name }}-help">{{ field.help_text }}</small><div id="{{ field.name }}-errors">{{ field.errors }}</div></div>{% endfor %}
 </div>
 <div class="hero-actions"><a class="btn btn-secondary" href="{% url 'billing:subscription_access' %}">Back</a><button class="btn btn-primary" type="submit">Continue to secure checkout</button></div>

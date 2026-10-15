@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from .countries import BILLING_COUNTRIES
+from apps.accounts.legal import BILLING_TERMS_VERSION
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -271,14 +272,20 @@ class ProfessionalBillingForm(forms.Form):
     postal_code = forms.CharField(label='Postal code', max_length=20, required=False)
     professional_purchase = forms.BooleanField(label='I am purchasing NuviaMy for my business or professional practice and am authorized to make this purchase.')
 
+    accept_billing_terms = forms.BooleanField(label='I have read and accept the subscription terms.', error_messages={'required':'Accept the subscription terms to continue to Checkout.'})
+    billing_terms_version = forms.ChoiceField(choices=[(BILLING_TERMS_VERSION, BILLING_TERMS_VERSION)], initial=BILLING_TERMS_VERSION, widget=forms.HiddenInput, error_messages={'required':'Review and accept the current subscription terms.', 'invalid_choice':'The terms have changed. Review the current terms and submit again.'})
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.is_bound and self.data.get('billing_terms_version') != BILLING_TERMS_VERSION:
+            self.data = self.data.copy()
+            self.data['accept_billing_terms'] = ''
         autocomplete = {'legal_name':'organization','line1':'address-line1','line2':'address-line2','city':'address-level2','state':'address-level1','postal_code':'postal-code'}
         for name, field in self.fields.items():
             field.widget.attrs['aria-describedby'] = f'{name}-help {name}-errors'
             if name in autocomplete:
                 field.widget.attrs['autocomplete'] = autocomplete[name]
-        self.order_fields(['legal_name','country','line1','line2','city','state','postal_code','professional_purchase'])
+        self.order_fields(['legal_name','country','line1','line2','city','state','postal_code','professional_purchase','accept_billing_terms','billing_terms_version'])
         country = self.data.get('country') if self.is_bound else self.initial.get('country', 'US')
         if country == 'US':
             self.fields['state'].required = True
