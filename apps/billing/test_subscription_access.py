@@ -1,3 +1,4 @@
+from apps.accounts.legal import BILLING_TERMS_VERSION
 from .billing_test_data import PROFESSIONAL_BILLING_DATA
 from datetime import timedelta
 from unittest.mock import patch
@@ -124,7 +125,7 @@ class SubscriptionAccessTests(TestCase):
     def test_pending_checkout_is_reused_instead_of_creating_duplicate(self, create, retrieve):
         from types import SimpleNamespace
         self.subscription('incomplete', stripe_price_id='price_current', stripe_checkout_session_id='cs_pending')
-        retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending', metadata={'billing_policy': 'cardless-v2-billing-info', 'active_user_count': '1'})
+        retrieve.return_value=SimpleNamespace(status='open',url='https://checkout.stripe.test/pending', metadata={'billing_policy': 'cardless-v2-billing-info', 'billing_terms_version': BILLING_TERMS_VERSION, 'active_user_count': '1'})
         response=self.client.post(reverse('billing:subscribe',args=['solo','monthly']), PROFESSIONAL_BILLING_DATA)
         self.assertEqual(response.url, 'https://checkout.stripe.test/pending')
         create.assert_not_called()
@@ -170,7 +171,7 @@ class SubscriptionAccessTests(TestCase):
     def test_pending_checkout_is_replaced_when_active_user_count_changes(self, create, retrieve, expire):
         from types import SimpleNamespace
         self.subscription('incomplete', stripe_price_id='price_current', stripe_checkout_session_id='cs_pending')
-        retrieve.return_value = SimpleNamespace(id='cs_pending', status='open', url='https://checkout.stripe.test/old', metadata={'billing_policy': 'cardless-v2-billing-info', 'active_user_count': '1'})
+        retrieve.return_value = SimpleNamespace(id='cs_pending', status='open', url='https://checkout.stripe.test/old', metadata={'billing_policy': 'cardless-v2-billing-info', 'billing_terms_version': BILLING_TERMS_VERSION, 'active_user_count': '1'})
         create.return_value = SimpleNamespace(id='cs_updated', url='https://checkout.stripe.test/updated')
         admin = get_user_model().objects.create_user(username='checkout-admin')
         UserProfile.objects.create(user=admin, practice=self.practice, role=UserProfile.Role.ADMIN)

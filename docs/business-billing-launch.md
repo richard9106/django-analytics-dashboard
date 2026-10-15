@@ -64,3 +64,8 @@ Before every subscription Checkout, the manager supplies legal billing name, bil
 The form is purchaser-supplied evidence, not independent proof of business status or entitlement to tax exemption. No country activation gate, automatic tax, tax exemption or live key was deployed. US-specific gate implementation was withdrawn before deployment at the operator's request. Current operator facts: works alone from Spain without US staff/office, VPS currently in Europe, possible future New York migration requires a new review.
 
 Before real charges, review the expanded international tax scope rather than assuming all buyers receive the same US B2B treatment. Free preview remains cardless and independent of billing country. Local acceptance tests cover Spanish, British and Irish addresses, as well as US state/ZIP validation.
+
+
+## Publicación de condiciones — 2026-10-15
+
+Las condiciones comerciales acordadas están publicadas en `/terms/#subscription-conditions`, versión `2026-10-15-commercial-v1`, con aceptación independiente antes de Checkout. La publicación mantiene explícitos los límites actuales: pagos de prueba y datos ficticios, tratamiento fiscal internacional y presentación con/sin impuestos pendientes. Por ello no constituye la apertura de cobros reales ni sustituye los contratos/procedimientos clínicos pendientes.

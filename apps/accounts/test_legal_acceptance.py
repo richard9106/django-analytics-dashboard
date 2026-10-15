@@ -37,3 +37,9 @@ class LegalAcceptanceTests(TestCase):
             self.assertContains(response,reverse('legal_notice'))
         self.assertContains(self.client.get(reverse('legal_notice')),'FICTIONAL-TAX-ID')
         self.assertNotContains(self.client.get(reverse('legal_notice')),'pending completion')
+
+    def test_commercial_terms_publish_agreed_conditions_and_preview_limits(self):
+        from apps.accounts.legal import BILLING_TERMS_VERSION
+        response=self.client.get(reverse('terms_of_service'))
+        for text in ('subscription-conditions','USD 39','USD 421','paid in advance','renews automatically','00:00 UTC','refund requests','test mode',BILLING_TERMS_VERSION):
+            self.assertContains(response,text)
