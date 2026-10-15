@@ -19,23 +19,15 @@ def get_calendar_integration(practice):
 
 
 def build_event_payload(appointment):
-    description_parts = [
-        'NuviaMy appointment.',
-        f'Client: {appointment.client}',
-        f'Therapist: {appointment.therapist}',
-        f'Session: {appointment.get_session_kind_display()}',
-    ]
-    if appointment.meeting_url:
-        description_parts.append(f'Meeting URL: {appointment.meeting_url}')
-
+    # Calendar providers receive an occupancy block, never the clinical record.
+    # Explicit empty location also clears a value on existing PATCHed events.
     payload = {
-        'summary': f'Appointment with {appointment.client}',
-        'description': '\n'.join(description_parts),
+        'summary': 'Reserved time',
+        'description': 'Open NuviaMy to view appointment details.',
+        'location': '',
         'start': {'dateTime': appointment.starts_at.isoformat()},
         'end': {'dateTime': appointment.ends_at.isoformat()},
     }
-    if appointment.location:
-        payload['location'] = appointment.location
     if appointment.status == Appointment.Status.CANCELLED:
         payload['status'] = 'cancelled'
     return payload
@@ -85,7 +77,7 @@ def sync_appointment_to_google(appointment):
         appointment.sync_error = ''
     except Exception as error:
         appointment.sync_status = Appointment.SyncStatus.FAILED
-        appointment.sync_error = str(error)
+        appointment.sync_error = 'Calendar synchronization failed. Try again or contact support.'
     appointment.save(update_fields=[
         'external_event_id',
         'external_event_url',

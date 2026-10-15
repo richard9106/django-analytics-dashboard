@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .invitation_views import AccountInvitationView
 from .views import PracticeDataExportView, PracticeSignupView, ProfileSettingsView, TeamManagementView, TeamMemberActionView
 
 
@@ -7,6 +8,7 @@ from .security_views import (MFASetupView, MFAChallengeView, RecoveryCodesView,
                              ReauthenticateView, SecuritySettingsView, SecuritySessionView)
 
 urlpatterns = [
+    path('invitations/<uidb64>/<token>/', AccountInvitationView.as_view(), name='account_invitation'),
     path('security/', SecuritySettingsView.as_view(), name='security_settings'),
     path('security/setup/', MFASetupView.as_view(), name='mfa_setup'),
     path('security/challenge/', MFAChallengeView.as_view(), name='mfa_challenge'),

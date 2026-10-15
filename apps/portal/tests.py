@@ -1316,8 +1316,8 @@ class ClientPortalViewTests(TestCase):
         access = ClientPortalAccess.objects.get()
         self.assertEqual(access.client, client)
         self.assertTrue(access.is_active)
-        self.assertTrue(access.user.check_password("StrongPass123!"))
-        self.assertTrue(access.user.nuvia_profile.must_change_password)
+        self.assertFalse(access.user.has_usable_password())
+        self.assertFalse(access.user.nuvia_profile.must_change_password)
 
     def test_portal_settings_suggests_client_email_unique_username_and_password(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
@@ -1332,7 +1332,7 @@ class ClientPortalViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-email="maya@example.com"')
         self.assertContains(response, 'data-username="maya.johnson.2"')
-        self.assertContains(response, 'data-password="Nuvia-')
+        self.assertNotContains(response, 'data-password=')
 
     def test_portal_settings_rejects_duplicate_username_case_insensitive(self):
         practice = Practice.objects.create(name="NuviaMy Wellness")
@@ -1382,7 +1382,7 @@ class ClientPortalViewTests(TestCase):
         self.assertContains(response, "Sep 23, 2026")
         self.assertNotContains(response, "Last login: Never")
 
-    def test_portal_settings_reset_password_creates_temporary_credentials_and_audit_log(self):
+    def test_portal_settings_reset_sends_link_without_changing_password(self):
         user, practice, _therapist, client, access = self.create_portal_user(username="practice-client")
         old_password = user.password
         practice_user = get_user_model().objects.create_user(username="practice-owner", password="StrongPass123!")
@@ -1393,10 +1393,10 @@ class ClientPortalViewTests(TestCase):
 
         user.refresh_from_db()
         self.assertEqual(response.status_code, 200)
-        self.assertNotEqual(user.password, old_password)
-        self.assertTrue(user.nuvia_profile.must_change_password)
-        self.assertContains(response, "Temporary credentials")
-        self.assertContains(response, "Portal URL:")
+        self.assertEqual(user.password, old_password)
+        self.assertFalse(UserProfile.objects.filter(user=user, must_change_password=True).exists())
+        self.assertNotContains(response, "Temporary credentials")
+        self.assertContains(response, "Existing passwords stay unchanged")
         self.assertContains(response, user.username)
         log = AuditLog.objects.get(action=AuditLog.Action.UPDATE, object_type="portal.ClientPortalAccess")
         self.assertEqual(log.object_id, str(access.pk))
@@ -1411,8 +1411,8 @@ class ClientPortalViewTests(TestCase):
         self.client.force_login(practice_user)
         response = self.client.get(reverse("portal_settings:portal_access"))
 
-        self.assertContains(response, "Reset password")
-        self.assertContains(response, "data-confirm-message=\"Reset this client's portal password? Their current password will stop working.\"")
+        self.assertContains(response, "Send password reset email")
+        self.assertContains(response, "Existing passwords stay unchanged until the recipient completes the reset.")
         self.assertContains(response, "Delete access")
         self.assertContains(response, "data-confirm-message=\"Delete this client portal access? The client will lose portal access.\"")
 

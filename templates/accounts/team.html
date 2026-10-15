@@ -26,7 +26,7 @@
       <header class="topbar compact-topbar"><div><p class="eyebrow">Account</p><h1>Team management</h1><p>Add internal users, review roles, and track the active users included in subscription billing.</p></div></header>
 
       {% if messages %}<section class="message-list" aria-label="Team messages">{% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}</section>{% endif %}
-      {% if not gmail_connected %}<section class="team-gmail-notice"><strong>Connect Gmail to send invitations from your practice email.</strong><p>Google OAuth keeps access secure and lets NuviaMy send temporary passwords without storing an email password.</p><a class="inline-link" href="{% url 'practice_settings:integrations' %}">Connect Gmail</a></section>{% endif %}
+
 
       <section class="profile-grid">
         <article class="panel">
@@ -37,10 +37,10 @@
                 <div class="team-member-identity"><span class="avatar avatar-md" aria-hidden="true">{% if member.profile_photo %}<img src="{{ member.profile_photo.url }}" alt="">{% else %}{{ member.user.first_name|first }}{{ member.user.last_name|first }}{% endif %}</span><div><h3>{{ member.user.get_full_name|default:member.user.email|default:member.user.username }}</h3><p>{{ member.user.email|default:'No email set' }}</p></div></div>
                 <span class="badge {% if not member.user.is_active %}danger{% elif member.role == 'owner' %}success{% elif member.role == 'admin' %}brand{% else %}warning{% endif %}">{% if not member.user.is_active %}Inactive{% else %}{{ member.get_role_display }}{% endif %}</span>
                 {% if member.user.therapist_profile %}<p class="sync-meta">License: {{ member.user.therapist_profile.license_number }} · {{ member.user.therapist_profile.license_state }}</p>{% endif %}
-                {% if member.must_change_password %}<p class="sync-meta">Temporary password change pending.</p>{% endif %}
+                {% if not member.user.has_usable_password %}<p class="sync-meta">Invitation pending · Password not set</p>{% endif %}
                 <div class="team-member-actions">
                   {% if member.user.is_active %}<form method="post" action="{% url 'team_member_action' member.pk %}" data-confirm-message="Deactivate this team member? They will lose workspace access until reactivated.">{% csrf_token %}<input type="hidden" name="action" value="deactivate"><button class="inline-button" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><button class="inline-button" type="submit">Reactivate</button></form>{% if member.role != 'owner' %}<form method="post" action="{% url 'team_member_action' member.pk %}" data-confirm-message="Delete this inactive team member permanently? This cannot be undone.">{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="inline-button-danger" type="submit">Delete permanently</button></form>{% endif %}{% endif %}
-                  {% if member.user.is_active and member.must_change_password %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resend_invitation"><button class="inline-button" type="submit">Resend invitation</button></form>{% endif %}
+                  {% if member.user.is_active and not member.user.has_usable_password %}<form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resend_invitation"><button class="inline-button" type="submit">Resend invitation</button></form>{% endif %}
                 </div>
                 {% if member.role == 'therapist' %}<details class="team-permissions"><summary>Permissions</summary><form method="post" action="{% url 'team_member_action' member.pk %}">{% csrf_token %}<input type="hidden" name="action" value="update_permissions"><div class="permission-matrix"><div class="permission-row permission-head"><span>Area</span><span>Read</span><span>Create</span><span>Edit</span><span>Delete</span></div>{% for row in member.permission_rows %}<div class="permission-row"><strong>{{ row.label }}</strong>{% for action in row.actions %}<label><input type="checkbox" name="perm_{{ row.key }}_{{ action.key }}" {% if action.enabled %}checked{% endif %}> <span class="sr-only">{{ action.label }}</span></label>{% endfor %}</div>{% endfor %}</div><button class="btn btn-secondary" type="submit">Save permissions</button></form></details>{% endif %}
               </article>
@@ -81,12 +81,9 @@
                 <div class="field"><label for="team-specialty">Specialty</label><input id="team-specialty" name="specialty" value="{{ form.specialty.value|default:'' }}">{{ form.specialty.errors }}</div>
                 <div class="field"><label for="team-license-number">License number</label><input id="team-license-number" name="license_number" value="{{ form.license_number.value|default:'' }}">{{ form.license_number.errors }}</div>
                 <div class="field"><label for="team-license-state">License state</label><input id="team-license-state" name="license_state" value="{{ form.license_state.value|default:'' }}">{{ form.license_state.errors }}</div>
-                <div class="field"><label for="team-password-mode">Password</label><select id="team-password-mode" name="password_mode" data-password-mode><option value="temporary" {% if form.password_mode.value != 'custom' %}selected{% endif %}>Generate temporary password</option><option value="custom" {% if form.password_mode.value == 'custom' %}selected{% endif %}>Set password manually</option></select>{{ form.password_mode.errors }}</div>
-                <div class="field" data-custom-password-field hidden><label for="team-password">Custom password</label>{{ form.password }}{{ form.password.errors }}</div>
-                <div class="field checkbox-field full"><label><input name="send_invitation_email" type="checkbox" {% if form.send_invitation_email.value != False %}checked{% endif %}> {% if gmail_connected %}Send the temporary password using connected Gmail{% else %}Email the temporary password to this team member{% endif %}</label></div>
               </div>
-              <p class="empty-state">NuviaMy will generate a temporary password and require the new user to change it at first login.</p>
-              <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Create team member</button></div>
+              <p class="empty-state">We’ll email a one-time link so this team member can set their own password. Active internal accounts, including pending invitations, count toward per-user billing.</p>
+              <div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Send invitation</button></div>
             </form>
           </div>
       </dialog>
@@ -95,11 +92,6 @@
   <script>
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-target]'); if (!trigger) return; const dialog = document.getElementById(trigger.dataset.modalTarget); if (!dialog || typeof dialog.showModal !== 'function') return; event.preventDefault(); dialog.showModal(); });
     document.addEventListener('click', (event) => { const trigger = event.target.closest('[data-modal-close]'); if (trigger) trigger.closest('dialog')?.close(); });
-    const passwordMode = document.querySelector('[data-password-mode]');
-    const customPasswordField = document.querySelector('[data-custom-password-field]');
-    const syncPasswordMode = () => { if (passwordMode && customPasswordField) customPasswordField.hidden = passwordMode.value !== 'custom'; };
-    passwordMode?.addEventListener('change', syncPasswordMode);
-    syncPasswordMode();
     if (document.querySelector('[data-team-form-errors]') && document.getElementById('team-member-modal')) document.getElementById('team-member-modal').showModal();
   </script>
 </body>

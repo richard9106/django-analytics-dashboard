@@ -1,4 +1,3 @@
-import secrets
 from datetime import datetime, timedelta
 
 from django import forms
@@ -26,14 +25,9 @@ def suggest_portal_username(client):
     return f'{username}.{suffix}'
 
 
-def suggest_portal_password():
-    return f'Nuvia-{secrets.token_urlsafe(6)}'
-
-
 class ClientPortalAccessForm(forms.ModelForm):
     username = forms.CharField(max_length=150)
-    email = forms.EmailField(required=False)
-    password = forms.CharField(widget=forms.PasswordInput, required=False)
+    email = forms.EmailField(required=True)
 
     class Meta:
         model = ClientPortalAccess
@@ -52,16 +46,13 @@ class ClientPortalAccessForm(forms.ModelForm):
             self.fields['client'].disabled = True
             self.fields['username'].initial = self.instance.user.username
             self.fields['email'].initial = self.instance.user.email
-            self.fields['password'].help_text = 'Leave blank to keep the current password.'
         else:
-            self.fields['password'].required = True
             if practice and not self.is_bound:
                 client = self.fields['client'].queryset.first()
                 if client:
                     self.fields['client'].initial = client
                     self.fields['username'].initial = suggest_portal_username(client)
                     self.fields['email'].initial = client.email
-                    self.fields['password'].initial = suggest_portal_password()
 
     def clean_client(self):
         client = self.cleaned_data['client']
@@ -81,38 +72,34 @@ class ClientPortalAccessForm(forms.ModelForm):
             raise forms.ValidationError('A user with this username already exists.')
         return username
 
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        existing = get_user_model().objects.filter(email__iexact=email)
+        if self.instance.pk:
+            existing = existing.exclude(pk=self.instance.user_id)
+        if existing.exists():
+            raise forms.ValidationError('A user with this email already exists.')
+        return email
+
     @transaction.atomic
     def save(self, commit=True):
         access = super().save(commit=False)
         access.practice = self.practice
         username = self.cleaned_data['username']
-        email = self.cleaned_data.get('email', '')
-        password = self.cleaned_data.get('password')
-
+        email = self.cleaned_data['email']
         if access.pk:
             user = access.user
             user.username = username
             user.email = email
-            if password:
-                user.set_password(password)
-            user.save()
+            user.save(update_fields=['username', 'email'])
         else:
-            user = get_user_model().objects.create_user(username=username, email=email, password=password)
+            user = get_user_model().objects.create_user(username=username, email=email, password=None)
             access.user = user
-
         if commit:
             access.full_clean()
             access.save()
-            profile, _created = UserProfile.objects.update_or_create(
-                user=user,
-                defaults={
-                    'practice': self.practice,
-                    'role': UserProfile.Role.CLIENT,
-                },
-            )
-            if password:
-                profile.must_change_password = True
-                profile.save(update_fields=['must_change_password', 'updated_at'])
+            UserProfile.objects.update_or_create(user=user, defaults={
+                'practice': self.practice, 'role': UserProfile.Role.CLIENT})
             self.save_m2m()
         return access
 

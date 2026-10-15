@@ -50,6 +50,12 @@ class ClientDocument(models.Model):
         ordering = ["-created_at"]
 
     def clean(self):
+        if self.file and not self.file._committed:
+            from .uploads import validate_document_upload
+            try:
+                self.content_type = validate_document_upload(self.file)
+            except ValidationError as error:
+                raise ValidationError({'file': error.messages})
         if self.client_id and self.practice_id and self.client.practice_id != self.practice_id:
             raise ValidationError({"client": "Document client must belong to the same practice."})
 

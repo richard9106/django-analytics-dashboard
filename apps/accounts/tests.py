@@ -394,9 +394,9 @@ class TeamManagementViewTests(TestCase):
         self.assertContains(response, "Per-user billing")
         self.assertContains(response, "Add team member")
         self.assertContains(response, "owner@example.com")
-        self.assertContains(response, "Connect Gmail")
+        self.assertContains(response, "one-time link")
 
-    def test_owner_can_create_therapist_team_member_with_temporary_password(self):
+    def test_owner_can_invite_therapist_without_a_shared_password(self):
         user, practice = self.create_practice_user()
 
         self.client.force_login(user)
@@ -408,9 +408,9 @@ class TeamManagementViewTests(TestCase):
         therapist = member.therapist_profile
         self.assertEqual(profile.practice, practice)
         self.assertEqual(profile.role, UserProfile.Role.THERAPIST)
-        self.assertTrue(profile.must_change_password)
+        self.assertFalse(profile.must_change_password)
         self.assertEqual(therapist.practice, practice)
-        self.assertContains(response, "Temporary password:")
+        self.assertNotContains(response, "Temporary password:")
         self.assertContains(response, "Laura Jones")
 
     def test_owner_can_create_admin_without_license(self):
@@ -430,7 +430,7 @@ class TeamManagementViewTests(TestCase):
         self.assertEqual(admin.nuvia_profile.role, UserProfile.Role.ADMIN)
         self.assertFalse(hasattr(admin, "therapist_profile"))
 
-    def test_owner_can_set_custom_password_for_team_member(self):
+    def test_legacy_custom_password_payload_cannot_set_team_credentials(self):
         user, _practice = self.create_practice_user()
 
         self.client.force_login(user)
@@ -446,11 +446,11 @@ class TeamManagementViewTests(TestCase):
 
         self.assertRedirects(response, reverse("team_management"))
         admin = get_user_model().objects.get(email="admin-custom@example.com")
-        self.assertTrue(admin.check_password("CustomStrongPass123!"))
+        self.assertFalse(admin.has_usable_password())
         self.assertFalse(admin.nuvia_profile.must_change_password)
 
-    @patch("apps.accounts.views.send_mail", return_value=1)
-    def test_owner_can_email_temporary_password(self, mock_send_mail):
+    @patch("apps.accounts.invitations.send_mail", return_value=1)
+    def test_owner_emails_setup_link(self, mock_send_mail):
         user, _practice = self.create_practice_user()
 
         self.client.force_login(user)
@@ -460,31 +460,21 @@ class TeamManagementViewTests(TestCase):
         mock_send_mail.assert_called_once()
         email_args = mock_send_mail.call_args.args
         self.assertEqual(email_args[3], ["laura@example.com"])
-        self.assertIn("Temporary password:", email_args[1])
-        self.assertContains(response, "temporary password was sent via email")
+        self.assertIn("/accounts/invitations/", email_args[1])
+        self.assertNotIn("Temporary password:", email_args[1])
+        self.assertContains(response, "Invitation sent to")
 
-    @patch("apps.accounts.views.send_gmail_message")
-    def test_owner_uses_connected_gmail_for_invitation(self, mock_send_gmail):
+    @patch("apps.accounts.invitations.send_mail", return_value=1)
+    def test_invitation_uses_transactional_mail_even_with_google_connected(self, send):
         user, practice = self.create_practice_user()
-        integration = ExternalIntegration.objects.create(
-            practice=practice,
-            provider=ExternalIntegration.Provider.GOOGLE,
-            status=ExternalIntegration.Status.CONNECTED,
-            account_email="owner@gmail.com",
-            send_email_enabled=True,
-        )
-
+        ExternalIntegration.objects.create(practice=practice, provider='google', status='connected', send_email_enabled=True)
         self.client.force_login(user)
-        response = self.client.post(reverse("team_management"), self.team_payload(send_invitation_email="on"), follow=True)
+        response = self.client.post(reverse('team_management'), self.team_payload(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        send.assert_called_once()
 
-        self.assertRedirects(response, reverse("team_management"))
-        mock_send_gmail.assert_called_once()
-        self.assertEqual(mock_send_gmail.call_args.args[0], integration)
-        self.assertEqual(mock_send_gmail.call_args.args[1], "laura@example.com")
-        self.assertContains(response, "sent via connected Gmail")
-
-    @patch("apps.accounts.views.send_mail", return_value=0)
-    def test_email_failure_keeps_temporary_password_visible_as_fallback(self, mock_send_mail):
+    @patch("apps.accounts.invitations.send_mail", return_value=0)
+    def test_email_failure_never_exposes_password_or_invitation_link(self, mock_send_mail):
         user, _practice = self.create_practice_user()
 
         self.client.force_login(user)
@@ -493,7 +483,7 @@ class TeamManagementViewTests(TestCase):
         self.assertRedirects(response, reverse("team_management"))
         mock_send_mail.assert_called_once()
         self.assertContains(response, "email could not be sent")
-        self.assertContains(response, "Temporary password:")
+        self.assertNotContains(response, "Temporary password:")
 
     def test_team_management_allows_adding_beyond_old_plan_limit(self):
         user, practice = self.create_practice_user(plan=PracticeSubscription.Plan.SOLO)
@@ -619,8 +609,8 @@ class TeamManagementViewTests(TestCase):
         self.assertTrue(owner.is_active)
         self.assertContains(response, "at least one active owner")
 
-    @patch("apps.accounts.views.send_team_invitation", return_value="connected Gmail")
-    def test_resend_invitation_resets_password_and_requires_change(self, mock_send_invitation):
+    @patch("apps.accounts.views.send_account_access_email", return_value=True)
+    def test_resend_invitation_cannot_replace_an_activated_users_password(self, mock_send_invitation):
         owner, practice = self.create_practice_user()
         member = get_user_model().objects.create_user(username="member", email="member@example.com", password="OldPass123!")
         member_profile = UserProfile.objects.create(user=member, practice=practice, role=UserProfile.Role.ADMIN, must_change_password=False)
@@ -631,9 +621,9 @@ class TeamManagementViewTests(TestCase):
         self.assertRedirects(response, reverse("team_management"))
         member.refresh_from_db()
         member_profile.refresh_from_db()
-        self.assertTrue(member_profile.must_change_password)
-        self.assertTrue(member.check_password(mock_send_invitation.call_args.args[2]))
-        self.assertNotEqual(mock_send_invitation.call_args.args[2], "OldPass123!")
+        self.assertFalse(member_profile.must_change_password)
+        self.assertTrue(member.check_password("OldPass123!"))
+        mock_send_invitation.assert_not_called()
 
     def test_owner_can_delete_deactivated_team_member(self):
         owner, practice = self.create_practice_user()

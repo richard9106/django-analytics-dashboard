@@ -18,6 +18,7 @@ import stripe
 from django.conf import settings
 
 from apps.accounts.access import ClientPortalRedirectMixin, ForcePasswordChangeRequiredMixin, PracticePermissionMixin, get_practice_for_user, has_practice_permission, permission_redirect
+from apps.accounts.invitations import send_account_access_email
 from apps.accounts.models import UserProfile
 from apps.appointments.google_calendar import sync_appointment_to_google
 from apps.appointments.models import Appointment, practice_allows_interval
@@ -38,7 +39,6 @@ from .forms import (
     PortalMessageForm,
     IntakePacketTemplateForm,
     PublicBookingRequestForm,
-    suggest_portal_password,
     suggest_portal_username,
 )
 from .models import ClientIntakeAssignment, ClientPortalAccess, ClientPortalRequest, IntakePacketTemplate, PortalConversation, PortalMessage, PublicBookingRequest
@@ -103,7 +103,6 @@ class PracticeContextMixin(LoginRequiredMixin, ClientPortalRedirectMixin):
                 'client': client,
                 'username': suggest_portal_username(client),
                 'email': client.email,
-                'password': suggest_portal_password(),
             }
             for client in context['portal_clients']
         ]
@@ -521,7 +520,7 @@ class PortalAccessListView(PracticePermissionMixin, PracticeContextMixin, ListVi
         client_id = self.request.GET.get('client')
         if client_id and client_id.isdigit() and practice:
             breadcrumb_client = practice.clients.filter(pk=client_id).first()
-        context['reset_credentials'] = self.request.session.pop('portal_reset_credentials', None)
+        self.request.session.pop('portal_reset_credentials', None)  # Discard legacy plaintext credentials.
         context['breadcrumbs'] = (
             [
                 {'label': 'Clients', 'url': reverse('clients:list')},
@@ -559,6 +558,15 @@ class PortalAccessCreateView(PracticePermissionMixin, PracticeContextMixin, Crea
             practice=self.object.practice,
             metadata={'client_id': self.object.client_id, 'portal_user_id': self.object.user_id, 'is_active': self.object.is_active},
         )
+        if not self.object.user.has_usable_password() and self.object.is_active:
+            try:
+                sent = send_account_access_email(self.request, self.object.user)
+            except Exception:
+                sent = False
+            if sent:
+                messages.success(self.request, 'An account setup link was sent to the portal email address.')
+            else:
+                messages.warning(self.request, 'Portal access was saved, but the invitation email could not be sent. Check the email address and try Resend invitation.')
         return response
 
 
@@ -599,24 +607,17 @@ class PortalAccessPasswordResetView(PracticePermissionMixin, PracticeContextMixi
     def post(self, request, pk):
         practice = self.get_practice()
         access = get_object_or_404(ClientPortalAccess.objects.select_related('client', 'user'), pk=pk, practice=practice)
-        password = suggest_portal_password()
-        access.user.set_password(password)
-        access.user.save(update_fields=['password'])
-        profile, _created = UserProfile.objects.update_or_create(
-            user=access.user,
-            defaults={
-                'practice': access.practice,
-                'role': UserProfile.Role.CLIENT,
-                'must_change_password': True,
-            },
-        )
-        request.session['portal_reset_credentials'] = {
-            'access_id': access.pk,
-            'client_name': str(access.client),
-            'username': access.user.username,
-            'password': password,
-            'portal_url': request.build_absolute_uri(reverse_lazy('portal:dashboard')),
-        }
+        if not access.is_active or not access.user.is_active:
+            messages.error(request, 'Reactivate portal access before sending an account link.')
+            return redirect('portal_settings:portal_access')
+        try:
+            sent = send_account_access_email(request, access.user)
+        except Exception:
+            sent = False
+        if sent:
+            messages.success(request, 'An account link was sent. Existing passwords stay unchanged until the recipient completes the reset.')
+        else:
+            messages.warning(request, 'The email could not be sent. Check the email address and try again.')
         log_audit_event(
             request,
             AuditLog.Action.UPDATE,

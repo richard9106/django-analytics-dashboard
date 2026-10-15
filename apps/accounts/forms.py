@@ -167,18 +167,9 @@ class TeamMemberCreateForm(forms.Form):
     license_number = forms.CharField(max_length=60, required=False)
     license_state = forms.CharField(max_length=60, required=False)
     specialty = forms.CharField(max_length=140, required=False)
-    send_invitation_email = forms.BooleanField(required=False, initial=True)
-    password_mode = forms.ChoiceField(
-        choices=(('temporary', 'Generate a temporary password'), ('custom', 'Set a password manually')),
-        required=False,
-        initial='temporary',
-    )
-    password = forms.CharField(max_length=128, required=False, widget=forms.PasswordInput(render_value=False))
-
     def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.practice = practice
-        self.temporary_password = ""
 
     def build_username(self):
         User = get_user_model()
@@ -205,8 +196,6 @@ class TeamMemberCreateForm(forms.Form):
         role = cleaned_data.get("role")
         license_number = cleaned_data.get("license_number")
         license_state = cleaned_data.get("license_state")
-        password_mode = cleaned_data.get('password_mode') or 'temporary'
-        password = cleaned_data.get('password')
 
         if role == UserProfile.Role.THERAPIST:
             if not license_number:
@@ -219,14 +208,6 @@ class TeamMemberCreateForm(forms.Form):
             ).exists():
                 self.add_error("license_number", "A therapist profile with this license already exists in that state.")
 
-        if password_mode == 'custom':
-            if not password:
-                self.add_error('password', 'Enter a password or choose a temporary password.')
-            else:
-                try:
-                    validate_password(password)
-                except ValidationError as error:
-                    self.add_error('password', error)
         return cleaned_data
 
     @transaction.atomic
@@ -235,11 +216,10 @@ class TeamMemberCreateForm(forms.Form):
         self.practice = Practice.objects.select_for_update().get(pk=self.practice.pk)
         assert_free_seat_available(self.practice)
         User = get_user_model()
-        self.temporary_password = self.cleaned_data.get('password') if self.cleaned_data.get('password_mode') == 'custom' else get_random_string(14)
         user = User.objects.create_user(
             username=self.build_username(),
             email=self.cleaned_data["email"],
-            password=self.temporary_password,
+            password=None,
             first_name=self.cleaned_data["first_name"],
             last_name=self.cleaned_data["last_name"],
         )
@@ -257,7 +237,7 @@ class TeamMemberCreateForm(forms.Form):
             role=self.cleaned_data["role"],
             phone=self.cleaned_data.get("phone", ""),
             profile_photo=self.cleaned_data.get('profile_photo'),
-            must_change_password=self.cleaned_data.get('password_mode') != 'custom',
+            must_change_password=False,
         )
         if profile.role == UserProfile.Role.THERAPIST:
             from .access import DEFAULT_THERAPIST_PERMISSIONS
