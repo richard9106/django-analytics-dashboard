@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import ClientDocument
+from .uploads import validate_document_upload
 
 
 class ClientDocumentForm(forms.ModelForm):
@@ -21,6 +22,11 @@ class ClientDocumentForm(forms.ModelForm):
             self.fields['client'].queryset = practice.clients.all()
         else:
             self.fields['client'].queryset = self.fields['client'].queryset.none()
+
+    def clean_file(self):
+        upload = self.cleaned_data['file']
+        upload.content_type = validate_document_upload(upload)
+        return upload
 
     def save(self, commit=True):
         document = super().save(commit=False)

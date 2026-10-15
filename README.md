@@ -4,7 +4,7 @@ NuviaMy is a Django-based practice management SaaS for solo therapists and multi
 
 ## Current status
 
-Last documentation review: **October 13, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
+Last documentation review: **October 15, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
 
 - Production uses Docker Compose, PostgreSQL, Gunicorn and host Nginx at `nuviamy.com`.
 - Stripe mode follows the protected deployment credentials; the operator has authorized **live subscription billing**. Published pricing (excluding applicable taxes) is **USD 39 per active internal user/month** or **USD 421/user/year**.
@@ -13,7 +13,7 @@ Last documentation review: **October 13, 2026**. The latest functional release i
 - Authenticated sessions expire after **one hour of inactivity** and have an **eight-hour absolute limit**.
 - Release CI runs the full PostgreSQL test suite, JavaScript interaction checks, migration/deployment checks and database role/backup-restore checks. Production verification confirmed the initial consultation defaults, migrations and enabled clinical immutability guards.
 
-The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See [Clinical readiness for the US](docs/clinical-readiness-us.md).
+The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See the [current clinical security evidence and open release gates](docs/compliance/README.md); the [initial clinical review](docs/clinical-readiness-us.md) is historical.
 
 ## Main client workflow
 
@@ -119,7 +119,7 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 ### Documents, portal and integrations
 
 - Authorized client document upload, download, portal visibility and optional Google Drive export; local filesystem and Cloudflare R2 storage backends.
-- Portal accounts are restricted to client-facing routes; temporary passwords must be changed. Clients can view their sessions/documents, submit requests/forms, message the practice and pay eligible invoices.
+- Portal accounts are restricted to client-facing routes and activated through emailed setup links; legacy temporary passwords still require a change. Clients can view their sessions/documents, submit requests/forms, message the practice and pay eligible invoices.
 - Google OAuth supports Gmail, Calendar and Drive; tokens are encrypted through `FIELD_ENCRYPTION_KEY`. NuviaMy remains the source of truth.
 - Optional client/team photos, team invitations and granular therapist permissions are implemented.
 - Telehealth rooms are reserved for future provider integration; video appointment format is not an embedded telehealth service.
@@ -256,3 +256,24 @@ Prefer compact operational rows, clear client identity, labeled metadata, bounde
 New professional workspace registrations send an operator email after the account transaction commits. `SIGNUP_NOTIFICATION_EMAIL` defaults to `support@nuviamy.com` in Compose (set it empty to disable); notifications contain the registrant name, email, practice and registration date, never passwords or clinical data. SMTP failures are logged without blocking registration. Patient and team invitations do not trigger this signup alert.
 
 Live billing rollout: use the separately validated live prices, invoice template, API keys and endpoint signing secret. Archive and detach sandbox subscription/customer/session references before switching; do not carry a sandbox payment status into live access. Preserve existing local trial/invitation entitlements. Commercial availability does not authorize identifiable clinical records.
+
+## Clinical security baseline — October 15, 2026
+
+Staff and client portal access use single-use account setup links (up to 48 hours).
+Administrators do not choose, see or email a recipient's password. Resending a pending
+invitation revokes the earlier link; recovery for an established account leaves its
+password unchanged until the recipient completes the reset. Disabled accounts cannot
+receive new links. Transactional SMTP sends neutral messages without client names
+or clinical details. Pending active staff still count towards paid seats.
+
+Sentry exports only exception types and structural stack locations; request data,
+messages, locals, breadcrumbs and performance transactions are discarded. Google
+Calendar synchronization sends neutral reserved-time blocks without client names,
+notes, meeting links or locations. Previously exported events require separate review.
+Client document uploads have a 10 MB limit and container/type validation; this is
+not malware scanning and does not establish that every upload route is approved.
+
+`ops/offsite_config_backup.py` captures an authenticated encrypted configuration/key
+snapshot on the operator's computer, with the decryption key kept outside the VPS.
+See [recovery evidence and instructions](docs/compliance/recovery.md). This snapshot
+does not replace database backups or historical document recovery.

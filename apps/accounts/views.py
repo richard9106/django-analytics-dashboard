@@ -6,14 +6,12 @@ from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView
-from django.core.mail import send_mail
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils.crypto import get_random_string
 from django.views.generic import FormView, TemplateView
 from django.views import View
 
@@ -22,33 +20,13 @@ from .access import DEFAULT_THERAPIST_PERMISSIONS, PERMISSION_ACTIONS, PERMISSIO
 from apps.audit.models import AuditLog
 from apps.audit.utils import log_audit_event
 from apps.billing.models import PracticeSubscription
-from apps.practices.google_oauth import send_gmail_message
 from apps.appointments.reminders import get_gmail_integration
 from apps.rate_limit import PostRateLimitMixin
 from .forms import EmailAuthenticationForm, ForcePasswordChangeForm, PracticeSignupForm, ProfileDetailsForm, TeamMemberCreateForm
+from .invitations import send_account_access_email
 from .models import UserProfile
 from .security import requires_mfa, security_state
 from .export import build_practice_export
-
-
-def send_team_invitation(request, user, temporary_password):
-    practice = user.nuvia_profile.practice
-    integration = get_gmail_integration(practice)
-    subject = "Your NuviaMy team invitation"
-    body = (
-        f"Hello {user.first_name or user.email},\n\n"
-        f"You have been invited to join {practice.name} on NuviaMy.\n\n"
-        f"Sign in at: {request.build_absolute_uri('/login/')}\n"
-        f"Email: {user.email}\n"
-        f"Temporary password: {temporary_password}\n\n"
-        "You will be required to change this password when you first sign in."
-    )
-    if integration:
-        send_gmail_message(integration, user.email, subject, body)
-        return "connected Gmail"
-    if send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False):
-        return "email"
-    return ""
 
 
 def sync_subscription_user_quantity(practice):
@@ -308,17 +286,14 @@ class TeamManagementView(LoginRequiredMixin, FormView):
             form.add_error(None, error)
             return self.form_invalid(form)
         member_name = user.get_full_name() or user.email
-        if form.cleaned_data.get("send_invitation_email"):
-            try:
-                sent_via = send_team_invitation(self.request, user, form.temporary_password)
-            except Exception:
-                sent_via = ""
-            if sent_via:
-                messages.success(self.request, f"Team member {member_name} was created and the temporary password was sent via {sent_via} to {user.email}.")
-            else:
-                messages.warning(self.request, f"Team member {member_name} was created, but the email could not be sent. Temporary password: {form.temporary_password}")
+        try:
+            sent = send_account_access_email(self.request, user)
+        except Exception:
+            sent = False
+        if sent:
+            messages.success(self.request, f"Invitation sent to {user.email}. They can set their password using the link.")
         else:
-            messages.success(self.request, f"Team member {member_name} was created. Temporary password: {form.temporary_password}")
+            messages.warning(self.request, "Team member was added, but the invitation email could not be sent. Use Resend invitation to try again.")
         log_audit_event(
             self.request,
             AuditLog.Action.CREATE,
@@ -410,19 +385,17 @@ class TeamMemberActionView(LoginRequiredMixin, View):
             if not sync_subscription_user_quantity(practice):
                 messages.warning(request, 'Stripe subscription quantity could not be updated. Please review billing in Stripe.')
         elif action == "resend_invitation":
-            password = get_random_string(14)
-            target.user.set_password(password)
-            target.user.save(update_fields=["password"])
-            target.must_change_password = True
-            target.save(update_fields=["must_change_password", "updated_at"])
+            if target.user.has_usable_password():
+                messages.error(request, 'This account is already set up. They can use password recovery from the sign-in page.')
+                return redirect('team_management')
             try:
-                sent_via = send_team_invitation(request, target.user, password)
+                sent = send_account_access_email(request, target.user)
             except Exception:
-                sent_via = ""
-            if sent_via:
-                messages.success(request, f"A new temporary password was sent via {sent_via} to {target.user.email}.")
+                sent = False
+            if sent:
+                messages.success(request, 'A new invitation was sent. Previous invitation links no longer work.')
             else:
-                messages.warning(request, f"The invitation email could not be sent. New temporary password: {password}")
+                messages.warning(request, 'The invitation email could not be sent. Check the email address and try again.')
         else:
             messages.error(request, "Unknown team action.")
         return redirect("team_management")

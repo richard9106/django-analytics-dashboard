@@ -1121,7 +1121,10 @@ class AppointmentViewTests(TestCase):
         args, kwargs = google_request.call_args
         self.assertEqual(kwargs['method'], 'POST')
         self.assertIn('/calendars/primary/events', args[1])
-        self.assertEqual(kwargs['data']['summary'], 'Appointment with Maya Johnson')
+        self.assertEqual(kwargs['data']['summary'], 'Reserved time')
+        self.assertEqual(kwargs['data']['location'], '')
+        self.assertNotIn('Maya', str(kwargs['data']))
+        self.assertNotIn('Office 1', str(kwargs['data']))
         self.assertNotIn('Do not send notes', kwargs['data']['description'])
 
     def test_appointment_create_prefills_from_calendar_date(self):

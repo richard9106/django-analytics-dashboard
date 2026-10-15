@@ -20,9 +20,10 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127
 
 SENTRY_DSN = os.getenv('SENTRY_DSN', '')
 SENTRY_ENVIRONMENT = os.getenv('SENTRY_ENVIRONMENT', 'development' if DEBUG else 'production')
-SENTRY_TRACES_SAMPLE_RATE = float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.05'))
+SENTRY_TRACES_SAMPLE_RATE = float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0'))
 if SENTRY_DSN:
     import sentry_sdk
+    from .sentry_privacy import before_send, discard_transaction, discard_breadcrumb
     from sentry_sdk.integrations.django import DjangoIntegration
 
     sentry_sdk.init(
@@ -32,6 +33,12 @@ if SENTRY_DSN:
         send_default_pii=False,
         include_local_variables=False,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+        before_send=before_send,
+        before_send_transaction=discard_transaction,
+        before_breadcrumb=discard_breadcrumb,
+        profiles_sample_rate=0.0,
+        enable_logs=False,
+        send_client_reports=False,
     )
 
 INSTALLED_APPS = [
