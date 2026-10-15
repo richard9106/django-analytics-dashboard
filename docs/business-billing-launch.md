@@ -69,3 +69,9 @@ Before real charges, review the expanded international tax scope rather than ass
 ## Publicación de condiciones — 2026-10-15
 
 Las condiciones comerciales acordadas están publicadas en `/terms/#subscription-conditions`, versión `2026-10-15-commercial-v1`, con aceptación independiente antes de Checkout. La publicación mantiene explícitos los límites actuales: pagos de prueba y datos ficticios, tratamiento fiscal internacional y presentación con/sin impuestos pendientes. Por ello no constituye la apertura de cobros reales ni sustituye los contratos/procedimientos clínicos pendientes.
+
+## Live subscription rollout authorized — 2026-10-15
+
+The operator has explicitly authorized activating real subscription payments. The public terms now distinguish live Checkout from test deployments; paid subscriptions remain professional preview access with fictional clinical records. Prices exclude applicable taxes and the final amount must be visible before confirmation. This update does not assert that every destination tax obligation is resolved or approve clinical processing.
+
+Rollout uses the verified live product/prices/template and signed webhook secret stored outside Git. Archive sandbox subscription rows and protected configuration before detaching their customer/subscription/price/session references. Preserve local trials, invitations and internal exemptions; any temporary continuation of a test workspace is complimentary access rather than a live paid subscription. Never copy sandbox paid status into a real subscription or create charges merely to test the change. Verify live configuration and HTTP health after restart; retain the private rollback snapshot.

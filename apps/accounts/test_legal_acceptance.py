@@ -43,3 +43,13 @@ class LegalAcceptanceTests(TestCase):
         response=self.client.get(reverse('terms_of_service'))
         for text in ('subscription-conditions','USD 39','USD 421','paid in advance','renews automatically','00:00 UTC','refund requests','test mode',BILLING_TERMS_VERSION):
             self.assertContains(response,text)
+
+
+@override_settings(STRIPE_SECRET_KEY='sk_live_fictional')
+class LiveCommercialNoticeTests(TestCase):
+    def test_terms_explain_real_payments_and_retain_clinical_limit(self):
+        response = self.client.get(reverse('terms_of_service'))
+        self.assertContains(response, 'authorizes real recurring payments')
+        self.assertContains(response, 'prices exclude any applicable taxes')
+        self.assertContains(response, 'Do not enter identifiable patient')
+        self.assertNotContains(response, 'Stripe is in test mode')
