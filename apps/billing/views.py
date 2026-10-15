@@ -897,6 +897,28 @@ class StripeWebhookView(View):
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
+        # This separate path validates only a non-financial live event. It must
+        # never forward a live payment/subscription to the test integration.
+        if (settings.STRIPE_SECRET_KEY.startswith(('sk_test_', 'rk_test_'))
+                and settings.STRIPE_LIVE_VERIFY_WEBHOOK_SECRET and settings.STRIPE_LIVE_VERIFY_NONCE):
+            try:
+                probe = stripe.Webhook.construct_event(
+                    request.body, request.META.get('HTTP_STRIPE_SIGNATURE', ''),
+                    settings.STRIPE_LIVE_VERIFY_WEBHOOK_SECRET)
+            except (ValueError, stripe.error.SignatureVerificationError):
+                probe = None  # Ordinary sandbox events still use their own verifier.
+            if probe is not None:
+                obj = probe.get('data', {}).get('object', {})
+                if (probe.get('livemode') is not True
+                        or probe.get('type') != 'billing_portal.configuration.updated'
+                        or obj.get('object') != 'billing_portal.configuration'
+                        or (obj.get('metadata') or {}).get('nuviamy_webhook_verification') != settings.STRIPE_LIVE_VERIFY_NONCE):
+                    return HttpResponseBadRequest('Event is not the configured verification probe.')
+                log_audit_event(request, AuditLog.Action.CREATE, 'stripe_live_webhook_verification', platform=True,
+                                actor=None, metadata={'stripe_event_id':probe.get('id'),
+                                    'probe_id':settings.STRIPE_LIVE_VERIFY_NONCE, 'livemode':True,
+                                    'payload_sha256':hashlib.sha256(request.body).hexdigest()})
+                return HttpResponse(status=200)
         if not settings.STRIPE_WEBHOOK_SECRET:
             return HttpResponseBadRequest('Webhook not configured.')
 

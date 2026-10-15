@@ -1,0 +1,11 @@
+# Live webhook signature proof without charges
+
+The application remains connected to Stripe test API keys, prices, customers and its ordinary test signing secret. Optional `STRIPE_LIVE_VERIFY_WEBHOOK_SECRET` and `STRIPE_LIVE_VERIFY_NONCE` enable a separate, narrow verifier at the same HTTPS webhook URL. It accepts only a signed live `billing_portal.configuration.updated` event whose metadata matches the configured nonce. It writes a platform audit receipt containing event ID, nonce, live-mode flag and body digest, then returns HTTP 200. No payment/subscription processing is called by this branch. Live financial events are rejected by it. Empty probe settings, or an active live payment API key, disable this secondary verifier.
+
+A protected candidate configuration lives outside Git at `/root/.config/nuviamy/stripe-live.env`. For the one-time proof, stage only its webhook signing secret and a fresh nonce in the probe settings. Preserve a private backup outside the checkout. Deploy the reviewed change through normal CI before executing the proof.
+
+Run `python3 ops/verify_stripe_live_webhook.py --run-probe` as the production operator after deployment. It temporarily adds the non-financial event to the existing live endpoint, writes a metadata marker on the existing live portal configuration and waits for an actual Stripe-signed delivery. It verifies the receipt, the matching Stripe event and that deliveries have settled. Subscription state fingerprints must remain unchanged. It does not create a charge, customer, invoice, subscription or Checkout, nor submit payment details.
+
+Cleanup removes the temporary event selection before restoring portal metadata, clears the probe secret/nonce from active configuration, recreates the web container with the ordinary test credentials and verifies application health and subscription state. State and recovery identifiers are retained privately in `/root/.config/nuviamy/webhook-verification-state.json`; no secret values appear in logs or arguments. Unexpected failure must be checked against that recovery state, not reported as successful proof.
+
+This proves HTTPS delivery and the signing secret for the real destination. It does not prove bank settlement, authorize live charges, resolve tax obligations or validate clinical use. Do not test card payments using real payment details in live mode.
