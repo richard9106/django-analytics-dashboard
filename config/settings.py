@@ -205,6 +205,7 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'false').lower() == 'true'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'false').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'NuviaMy <noreply@nuviamy.com>')
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@nuviamy.com')
+SIGNUP_NOTIFICATION_EMAIL = os.getenv('SIGNUP_NOTIFICATION_EMAIL', SUPPORT_EMAIL)
 OPERATOR_TAX_ID = os.getenv('OPERATOR_TAX_ID', '')
 
 if DJANGO_ENVIRONMENT == 'production':

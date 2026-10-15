@@ -252,3 +252,5 @@ Storage uses local `MEDIA_ROOT` by default. For R2, configure `DJANGO_STORAGE_BA
 The visual language uses Iris primary, Aqua supportive accents, Coral attention accents and Slate text/backgrounds; Manrope UI text with Lora editorial accents.
 
 Prefer compact operational rows, clear client identity, labeled metadata, bounded lists, full-width workspaces and native dialogs. Use readable clinical text, visible focus, keyboard controls, mobile touch targets and text labels alongside status colors. Preserve current protections while improving usability.
+
+New professional workspace registrations send an operator email after the account transaction commits. `SIGNUP_NOTIFICATION_EMAIL` defaults to `support@nuviamy.com` in Compose (set it empty to disable); notifications contain the registrant name, email, practice and registration date, never passwords or clinical data. SMTP failures are logged without blocking registration. Patient and team invitations do not trigger this signup alert.

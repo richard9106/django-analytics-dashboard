@@ -120,6 +120,44 @@ class PracticeSignupViewTests(TestCase):
         self.assertEqual(profile.role, UserProfile.Role.OWNER)
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.id)
 
+    @override_settings(SIGNUP_NOTIFICATION_EMAIL="operator@example.com")
+    def test_successful_signup_sends_one_operator_notification_after_commit(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            response = self.client.post(reverse("signup"), data=self.valid_payload())
+            self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(callbacks), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, ["operator@example.com"])
+        self.assertIn("Jane Smith", message.body)
+        self.assertIn("drsmith@example.com", message.body)
+        self.assertIn("NuviaMy Wellness", message.body)
+        self.assertNotIn("StrongPass123!", message.body)
+
+    def test_invalid_signup_does_not_send_notification(self):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.client.post(reverse("signup"), data=self.valid_payload(accept_terms=False))
+        self.assertEqual(len(callbacks), 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(SIGNUP_NOTIFICATION_EMAIL="operator@example.com")
+    @patch("apps.accounts.notifications.send_mail", side_effect=OSError("SMTP unavailable"))
+    def test_notification_failure_does_not_break_signup(self, send):
+        with self.assertLogs("apps.accounts.notifications", level="ERROR"):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(reverse("signup"), data=self.valid_payload())
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(get_user_model().objects.filter(email="drsmith@example.com").exists())
+        send.assert_called_once()
+
+    @override_settings(SIGNUP_NOTIFICATION_EMAIL="")
+    def test_signup_alert_can_be_disabled(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(reverse("signup"), data=self.valid_payload())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_signup_rejects_duplicate_email(self):
         get_user_model().objects.create_user(username="drsmith", email="drsmith@example.com")
 

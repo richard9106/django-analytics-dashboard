@@ -9,6 +9,7 @@ from django.contrib.auth.views import LoginView, LogoutView, PasswordResetView
 from django.core.mail import send_mail
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest
+from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -474,5 +475,7 @@ class PracticeSignupView(FormView):
         except ValidationError as error:
             form.add_error(None, error)
             return self.form_invalid(form)
+        from .notifications import notify_new_signup
+        transaction.on_commit(lambda: notify_new_signup(user))
         login(self.request, user)
         return super().form_valid(form)
