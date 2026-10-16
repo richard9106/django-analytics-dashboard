@@ -14,6 +14,10 @@ class RequiredEncryptedTextField(EncryptedTextField):
 
 class AccountSecurity(models.Model):
     user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='account_security')
+    email_code_hash = models.CharField(max_length=64, blank=True)
+    email_code_binding = models.CharField(max_length=64, blank=True)
+    email_code_sent_at = models.DateTimeField(null=True, blank=True)
+    email_code_attempts = models.PositiveIntegerField(default=0)
     secret = RequiredEncryptedTextField(blank=True)
     confirmed = models.BooleanField(default=False)
     last_counter = models.BigIntegerField(default=-1)

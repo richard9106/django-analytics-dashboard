@@ -53,6 +53,18 @@ class SecuritySessionMiddleware(MiddlewareMixin):
             request._audit_denied_reason = 'session_expired_or_revoked'
             logout(request)
             return redirect(reverse('login') + '?session_expired=1')
+        from .email_security import email_verified
+        if settings.EMAIL_TWO_STEP_REQUIRED and not email_verified(request):
+            if now - session.get('security_password_at', 0) >= settings.SECURITY_CHALLENGE_TIMEOUT:
+                logout(request)
+                return redirect(reverse('login') + '?session_expired=1')
+            if name != 'email_security_challenge':
+                if name == 'security_session':
+                    return JsonResponse({'authenticated': False}, status=401)
+                if not request.path.startswith('/accounts/security/'):
+                    session['security_next'] = request.get_full_path()
+                return redirect('email_security_challenge')
+            return None
         if must_change_password(request.user):
             if name == 'force_password_change' or (name == 'security_session' and not requires_mfa(request.user)):
                 return None

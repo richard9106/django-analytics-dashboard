@@ -7,7 +7,10 @@ from .views import PracticeDataExportView, PracticeSignupView, ProfileSettingsVi
 from .security_views import (MFASetupView, MFAChallengeView, RecoveryCodesView,
                              ReauthenticateView, SecuritySettingsView, SecuritySessionView)
 
+from .email_security import EmailChallengeView
+
 urlpatterns = [
+    path('security/email/', EmailChallengeView.as_view(), name='email_security_challenge'),
     path('invitations/<uidb64>/<token>/', AccountInvitationView.as_view(), name='account_invitation'),
     path('security/', SecuritySettingsView.as_view(), name='security_settings'),
     path('security/setup/', MFASetupView.as_view(), name='mfa_setup'),

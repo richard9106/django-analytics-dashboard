@@ -201,7 +201,7 @@ class SecuritySettingsView(LoginRequiredMixin, PostRateLimitMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         state = security_state(self.request.user)
-        context.update({'mfa_required': requires_mfa(self.request.user), 'recovery_count': len(state.recovery_hashes)})
+        context.update({'email_two_step_required': settings.EMAIL_TWO_STEP_REQUIRED, 'security_idle_minutes': settings.SECURITY_IDLE_TIMEOUT // 60, 'mfa_required': requires_mfa(self.request.user), 'recovery_count': len(state.recovery_hashes)})
         return context
 
     @transaction.atomic
