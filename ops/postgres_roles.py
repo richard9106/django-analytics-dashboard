@@ -10,7 +10,9 @@ from dotenv import dotenv_values
 
 CRUD = 'SELECT, INSERT, UPDATE, DELETE'
 GUARDS = {'audit_capture_actor', 'audit_reject_mutation', 'audit_reject_truncate',
-          'clinical_protect_finalized', 'clinical_reject_truncate'}
+          'clinical_protect_finalized', 'clinical_reject_truncate',
+          'clinical_protect_signature', 'clinical_signature_reject_truncate',
+          'clinical_protect_addendum', 'clinical_addendum_reject_truncate'}
 
 
 def identifier(value):

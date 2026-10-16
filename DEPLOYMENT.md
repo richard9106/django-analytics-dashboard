@@ -16,7 +16,7 @@ DJANGO_ALLOWED_HOSTS=nuviamy.com,www.nuviamy.com,YOUR_SERVER_IP
 DJANGO_CSRF_TRUSTED_ORIGINS=https://nuviamy.com,https://www.nuviamy.com
 SENTRY_DSN=
 SENTRY_ENVIRONMENT=production
-SENTRY_TRACES_SAMPLE_RATE=0.05
+SENTRY_TRACES_SAMPLE_RATE=0
 
 POSTGRES_DB=dashboard
 POSTGRES_USER=dashboard_user
@@ -63,12 +63,9 @@ BACKUP_R2_PREFIX=backups/postgres
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_WEBHOOK_SECRET=
-STRIPE_PRICE_SOLO_MONTHLY=
-STRIPE_PRICE_SOLO_YEARLY=
-STRIPE_PRICE_GROUP_MONTHLY=
-STRIPE_PRICE_GROUP_YEARLY=
-STRIPE_PRICE_CLINIC_MONTHLY=
-STRIPE_PRICE_CLINIC_YEARLY=
+STRIPE_PRICE_PER_USER_MONTHLY=
+STRIPE_PRICE_PER_USER_YEARLY=
+STRIPE_INVOICE_TEMPLATE_ID=
 ```
 
 Replace the secret placeholders before starting. Production refuses to start
@@ -172,7 +169,7 @@ Create a Django project in Sentry and set these VPS variables to enable applicat
 ```env
 SENTRY_DSN=https://...
 SENTRY_ENVIRONMENT=production
-SENTRY_TRACES_SAMPLE_RATE=0.05
+SENTRY_TRACES_SAMPLE_RATE=0
 ```
 
 Sentry is disabled when `SENTRY_DSN` is empty and is configured with `send_default_pii=false`. Use UptimeRobot, Better Uptime, or Uptime Kuma separately for an external HTTP check of `https://nuviamy.com/health/` or the public homepage. The staff-only in-app view is available at `/staff/monitoring/`.

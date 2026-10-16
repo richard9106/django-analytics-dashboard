@@ -25,7 +25,7 @@ ACTIONS = {
     'appointments': {'create': 'New appointment', 'edit': 'Edit appointment',
                      'reschedule': 'Reschedule appointment', 'sync_issues': 'Sync issues',
                      'availability_edit': 'Edit availability'},
-    'clinical': {'create': 'New note', 'edit': 'Edit note', 'delete': 'Delete note', 'sign': 'Review note',
+    'clinical': {'create': 'New note', 'edit': 'Edit note', 'delete': 'Delete note', 'sign': 'Review note', 'addendum': 'Addendum',
                  'treatment_plan_create': 'New treatment plan', 'treatment_plan_edit': 'Edit treatment plan',
                  'diagnosis_create': 'New diagnosis', 'diagnosis_edit': 'Edit diagnosis'},
     'billing': {'invoice_create': 'New invoice', 'invoice_edit': 'Edit invoice',
@@ -95,7 +95,7 @@ def workspace_breadcrumb_items(context):
 
     # A validated return path records the actual cross-section entry point.
     origin = _safe_existing_url(context, request.GET.get('next'))
-    if namespace == 'clinical' and name in {'list', 'create', 'edit', 'sign'} and origin and resolve(urlsplit(origin).path).view_name == 'appointments:list':
+    if namespace == 'clinical' and name in {'list', 'create', 'edit', 'sign', 'addendum'} and origin and resolve(urlsplit(origin).path).view_name == 'appointments:list':
         add('Appointments', 'appointments:list')
         crumbs[-1]['url'] = origin
         display = parse_qs(urlsplit(origin).query).get('view', [''])[0]
@@ -112,6 +112,9 @@ def workspace_breadcrumb_items(context):
                 if request.GET.get('via') == 'notes':
                     params.update(via='notes', appointment=request.GET.get('appointment', ''))
                 crumbs.append({'label': 'Review note', 'url': review_url + '?' + urlencode(params) if review_url else None})
+        if name == 'addendum' and context.get('note'):
+            review_url = _url(context, 'clinical:sign', [context['note'].pk])
+            crumbs.append({'label': 'Review note', 'url': review_url + '?' + urlencode({'next': origin}) if review_url else None})
         add(ACTIONS['clinical'].get(name, 'Notes'))
         return crumbs
 
@@ -159,6 +162,10 @@ def workspace_breadcrumb_items(context):
                     add(f'Treatment plan #{obj.pk}')
             else:
                 add('Notes', 'clinical:list')
+                if name == 'addendum':
+                    note = _scoped(context, context.get('note'))
+                    if note:
+                        add('Review note', 'clinical:sign', [note.pk])
                 if name == 'edit' and obj:
                     add(f'Note #{obj.pk}')
         elif namespace == 'intake':

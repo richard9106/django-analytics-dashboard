@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, Http404
@@ -751,6 +752,9 @@ class SessionNoteSignView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
         return render(request, 'clinical/sign.html', {'note': note, 'review_digest': note.review_digest(),
             'next_url': session_return_url(request), 'navigation_next': session_origin_url(request), 'can_sign': responsible and not note.signed_at and not blocked_reason,
             'signature_blocked_reason': blocked_reason if responsible else '',
+            'can_add_addendum': responsible and bool(note.signed_at),
+            'addenda': note.addenda.all(),
+            'new_addendum_id': request.GET.get('addendum', ''),
             'can_edit_draft': not note.is_locked and has_practice_permission(request.user, 'clinical', 'edit')})
 
     def post(self, request, pk):
@@ -770,3 +774,67 @@ class SessionNoteSignView(LoginRequiredMixin, PracticePermissionMixin, PracticeC
                         practice=note.practice, metadata={'event': 'signed', 'signed_by': request.user.pk, 'digest': note.signature_digest})
         messages.success(request, 'Note signed. Its content is now read-only.')
         return redirect(note_review_url(request, pk))
+
+
+class SessionNoteAddendumView(SessionNoteSignView):
+    """Review a signed payload before creating an immutable addendum."""
+    def render_form(self, request, note, form, **extra):
+        return render(request, 'clinical/addendum.html', {'note': note, 'form': form, 'practice': self.get_practice(),
+            'review_url': note_review_url(request, note.pk), 'navigation_next': session_origin_url(request), **extra})
+
+    def authorized_note(self, request, pk):
+        from django.core.exceptions import PermissionDenied
+        note = self.get_note(request, pk)
+        if not has_practice_permission(request.user, 'clinical', 'edit') or note.therapist.user_id != request.user.pk:
+            raise PermissionDenied('Only the responsible therapist can add an addendum.')
+        if not note.signed_at:
+            raise PermissionDenied('Sign the original note before adding an addendum.')
+        return note
+
+    def get(self, request, pk):
+        from .forms import SessionNoteAddendumForm
+        return self.render_form(request, self.authorized_note(request, pk), SessionNoteAddendumForm())
+
+    @transaction.atomic
+    def post(self, request, pk):
+        from uuid import uuid4
+        from django.core import signing
+        from .forms import SessionNoteAddendumForm
+        from .models import SessionNoteAddendum
+        note = self.authorized_note(request, pk)
+        form = SessionNoteAddendumForm(request.POST)
+        if request.POST.get('action') == 'edit':
+            form.is_valid()
+            return self.render_form(request, note, form)
+        if request.POST.get('action') == 'sign':
+            try:
+                data = signing.loads(request.POST.get('review_token', ''), salt='clinical.addendum', max_age=1800)
+                if data['note'] != note.pk or data['user'] != request.user.pk or data['original'] != note.signature_digest:
+                    raise signing.BadSignature()
+            except (signing.BadSignature, KeyError, TypeError, ValueError):
+                form.add_error(None, 'This review expired or changed. Review the addendum again.')
+                return self.render_form(request, note, form)
+            form = SessionNoteAddendumForm(data)
+            if not form.is_valid():
+                return self.render_form(request, note, form)
+            if request.POST.get('confirm_signature') != 'on':
+                form.add_error(None, 'Confirm that you reviewed this addendum before signing.')
+                return self.render_form(request, note, form, review=data, review_token=request.POST['review_token'])
+            addendum = SessionNoteAddendum(note=note, signed_by=request.user,
+                signer_name=request.user.get_full_name() or request.user.get_username(),
+                reason=data['reason'], content=data['content'], original_digest=data['original'], review_id=data['review_id'])
+            addendum.digest = addendum.review_digest()
+            # Repeated submissions of the same review do not create duplicate entries.
+            SessionNote.objects.select_for_update(of=('self',)).get(pk=note.pk)
+            saved, created = SessionNoteAddendum.objects.get_or_create(review_id=data['review_id'], defaults={
+                f.name: getattr(addendum, f.name) for f in addendum._meta.fields if f.name not in {'id', 'review_id'}})
+            if created:
+                log_audit_event(request, AuditLog.Action.CREATE, 'clinical.SessionNoteAddendum', saved.pk,
+                    practice=note.practice, metadata={'note_id': note.pk, 'event': 'addendum_signed', 'digest': saved.digest})
+            messages.success(request, 'Addendum signed. The original note remains unchanged.')
+            return redirect(note_review_url(request, pk) + ('&' if '?' in note_review_url(request, pk) else '?') + 'addendum=' + str(saved.pk) + '#addenda')
+        if not form.is_valid():
+            return self.render_form(request, note, form)
+        data = dict(form.cleaned_data, note=note.pk, user=request.user.pk, original=note.signature_digest, review_id=str(uuid4()))
+        return self.render_form(request, note, form, review=data,
+            review_token=signing.dumps(data, salt='clinical.addendum', compress=True))

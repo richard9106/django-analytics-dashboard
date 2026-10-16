@@ -5,6 +5,9 @@ Esta es una evaluación interna del código y de evidencias operativas disponibl
 no una auditoría independiente ni una certificación. El cobro comercial live ya
 está autorizado; ello no cambia el límite de uso clínico publicado.
 
+Ver también los [avances del 16 de octubre](readiness-progress-2026-10-16.md): adendas,
+matriz de acceso, preparación de migración y copias de documentos.
+
 ## Evidencia y trabajo entregado
 
 - Invitaciones de equipo y portal sin contraseñas compartidas: enlace individual,
@@ -19,6 +22,13 @@ está autorizado; ello no cambia el límite de uso clínico publicado.
 El código tiene que superar CI y el despliegue antes de considerarse activo. Consultar
 el PR y su ejecución para el estado final de entrega; no interpretar un borrador local
 como evidencia de producción. Los informes históricos conservan su fecha y alcance.
+
+## Bloqueo confirmado de alojamiento
+
+Contabo ha comunicado que no ofrece BAA para este VPS. Para el objetivo de tratar
+ePHI sujeta a HIPAA es necesario migrar a infraestructura cubierta por BAA; trasladar
+este VPS a Estados Unidos no resuelve el bloqueo. Ubicación confirmada por soporte:
+Francia; acceso de soporte desde Alemania y Chequia. Ver [evidencia y plan](vendors.md).
 
 ## Condiciones pendientes antes del piloto con pacientes identificables
 

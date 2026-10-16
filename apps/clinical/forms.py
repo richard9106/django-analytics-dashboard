@@ -192,3 +192,8 @@ class TreatmentPlanForm(forms.ModelForm):
             plan.save()
             self.save_m2m()
         return plan
+
+
+class SessionNoteAddendumForm(forms.Form):
+    reason = forms.CharField(max_length=300, label='Reason for addendum')
+    content = forms.CharField(max_length=20000, label='Addendum', widget=forms.Textarea(attrs={'rows': 8}))

@@ -303,3 +303,47 @@ class SessionNoteSignature(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError('Signatures cannot be deleted.')
+
+
+class SessionNoteAddendum(models.Model):
+    """A signed addition: never an edit or replacement of the original note."""
+    note = models.ForeignKey(SessionNote, on_delete=models.PROTECT, related_name='addenda')
+    signed_by = models.ForeignKey('auth.User', on_delete=models.PROTECT, related_name='note_addenda')
+    signer_name = models.CharField(max_length=320)
+    signed_at = models.DateTimeField(default=timezone.now)
+    reason = models.CharField(max_length=300)
+    content = models.TextField()
+    original_digest = models.CharField(max_length=64)
+    digest = models.CharField(max_length=64)
+    review_id = models.UUIDField(unique=True)
+    objects = SignatureQuerySet.as_manager()
+
+    class Meta:
+        ordering = ['signed_at', 'pk']
+
+    def review_digest(self):
+        import hashlib
+        import json
+        return hashlib.sha256(json.dumps([self.note_id, self.signed_by_id, self.reason,
+            self.content, self.original_digest, str(self.review_id)], ensure_ascii=False).encode()).hexdigest()
+
+    def clean(self):
+        if not self.note.is_locked or not self.note.signed_at:
+            raise ValidationError('Addenda require an already signed note.')
+        if self.note.therapist.user_id != self.signed_by_id:
+            raise ValidationError('Only the responsible therapist can sign an addendum.')
+        if not self.reason.strip() or not self.content.strip():
+            raise ValidationError('A reason and addendum content are required.')
+        if self.original_digest != self.note.signature_digest or self.digest != self.review_digest():
+            raise ValidationError('The addendum does not match the reviewed record.')
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('Signed addenda are immutable.')
+        self.note = SessionNote.objects.select_for_update(of=('self',)).select_related('signature', 'therapist').get(pk=self.note_id)
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Signed addenda cannot be deleted.')

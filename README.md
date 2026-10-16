@@ -4,7 +4,7 @@ NuviaMy is a Django-based practice management SaaS for solo therapists and multi
 
 ## Current status
 
-Last documentation review: **October 15, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
+Last documentation review: **October 16, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
 
 - Production uses Docker Compose, PostgreSQL, Gunicorn and host Nginx at `nuviamy.com`.
 - Stripe mode follows the protected deployment credentials; the operator has authorized **live subscription billing**. Published pricing (excluding applicable taxes) is **USD 39 per active internal user/month** or **USD 421/user/year**.
@@ -277,3 +277,12 @@ not malware scanning and does not establish that every upload route is approved.
 snapshot on the operator's computer, with the decryption key kept outside the VPS.
 See [recovery evidence and instructions](docs/compliance/recovery.md). This snapshot
 does not replace database backups or historical document recovery.
+
+## Signed addenda and recovery preparation — October 16, 2026
+
+Signed notes accept reviewed, signed addenda without changing the original. Addenda
+are immutable, restricted to the responsible therapist and included in exports.
+The [readiness progress report](docs/compliance/readiness-progress-2026-10-16.md) records
+the access matrix, fictional workflow tests and document snapshot evidence.
+See the [migration plan](docs/compliance/migration-plan.md) for isolated preparation
+and cutover safeguards. No new provider or clinical release is activated by these tools.
