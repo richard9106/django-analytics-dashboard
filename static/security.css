@@ -7,3 +7,11 @@
 .recovery-codes { list-style: none; padding: 0; display: grid; gap: 12px; }
 .recovery-codes code { overflow-wrap: anywhere; font-size: 14px; }
 .security-card a, .security-card input, .security-card button { outline-offset: 4px; }
+
+.email-challenge-card { max-width: 440px; }
+.email-challenge-card input[name="code"] { font-size: 24px; letter-spacing: .2em; }
+.email-challenge-card button { min-height: 44px; }
+@media (max-width: 640px) {
+  .email-challenge-card { padding: 20px; }
+  .email-challenge-card .login-form button { width: 100%; }
+}

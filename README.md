@@ -286,3 +286,19 @@ The [readiness progress report](docs/compliance/readiness-progress-2026-10-16.md
 the access matrix, fictional workflow tests and document snapshot evidence.
 See the [migration plan](docs/compliance/migration-plan.md) for isolated preparation
 and cutover safeguards. No new provider or clinical release is activated by these tools.
+
+### Email two-step sign-in
+
+`DJANGO_EMAIL_TWO_STEP_REQUIRED=true` requires a one-use six-digit email code after
+password authentication, including admin and client portal access. It uses the configured
+transactional SMTP sender. Codes expire after 10 minutes, are stored only as keyed hashes,
+are bound to the account and browser sign-in, and are invalidated after verification or
+resend. Re-sends have a 60-second account cooldown; five incorrect codes lock verification
+for 15 minutes, across browsers. Password challenges expire after 10 minutes.
+The email step is independent of the optional authenticator/QR setting `DJANGO_MFA_REQUIRED`.
+Existing sessions must complete verification when it is enabled; no bulk email is sent.
+The login form asks for the password once, followed by the code. Changing the sign-in email
+through the profile is disabled while email verification is mandatory; contact support for
+an identity-checked change. SMTP failures never grant access. Maintain a protected operator
+SSH recovery route and verify each active account has a deliverable email before activation.
+Do not log codes, include them in URLs, or use this feature as a claim of HIPAA certification.

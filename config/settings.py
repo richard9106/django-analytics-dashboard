@@ -228,3 +228,8 @@ SECURITY_CHALLENGE_TIMEOUT = 10 * 60
 SECURITY_REAUTH_TIMEOUT = 5 * 60
 SESSION_COOKIE_AGE = SECURITY_ABSOLUTE_TIMEOUT
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Email verification gates all authenticated routes, including admin and portal.
+EMAIL_TWO_STEP_REQUIRED = os.getenv('DJANGO_EMAIL_TWO_STEP_REQUIRED', 'false').strip().lower() == 'true'
+
+EMAIL_TIMEOUT = 15

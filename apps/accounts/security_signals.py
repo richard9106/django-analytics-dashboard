@@ -20,7 +20,7 @@ def start_security_session(sender, request, user, **kwargs):
         'security_password_at': now,
         'security_auth_at': now,
     })
-    for name in ('mfa_version', 'mfa_pending', 'mfa_codes', 'security_next'):
+    for name in ('email_verified_binding', 'email_challenge_id', 'mfa_version', 'mfa_pending', 'mfa_codes', 'security_next'):
         request.session.pop(name, None)
 
 

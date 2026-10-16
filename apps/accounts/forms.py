@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
@@ -257,6 +258,9 @@ class ProfileDetailsForm(forms.Form):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        if settings.EMAIL_TWO_STEP_REQUIRED:
+            self.fields['email'].widget.attrs['readonly'] = True
+            self.fields['email'].help_text = 'Your sign-in email is protected. Contact support to change it.'
         if user and not self.is_bound:
             self.initial.update({
                 'first_name': user.first_name,
@@ -267,6 +271,8 @@ class ProfileDetailsForm(forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data['email']
+        if settings.EMAIL_TWO_STEP_REQUIRED and email.casefold() != self.user.email.casefold():
+            raise ValidationError('Contact support to change your sign-in email securely.')
         if get_user_model().objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
             raise ValidationError('A user with this email already exists.')
         return email

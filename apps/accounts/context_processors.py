@@ -8,5 +8,7 @@ def security_context(request):
         return {}
     now = time.time()
     pending = requires_mfa(request.user) and not verified(request, request.account_security)
+    from .email_security import email_verified
+    pending = pending or (settings.EMAIL_TWO_STEP_REQUIRED and not email_verified(request))
     remaining = settings.SECURITY_CHALLENGE_TIMEOUT - (now - request.session.get('security_password_at', 0)) if pending else settings.SECURITY_ABSOLUTE_TIMEOUT - (now - request.session.get('security_started_at', 0))
     return {'security_pending': pending, 'security_deadline_seconds': max(0, int(remaining)), 'security_idle_seconds': settings.SECURITY_IDLE_TIMEOUT}
