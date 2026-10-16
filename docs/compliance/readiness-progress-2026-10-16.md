@@ -31,8 +31,10 @@ siendo parte de la revisión de seguridad previa al piloto.
 ## Preparación de migración
 
 Herramienta local de configuración y [plan de corte/retorno](migration-plan.md).
-Generación probada con configuración sintética; no provisiona servidores ni activa
-integraciones. La prueba de recuperación en otro host espera al destino contratado.
+Generación probada con configuración sintética; no provisiona servidores. El ensayo
+requiere además desconectar los tokens OAuth restaurados con el comando protegido
+`isolate_rehearsal`, antes de arrancar web o jobs. Vaciar solo client_id/client_secret
+no invalida un access token todavía vigente. La prueba de recuperación en otro host espera al destino contratado.
 
 ## Documentos históricos
 
