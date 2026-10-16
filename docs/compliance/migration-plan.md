@@ -22,7 +22,8 @@ Herramienta de preparación local (no conecta con proveedores):
 ```
 
 Genera directorio 0700 y archivos 0600. `rehearsal.env` conserva claves de lectura
-pero desactiva correo real, Stripe, Google, Sentry y credenciales de almacenamiento.
+pero vacía las credenciales de entorno y usa correo dummy. Renombra la DB con sufijo
+`_rehearsal`. Esto NO invalida tokens OAuth guardados dentro de la DB restaurada.
 `production-candidate.env` es una copia privada para revisión explícita, nunca activada
 por la herramienta. El manifiesto no contiene claves. No ejecutar un ensayo en el
 Compose/volumen de producción ni restaurar sobre la DB activa.
@@ -36,12 +37,19 @@ Compose/volumen de producción ni restaurar sobre la DB activa.
 3. Descifrar backup DB en área privada y restaurar en DB vacía del destino; aplicar
    migraciones y provisionar/verificar roles según DEPLOYMENT.md. No reutilizar
    contraseñas de CI. Preservar IDs del expediente y relaciones de firma/adendas.
-4. Descifrar documentos con `ops.document_snapshot`, validar todos los hashes antes
+4. Antes de arrancar web o jobs, ejecutar con la configuración de ensayo:
+   `docker compose --env-file rehearsal.env run --rm --no-deps migrate python manage.py isolate_rehearsal --confirm-isolated`.
+   Comprueba el nombre REAL de la DB conectada (sufijo `_rehearsal`), el modo de ensayo,
+   el correo dummy y la ausencia de credenciales externas antes de borrar tokens y
+   desconectar integraciones de esa copia. No llama a proveedores ni revoca tokens
+   del origen. Ejecutar con egress bloqueado durante la preparación. Sin este paso
+   no se considera aislada una copia restaurada.
+5. Descifrar documentos con `ops.document_snapshot`, validar todos los hashes antes
    de escribir. Usar el manifiesto para enlazar cada archivo con su storage_key,
    exclusivamente en almacenamiento de ensayo. No usar rutas no revisadas.
-5. Comprobar descifrado de campos, recuentos, referencias, firmas y adendas, permisos,
+6. Comprobar descifrado de campos, recuentos, referencias, firmas y adendas, permisos,
    exportación, acceso estático, health y recorrido con datos ficticios.
-6. Registrar inicio/fin, incidencias, recuentos esperados/obtenidos y hashes; no prometer
+7. Registrar inicio/fin, incidencias, recuentos esperados/obtenidos y hashes; no prometer
    RTO/RPO hasta medir el proceso completo y aprobarlos.
 
 ## Corte y vuelta atrás

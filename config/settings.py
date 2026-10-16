@@ -18,6 +18,8 @@ if not DJANGO_ENVIRONMENT:
     DJANGO_ENVIRONMENT = 'development' if DEBUG else 'production'
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',') if host.strip()]
 
+MIGRATION_REHEARSAL = os.getenv('MIGRATION_REHEARSAL', 'false').lower() == 'true'
+
 SENTRY_DSN = os.getenv('SENTRY_DSN', '')
 SENTRY_ENVIRONMENT = os.getenv('SENTRY_ENVIRONMENT', 'development' if DEBUG else 'production')
 SENTRY_TRACES_SAMPLE_RATE = float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0'))

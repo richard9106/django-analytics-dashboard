@@ -22,15 +22,17 @@ def prepare(source,destination,revision):
         with os.fdopen(fd,'w') as f:f.write(content)
     # Preserve the source bytes for explicit cutover review, not automatic activation.
     save('production-candidate.env',source.read_text())
+    values['POSTGRES_DB']=values['POSTGRES_DB']+'_rehearsal'
+    values['MIGRATION_REHEARSAL']='true'
     values.update(EMAIL_BACKEND='django.core.mail.backends.dummy.EmailBackend',SIGNUP_NOTIFICATION_EMAIL='',
         STRIPE_SECRET_KEY='',STRIPE_PUBLISHABLE_KEY='',STRIPE_WEBHOOK_SECRET='',STRIPE_LIVE_VERIFY_WEBHOOK_SECRET='',
         STRIPE_LIVE_VERIFY_NONCE='',SENTRY_DSN='',GOOGLE_OAUTH_CLIENT_ID='',GOOGLE_OAUTH_CLIENT_SECRET='',
         AWS_ACCESS_KEY_ID='',AWS_SECRET_ACCESS_KEY='',DJANGO_STORAGE_BACKEND='')
     # JSON strings are valid dotenv quoted values, including secrets with whitespace.
     save('rehearsal.env',''.join(k+'='+json.dumps(v)+'\n' for k,v in sorted(values.items())))
-    save('manifest.json',json.dumps({'revision':revision,'external_actions_disabled':True,
+    save('manifest.json',json.dumps({'revision':revision,'environment_credentials_disabled':True,'database_oauth_isolation_required':True,
         'field_encryption_key_preserved':True,'production_configuration_not_activated':True},indent=2))
-    return {'prepared':True,'external_actions_disabled':True,'revision':revision}
+    return {'prepared':True,'environment_credentials_disabled':True,'database_oauth_isolation_required':True,'revision':revision}
 
 
 def main():
