@@ -6,7 +6,7 @@ No guardar contratos privados, credenciales o datos de pacientes en este reposit
 
 | Destino | Tratamiento previsto/actual | Evidencia y condición pendiente |
 |---|---|---|
-| Contabo VPS | Aplicación, DB, configuración y copias locales | DPA privado aportado por usuario, electrónico 15/10; Contabo GmbH y servicio VPS identificados. Anexo incluye Contabo France SAS; confirmar ubicación real y alcance como subencargado. BAA no acreditado; consulta pendiente al proveedor |
+| Contabo VPS | Aplicación, DB, configuración y copias locales | DPA privado aportado por usuario, electrónico 15/10. Respuesta de soporte aportada por Richard: Contabo no ofrece BAA para este VPS; ubicación Francia cerca de la frontera alemana y acceso de soporte desde Alemania y Chequia. La remisión a su ayuda sobre DPA no confirma expresamente cobertura como subencargado. Alojamiento actual descartado para ePHI sujeta a HIPAA; migración a servicio con BAA necesaria antes de ese uso |
 | Cloudflare R2 | Documentos y backup cifrado PostgreSQL | Recuperación de objetos actuales y dump probada 13/10; contrato, elegibilidad BAA, región/transferencias y recuperación histórica pendientes |
 | Brevo SMTP | Acceso y recuperación, avisos y soporte | Entrega real confirmada por usuario. Invitaciones nuevas sin nombres ni contenido clínico. Revisar otros cuerpos y condiciones; no usar para expedientes |
 | Cloudflare Email Routing/Gmail | Recepción de soporte | Reenvío confirmado por usuario; buzón administrativo sin PHI en el alcance permitido. Revisar contratos si se amplía el uso |
@@ -30,3 +30,19 @@ de introducir ePHI. No interpretar falta de respuesta como aceptación.
 
 Los borradores DPA/BAA para clientes se han preparado por separado, sin firmas ni
 aprobación clínica. Deben concordar con este inventario real y los controles probados.
+
+## Respuesta de Contabo aportada por el operador
+
+Soporte general (Ondřej) confirma que no proporciona BAA. El correo aportado no
+incluye fecha ni identificador de ticket verificables; conservar el original en el
+expediente privado. Esta evidencia sustituye el estado anterior de consulta pendiente.
+No acredita la región de cada copia u otro proveedor ni el cifrado del almacenamiento.
+
+Para el objetivo HIPAA, cambiar únicamente la ubicación del VPS a Nueva York no
+resuelve la falta de BAA. El cifrado tampoco sustituye ese contrato para un proveedor
+que mantiene ePHI, incluso sin la clave. Fuente: [HHS, cloud computing, preguntas 1 y 2](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/index.html).
+
+Plan: mantener Contabo para demostración con datos ficticios mientras se selecciona
+y contrata infraestructura elegible; incluir aplicación, DB, documentos, backups y
+soporte en el alcance contractual y técnico. No contratar, migrar, cambiar DNS ni
+borrar datos como consecuencia automática de este registro.

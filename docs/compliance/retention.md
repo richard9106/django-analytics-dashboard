@@ -28,7 +28,8 @@ Fuentes: [historias clínicas, HHS](https://www.hhs.gov/hipaa/for-professionals/
   por una petición de identidad no verificada al soporte.
 - Preservar el original de una nota firmada. Una corrección requiere adenda vinculada,
   autoría, fecha y razón; no desbloquear el original ni cambiar SQL para satisfacerla.
-  El flujo completo de adendas sigue pendiente de implementación/validación.
+  Las notas firmadas ya tienen un flujo de adendas inmutables revisadas y firmadas;
+  la validación clínica y las reglas de corrección de otros tipos de registros siguen pendientes.
 - Un legal hold suspende disposición relevante, incluidas copias; registrar quién lo
   impuso y su levantamiento. Todavía no existe un motor integral de legal holds.
 - Eliminar solo con autorización y prueba de ausencia de obligación incompatible;
@@ -37,5 +38,5 @@ Fuentes: [historias clínicas, HHS](https://www.hhs.gov/hipaa/for-professionals/
 - Distinguir progress notes de psychotherapy notes; no ofrecer tratamiento separado de
   estas últimas hasta tener controles y autorizaciones específicas validados.
 
-Pendiente: matriz de una clínica piloto, controles técnicos de retención/adendas,
+Pendiente: matriz de una clínica piloto, controles técnicos integrales de retención, validación clínica de adendas,
 pruebas de exportación y eliminación autorizada, reglas fiscales/comerciales separadas.

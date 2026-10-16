@@ -4,6 +4,7 @@ import zipfile
 from datetime import datetime
 from html import escape
 from io import BytesIO
+from uuid import UUID
 
 from django.http import HttpResponse
 
@@ -11,7 +12,7 @@ from apps.appointments.models import Appointment
 from apps.audit.models import AuditLog
 from apps.billing.models import Invoice, Payment, ServicePackage
 from apps.clients.models import Client
-from apps.clinical.models import Diagnosis, SessionNote, SessionNoteSignature, TreatmentPlan
+from apps.clinical.models import Diagnosis, SessionNote, SessionNoteSignature, SessionNoteAddendum, TreatmentPlan
 from apps.dashboard.models import Task
 from apps.documents.models import ClientDocument
 from apps.portal.models import ClientPortalAccess
@@ -30,6 +31,7 @@ def build_export_data(practice, scope):
         data['treatment_plans'] = _rows(TreatmentPlan.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'title', 'status', 'goals', 'objectives', 'interventions', 'start_date', 'review_date', 'completed_at', 'created_at', 'updated_at')
         data['session_notes'] = _rows(SessionNote.objects.filter(practice=practice), 'id', 'client_id', 'therapist_id', 'appointment_id', 'treatment_plan_id', 'note_type', 'content', 'treatment_progress', 'is_locked', 'locked_at', 'created_at', 'updated_at')
         data['session_note_signatures'] = _rows(SessionNoteSignature.objects.filter(note__practice=practice), 'id', 'note_id', 'signed_by_id', 'signer_name', 'signed_at', 'digest')
+        data['session_note_addenda'] = _rows(SessionNoteAddendum.objects.filter(note__practice=practice), 'id', 'note_id', 'signed_by_id', 'signer_name', 'signed_at', 'reason', 'content', 'original_digest', 'digest', 'review_id')
         data['documents'] = _rows(ClientDocument.objects.filter(practice=practice), 'id', 'client_id', 'title', 'document_type', 'file', 'visible_to_client', 'created_at')
         data['portal_access'] = _rows(ClientPortalAccess.objects.filter(practice=practice), 'id', 'client_id', 'user_id', 'is_active', 'created_at', 'updated_at')
     if scope in {'all', 'billing'}:
@@ -65,6 +67,8 @@ def build_zip_export(practice, scope, data):
 
 
 def _cell_value(value):
+    if isinstance(value, UUID):
+        return str(value)
     if isinstance(value, (dict, list)):
         return json.dumps(value, default=str)
     if isinstance(value, datetime) and value.tzinfo:
@@ -108,6 +112,7 @@ def build_pdf_export(practice, scope, data):
     document = SimpleDocTemplate(output, pagesize=landscape(letter), rightMargin=0.4 * inch, leftMargin=0.4 * inch, topMargin=0.4 * inch, bottomMargin=0.4 * inch)
     styles = getSampleStyleSheet()
     story = [Paragraph('NuviaMy Practice Data Export', styles['Title']), Paragraph(f'{practice.name} · Scope: {scope}', styles['Normal']), Spacer(1, 12)]
+    story.append(Paragraph('Summary preview: up to 1,000 rows per section and 500 characters per field. Download the ZIP export for complete records and documents.', styles['Normal']))
     for name, rows in data.items():
         story.append(Paragraph(name.replace('_', ' ').title(), styles['Heading2']))
         if isinstance(rows, dict):

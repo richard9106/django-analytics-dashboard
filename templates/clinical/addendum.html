@@ -1,0 +1,68 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Addendum | NuviaMy</title>
+<link rel="stylesheet" href="{% static 'dashboard.css' %}">
+</head>
+<body class="app-page note-review-page">
+<div class="app-shell">{% include 'partials/sidebar.html' %}<main class="app-main">{% include 'partials/breadcrumbs.html' %}<article class="panel note-review">
+<header class="note-review-header">
+<div>
+<p class="note-review-eyebrow">Signed session note</p>
+<h1>{{ note.client }}</h1>
+<p>Add information without changing the original note.</p>
+</div>
+<span class="badge success">Original remains read-only</span>
+</header>
+<dl class="note-review-metadata">
+<div>
+<dt>Session</dt>
+<dd>{{ note.appointment.starts_at|date:"M j, Y g:i A"|default:"No linked session" }}</dd>
+</div>
+<div>
+<dt>Original signer</dt>
+<dd>{{ note.signer_name }}</dd>
+</div>
+</dl>
+{% if review %}<h2>Review addendum</h2>{{ form.non_field_errors }}<section class="note-review-content">
+<h3>{{ review.reason }}</h3>
+<div class="note-review-text">{{ review.content|linebreaks }}</div>
+</section>
+<form method="post" class="note-sign-form note-review-signature">{% csrf_token %}<input type="hidden" name="action" value="sign">
+<input type="hidden" name="review_token" value="{{ review_token }}">
+<input type="hidden" name="reason" value="{{ review.reason }}">
+<input type="hidden" name="content" value="{{ review.content }}">{% if navigation_next %}<input type="hidden" name="next" value="{{ navigation_next }}">{% endif %}<label>
+<input type="checkbox" name="confirm_signature" required> <span>I reviewed this addendum and attest that it accurately records the correction or additional information.</span>
+</label>
+<p class="sync-meta">Signing records your identity and time. The addendum will be read-only.</p>
+<button class="btn btn-primary" type="submit">Sign addendum</button>
+</form>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="edit">
+<input type="hidden" name="reason" value="{{ review.reason }}">
+<input type="hidden" name="content" value="{{ review.content }}">{% if navigation_next %}<input type="hidden" name="next" value="{{ navigation_next }}">{% endif %}<button class="btn btn-secondary" type="submit">Edit draft</button>
+</form>{% else %}
+<form method="post" class="appointment-form">{% csrf_token %}<input type="hidden" name="action" value="review">{% if navigation_next %}<input type="hidden" name="next" value="{{ navigation_next }}">{% endif %}{{ form.non_field_errors }}<p class="sync-meta">This draft is not saved until you sign it. Review it again after making changes.</p>
+<div class="field-grid">
+<div class="field full">{{ form.reason.label_tag }}{{ form.reason }}{{ form.reason.errors }}</div>
+<div class="field full">{{ form.content.label_tag }}{{ form.content }}{{ form.content.errors }}</div>
+</div>
+<div class="form-actions">
+<a class="btn btn-secondary" href="{{ review_url }}" data-leave-addendum>Back to original</a>
+<button class="btn btn-primary" type="submit">Review addendum</button>
+</div>
+</form>{% endif %}</article>
+</main>
+</div>{% include 'partials/security_session.html' %}<script>
+const draftFields = [...document.querySelectorAll('textarea,input[name="reason"]')];
+let unsavedAddendum = draftFields.some(field => field.value.trim());
+draftFields.forEach(field => field.addEventListener('input', () => { unsavedAddendum = true; }));
+document.querySelectorAll('form').forEach(form => form.addEventListener('submit', () => { unsavedAddendum = false; }));
+window.addEventListener('beforeunload', event => {
+  if (unsavedAddendum) { event.preventDefault(); event.returnValue = ''; }
+});
+</script>
+</body>
+</html>
