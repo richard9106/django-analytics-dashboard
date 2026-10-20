@@ -8,7 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 
 
-GOOGLE_BASE_SCOPES = ['openid', 'email', 'profile']
+GOOGLE_BASE_SCOPES = ['openid', 'email']
 GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo'

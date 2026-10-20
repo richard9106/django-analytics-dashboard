@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
 from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 
 from cryptography.fernet import Fernet
 from django.db import connection
@@ -118,6 +119,12 @@ class IntegrationSettingsTests(TestCase):
         self.assertIn("accounts.google.com", response.url)
         self.assertIn("gmail.send", response.url)
         self.assertIn("calendar.events", response.url)
+        requested_scopes = parse_qs(urlsplit(response.url).query)["scope"][0].split()
+        self.assertEqual(set(requested_scopes), {
+            "openid", "email",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/calendar.events",
+        })
         integration = ExternalIntegration.objects.get()
         self.assertEqual(integration.practice, practice)
         self.assertEqual(integration.provider, ExternalIntegration.Provider.GOOGLE)
