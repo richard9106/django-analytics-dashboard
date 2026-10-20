@@ -3,7 +3,7 @@ from django.db import transaction
 
 from apps.audit.models import AuditLog
 from .contract_forms import PublishContractBundleForm
-from .contract_models import ClinicalContractRequest, ClinicalContractBundle, ClinicalContractSignature
+from .contract_models import ClinicalContractRequest, ClinicalContractBundle, ClinicalContractSignature, StandardAgreementAcceptance
 
 
 class ContractEvidenceAdmin(admin.ModelAdmin):
@@ -57,3 +57,10 @@ class ContractBundleAdmin(ContractEvidenceAdmin):
         AuditLog.objects.create(practice=obj.request.practice, actor=request.user,
             action=AuditLog.Action.CREATE, object_type='clinical_contract', object_id=str(obj.pk),
             metadata={'event': 'contract_provider_signed', 'digest': obj.digest})
+
+
+@admin.register(StandardAgreementAcceptance)
+class StandardAgreementAcceptanceAdmin(ContractEvidenceAdmin):
+    list_display = ('practice', 'signer', 'version', 'created_at')
+    readonly_fields = ('practice', 'signer', 'version', 'snapshot', 'digest', 'created_at')
+    search_fields = ('practice__name', 'signer__email')

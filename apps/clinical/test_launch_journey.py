@@ -1,3 +1,4 @@
+from apps.accounts.standard_agreements import offer_digest
 from datetime import timedelta
 from unittest.mock import patch
 from django.test import TestCase, override_settings
@@ -12,11 +13,11 @@ from apps.clinical.models import SessionNote
 class LaunchJourney(TestCase):
     def test_cardless_client_consultation_session_note_signature_expiry(self):
         with patch('stripe.checkout.Session.create') as checkout:
-            response=self.client.post(reverse('signup'),dict(accept_terms=True, practice_name='Fictional launch acceptance',practice_type='solo',first_name='Fictional',last_name='Therapist',email='journey@example.invalid',password1='FictionalJourney2026!',password2='FictionalJourney2026!',license_number='fictional-launch-13',license_state='CA'))
+            response=self.client.post(reverse('signup'),dict(accept_terms=True, legal_name='Test legal practice', registered_address='Test street, CA, USA', representative_title='Owner', agreement_digest=offer_digest(), practice_name='Fictional launch acceptance',practice_type='solo',first_name='Fictional',last_name='Therapist',email='journey@example.invalid',password1='FictionalJourney2026!',password2='FictionalJourney2026!',license_number='fictional-launch-13',license_state='CA'))
             self.assertEqual(response.status_code,302)
             checkout.assert_not_called()
         practice=Practice.objects.get(name='Fictional launch acceptance')
-        self.assertEqual(practice.free_trial_ends_at-practice.free_trial_started_at,timedelta(days=15))
+        self.assertEqual(practice.free_trial_ends_at-practice.free_trial_started_at,timedelta(days=30))
         therapist=practice.therapists.get()
         self.client.force_login(therapist.user)
         response=self.client.post(reverse('clients:create'),{'first_name':'Fictional','last_name':'Patient','status':'active','primary_therapist':therapist.pk})

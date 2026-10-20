@@ -123,3 +123,21 @@ class ClinicalContractSignature(ContractEvidence):
         if self.bundle_id and (self.bundle_digest != self.bundle.digest or
                                self.bundle_digest != self.bundle.calculate_digest()):
             raise ValidationError('The contract digest does not match the reviewed documents.')
+
+
+class StandardAgreementAcceptance(ContractEvidence):
+    """Exact published offer, customer identity and explicit acceptance; never overwritten."""
+    practice = models.ForeignKey('practices.Practice', on_delete=models.PROTECT, related_name='standard_agreements')
+    signer = models.ForeignKey('auth.User', on_delete=models.PROTECT)
+    version = models.CharField(max_length=100)
+    snapshot = models.JSONField()
+    digest = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['practice', 'version'], name='standard_agreement_practice_version')]
+
+    def clean(self):
+        super().clean()
+        from .standard_agreements import digest
+        if self.digest != digest(self.snapshot):
+            raise ValidationError('Agreement snapshot digest does not match.')

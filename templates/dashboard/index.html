@@ -47,9 +47,9 @@
       {% endif %}
 
 
-      {% if can_manage_contracts %}
+      {% if can_manage_contracts and needs_standard_agreements %}
       <section class="panel" aria-labelledby="clinical-onboarding-title">
-        <div class="panel-head"><div><h2 id="clinical-onboarding-title">Prepare for clinical use</h2><p>Complete your practice agreements before using real patient data. Continue evaluating with fictional records while approval is pending.</p></div><a class="btn btn-secondary" href="{% url 'clinical_contracts' %}">Review contracts and next steps</a></div>
+        <div class="panel-head"><div><h2 id="clinical-onboarding-title">Accept your practice agreements</h2><p>Accept the standard DPA, applicable BAA and Processing Schedule before using real client records. Your agreements cover the trial and paid subscription.</p></div><a class="btn btn-secondary" href="{% url 'clinical_contracts' %}">Review and accept agreements</a></div>
       </section>
       {% endif %}
 

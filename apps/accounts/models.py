@@ -46,4 +46,4 @@ class UserProfile(models.Model):
 
 # Keep authentication state independent of practice roles (including superusers).
 from .security_models import AccountSecurity, RateLimitBucket  # noqa: E402,F401
-from .contract_models import ClinicalContractRequest, ClinicalContractBundle, ClinicalContractSignature  # noqa: E402,F401
+from .contract_models import ClinicalContractRequest, ClinicalContractBundle, ClinicalContractSignature, StandardAgreementAcceptance  # noqa: E402,F401

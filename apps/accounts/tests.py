@@ -1,3 +1,4 @@
+from apps.accounts.standard_agreements import offer_digest
 from unittest.mock import patch
 from io import BytesIO
 from zipfile import ZipFile
@@ -81,7 +82,7 @@ class PracticeSignupViewTests(TestCase):
     def valid_payload(self, **overrides):
         data = {
             "practice_name": "NuviaMy Wellness",
-            "accept_terms": True,
+            "accept_terms": True, "legal_name": "Test legal practice", "registered_address": "Test street, CA, USA", "representative_title": "Owner", "agreement_digest": offer_digest(),
             "practice_type": Practice.PracticeType.SOLO,
             "practice_email": "hello@nuviamy.test",
             "practice_phone": "555-0100",
@@ -101,9 +102,9 @@ class PracticeSignupViewTests(TestCase):
         response = self.client.get(reverse("signup"), {"plan": "group", "period": "yearly"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Create your professional preview workspace")
+        self.assertContains(response, "Create your practice workspace")
         self.assertContains(response, "Free access — no payment commitment")
-        self.assertContains(response, "15-day free trial")
+        self.assertContains(response, "30-day free trial")
         self.assertContains(response, "Back to home")
         self.assertNotContains(response, "Username")
 

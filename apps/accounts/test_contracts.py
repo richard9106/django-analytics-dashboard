@@ -57,25 +57,25 @@ class ContractFlowTests(TestCase):
         return self.client.get(reverse('clinical_contract_review', args=[bundle.pk]))
 
     def test_request_is_distinct_from_signature_and_idempotent(self):
-        self.assertContains(self.client.get(reverse('clinical_contracts')), 'Submit practice details')
-        self.assertContains(self.client.get(reverse('clinical_contracts')), '>Contracts</a>')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1'), 'Submit practice details')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1'), '>Contracts</a>')
         for _ in range(2):
             self.assertRedirects(self.client.post(reverse('clinical_contracts'), self.details()), reverse('clinical_contracts'))
         self.assertEqual(ClinicalContractRequest.objects.count(), 1)
         self.assertEqual(ClinicalContractSignature.objects.count(), 0)
         self.assertEqual(AuditLog.objects.filter(metadata__event='contract_requested').count(), 1)
-        self.assertContains(self.client.get(reverse('clinical_contracts')), 'Awaiting preparation')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1'), 'Awaiting preparation')
 
     def test_corrected_request_preserves_history_and_supersedes_unsigned_packet(self):
         bundle = self.bundle()
-        self.assertContains(self.client.get(reverse('clinical_contracts') + '?revise=1'), 'Submit practice details')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1&revise=1'), 'Submit practice details')
         data = self.details(); data['legal_name'] = 'Corrected Fictional Clinic'
         data['request_revision'] = str(bundle.request_id)
         for _ in range(2):
             self.client.post(reverse('clinical_contracts'), data)
         self.assertEqual(ClinicalContractRequest.objects.count(), 2)
-        self.assertContains(self.client.get(reverse('clinical_contracts')), 'Awaiting preparation by NuviaMy.')
-        self.assertContains(self.client.get(reverse('clinical_contracts')), 'Superseded packet.')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1'), 'Awaiting preparation by NuviaMy.')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1'), 'Superseded packet.')
         self.assertEqual(ClinicalContractRequest.objects.get(pk=bundle.request_id).details['legal_name'], 'Fictional Clinic LLC')
         self.review(bundle)
         self.sign(bundle)
@@ -103,7 +103,7 @@ class ContractFlowTests(TestCase):
                 UserProfile.objects.filter(user=self.owner).update(role=role)
                 for name in ('clinical_contract_review', 'clinical_contract_download'):
                     self.assertEqual(self.client.get(reverse(name, args=[bundle.pk])).status_code, 403)
-                self.assertEqual(self.client.get(reverse('clinical_contracts')).status_code, 403)
+                self.assertEqual(self.client.get(reverse('clinical_contracts') + '?custom=1').status_code, 403)
                 self.assertEqual(self.sign(bundle).status_code, 403)
         self.assertFalse(ClinicalContractSignature.objects.exists())
 
@@ -117,8 +117,8 @@ class ContractFlowTests(TestCase):
 
     def test_anonymous_redirects_to_login(self):
         self.client.logout()
-        self.assertEqual(self.client.get(reverse('clinical_contracts')).status_code, 302)
-        self.assertIn('/login/', self.client.get(reverse('clinical_contracts')).url)
+        self.assertEqual(self.client.get(reverse('clinical_contracts') + '?custom=1').status_code, 302)
+        self.assertIn('/login/', self.client.get(reverse('clinical_contracts') + '?custom=1').url)
 
     def test_review_signature_receipt_and_immutability(self):
         bundle = self.bundle()
@@ -127,7 +127,7 @@ class ContractFlowTests(TestCase):
         signature = ClinicalContractSignature.objects.get()
         self.assertEqual(signature.bundle_digest, bundle.calculate_digest())
         self.assertEqual(signature.signer_email, self.owner.email)
-        self.assertContains(self.client.get(reverse('clinical_contracts')), 'Signed by both parties')
+        self.assertContains(self.client.get(reverse('clinical_contracts') + '?custom=1'), 'Signed by both parties')
         self.assertContains(self.review(bundle), 'Clinical approval remains pending')
         self.sign(bundle)
         self.assertEqual(ClinicalContractSignature.objects.count(), 1)
@@ -231,7 +231,7 @@ class ContractFlowTests(TestCase):
         self.practice.subscription_required = True
         self.practice.free_trial_ends_at = timezone.now() - timedelta(days=1)
         self.practice.save()
-        self.assertEqual(self.client.get(reverse('clinical_contracts')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('clinical_contracts') + '?custom=1').status_code, 200)
         self.assertEqual(self.client.post(reverse('clinical_contracts'), self.details()).status_code, 302)
         from apps.billing.access import subscription_access
         self.assertEqual(subscription_access(self.practice)['mode'], 'readonly')

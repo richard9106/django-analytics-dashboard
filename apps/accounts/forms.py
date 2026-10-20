@@ -13,9 +13,11 @@ from django.utils import timezone
 from apps.accounts.models import UserProfile
 from apps.practices.models import Practice, TherapistProfile
 
+from .standard_agreements import StandardAgreementForm, accept_standard_agreement
 
-class PracticeSignupForm(forms.Form):
-    accept_terms = forms.BooleanField(required=True, error_messages={'required': 'Agree to the professional preview terms to create your account.'}, widget=forms.CheckboxInput(attrs={'aria-describedby': 'terms-help terms-errors'}))
+
+class PracticeSignupForm(StandardAgreementForm):
+    representative_name = None
     invitation = forms.CharField(required=False, widget=forms.HiddenInput, max_length=200)
     practice_name = forms.CharField(max_length=140)
     practice_type = forms.ChoiceField(choices=Practice.PracticeType.choices)
@@ -95,7 +97,7 @@ class PracticeSignupForm(forms.Form):
             name=self.cleaned_data["practice_name"],
             subscription_required=True,
             free_trial_started_at=trial_started,
-            free_trial_ends_at=trial_started + timedelta(days=15),
+            free_trial_ends_at=trial_started + timedelta(days=30),
             practice_type=self.cleaned_data["practice_type"],
             email=self.cleaned_data.get("practice_email", ""),
             phone=self.cleaned_data.get("practice_phone", ""),
@@ -123,12 +125,7 @@ class PracticeSignupForm(forms.Form):
             role=UserProfile.Role.OWNER,
             phone=self.cleaned_data.get("practice_phone", ""),
         )
-        from apps.audit.models import AuditLog
-        from .legal import TERMS_VERSION, PRIVACY_VERSION
-        AuditLog.objects.create(practice=practice, actor=user, action=AuditLog.Action.CREATE,
-                                object_type='service_agreement', object_id=str(practice.pk),
-                                metadata={'event': 'preview_terms_accepted', 'terms_version': TERMS_VERSION,
-                                          'privacy_notice_version': PRIVACY_VERSION})
+        accept_standard_agreement(user, practice, self.cleaned_data)
         return user
 
 

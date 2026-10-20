@@ -1,3 +1,4 @@
+from apps.accounts.standard_agreements import offer_digest
 from apps.accounts.legal import BILLING_TERMS_VERSION
 from .billing_test_data import PROFESSIONAL_BILLING_DATA
 from datetime import timedelta
@@ -159,7 +160,7 @@ class SubscriptionAccessTests(TestCase):
         self.assertNotIn('trial_period_days', create.call_args.kwargs['subscription_data'])
 
     def test_signup_marks_practice_as_subscription_required(self):
-        form = PracticeSignupForm(data={'accept_terms':True,'practice_name':'New practice','practice_type':'solo','first_name':'Test','last_name':'Owner','email':'new-owner@example.invalid','password1':'ValidPasswordForTest2026!','password2':'ValidPasswordForTest2026!','license_number':'test-signup','license_state':'CA'})
+        form = PracticeSignupForm(data={'accept_terms':True,'legal_name':'Test legal practice','registered_address':'Test street, CA, USA','representative_title':'Owner','agreement_digest':offer_digest(),'practice_name':'New practice','practice_type':'solo','first_name':'Test','last_name':'Owner','email':'new-owner@example.invalid','password1':'ValidPasswordForTest2026!','password2':'ValidPasswordForTest2026!','license_number':'test-signup','license_state':'CA'})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertTrue(form.save().nuvia_profile.practice.subscription_required)
 
@@ -202,15 +203,15 @@ class SubscriptionAccessTests(TestCase):
 
 class CardlessTrialTests(TestCase):
     def signup_data(self, **extra):
-        return dict(accept_terms=True, practice_name='Trial practice', practice_type='solo', first_name='Test', last_name='Owner', email='owner@example.invalid', password1='TrialSecureTest2026!', password2='TrialSecureTest2026!', license_number='trial-unique', license_state='CA', **extra)
+        return dict(accept_terms=True, legal_name='Test legal practice', registered_address='Test street, CA, USA', representative_title='Owner', agreement_digest=offer_digest(), practice_name='Trial practice', practice_type='solo', first_name='Test', last_name='Owner', email='owner@example.invalid', password1='TrialSecureTest2026!', password2='TrialSecureTest2026!', license_number='trial-unique', license_state='CA', **extra)
 
-    def test_signup_starts_fifteen_days_without_checkout(self):
+    def test_signup_starts_thirty_days_without_checkout(self):
         form = PracticeSignupForm(self.signup_data())
         self.assertTrue(form.is_valid(), form.errors)
         with patch('stripe.checkout.Session.create') as checkout:
             user = form.save()
         practice = user.nuvia_profile.practice
-        self.assertEqual(practice.free_trial_ends_at - practice.free_trial_started_at, timedelta(days=15))
+        self.assertEqual(practice.free_trial_ends_at - practice.free_trial_started_at, timedelta(days=30))
         self.assertEqual(subscription_access(practice)['mode'], 'full')
         checkout.assert_not_called()
         with patch('apps.billing.access.timezone.now', return_value=practice.free_trial_ends_at):
