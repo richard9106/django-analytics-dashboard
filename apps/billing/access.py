@@ -42,7 +42,7 @@ def subscription_access(practice):
 class SubscriptionAccessMiddleware(MiddlewareMixin):
     always_available = {
         'home', 'pricing', 'features', 'help_center', 'support_contact', 'cookie_policy', 'privacy_policy', 'terms_of_service', 'legal_notice',
-        'clinical_contracts', 'clinical_contract_review', 'clinical_contract_sign', 'clinical_contract_download',
+        'standard_agreement_download', 'standard_agreement_offer', 'clinical_contracts', 'clinical_contract_review', 'clinical_contract_sign', 'clinical_contract_download',
         'email_security_challenge', 'login', 'logout', 'force_password_change', 'profile_settings', 'practice_data_export',
         'billing:subscription_access', 'billing:subscribe', 'billing:subscribe_success',
         'billing:subscribe_cancel', 'billing:customer_portal', 'billing:change_plan',

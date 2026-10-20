@@ -1,7 +1,7 @@
 {% extends 'accounts/contracts_base.html' %}
 {% block content %}
 <header class="topbar"><div><p class="eyebrow">Practice settings</p><h1>Contracts and clinical onboarding</h1><p>Prepare your practice agreements before using real patient data.</p></div></header>
-<p class="contract-notice"><strong>Clinical use is pending approval.</strong> Continue evaluating with fictional data. A subscription payment or contract signature does not activate clinical use.</p>
+<p class="contract-notice">This is the optional custom-contract workflow. For ordinary service, <a href="{% url 'clinical_contracts' %}">accept the standard practice agreements</a> without manual preparation. Custom packets retain the conditions stated in their own texts.</p>
 <ol class="contract-steps"><li>Submit practice details</li><li>Review your complete contract packet</li><li>Sign and download your copy</li><li>Separate clinical approval</li></ol>
 {% if show_form %}
 <section class="panel"><h2>Request your practice agreements</h2><p>The practice owner submits these details on behalf of the legal entity or sole practitioner. NuviaMy will prepare a DPA, an applicable BAA and a shared service schedule. Do not include patient information.</p>
@@ -10,7 +10,7 @@
 <button class="btn btn-primary" type="submit">Submit practice details</button></form></section>
 {% else %}
 <section class="panel"><h2>{{ submission.details.legal_name }}</h2><p>Submitted {{ submission.created_at|date:'M j, Y H:i' }} UTC by {{ submission.details.representative_name }}, {{ submission.details.representative_title }}.</p>
-<p>Existing submissions and signatures remain in your contract history. <a href="?revise=1">Submit corrected practice details</a> to request a new packet. Existing executed agreements are not cancelled by a new request.</p></section>
+<p>Existing submissions and signatures remain in your contract history. <a href="?custom=1&amp;revise=1">Submit corrected practice details</a> to request a new packet. Existing executed agreements are not cancelled by a new request.</p></section>
 <section class="panel"><h2>Your contract packets</h2>
 {% if not has_current_bundle %}<p><strong>Awaiting preparation by NuviaMy.</strong> Your completed agreements will appear here when ready. You have not signed a BAA by submitting this request.</p>{% endif %}
 {% for bundle in bundles %}<article class="contract-record"><h3>{{ bundle.version }}</h3>

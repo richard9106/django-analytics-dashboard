@@ -1,0 +1,80 @@
+# NuviaMy HIPAA Business Associate Agreement
+
+Version NUVIA BAA 2026 10 20 standard v1
+
+This agreement sets the obligations for NuviaMy’s handling of protected health information on behalf of the HIPAA-regulated Customer identified below. It supplements the parties’ service agreement and any Data Processing Agreement. The Standard Processing Schedule is incorporated into this agreement.
+
+## 1 Parties and HIPAA roles
+
+Business Associate: Richard Andres Marles Bonilla, trading as NuviaMy, Calle Paciente Inglés 22, 50019 Zaragoza, Spain. Contract contact: marleswebinfo@gmail.com. Operational contact: support@nuviamy.com.
+
+The Customer, registered address, workspace and authorized representative are identified in the electronic acceptance receipt. Its account email is the monitored HIPAA privacy, security and incident contact. The receipt retains the exact Terms of Use, DPA, BAA and Standard Processing Schedule, including versions and acceptance time.
+
+This BAA applies when the Customer is a covered entity or a business associate and the service involves PHI. If the Customer is an upstream business associate, NuviaMy acts as its subcontractor and Customer obligations apply consistently with that relationship and applicable law. The Customer must have authority from its upstream entity and provide relevant restrictions without disclosing unrelated confidential terms.
+
+Terms such as Protected Health Information or PHI, Electronic PHI, Breach, Security Incident, Designated Record Set, Individual, Secretary, Use and Disclosure have the meanings in 45 CFR Parts 160 and 164. HIPAA Rules means the applicable Privacy, Security, Breach Notification and Enforcement Rules, as amended. The agreement does not assert that every therapist or every NuviaMy customer is a HIPAA covered entity.
+
+## 2 Permitted activities and limitations
+
+NuviaMy may create, receive, maintain and transmit PHI only as necessary to provide the Customer’s approved workspace operations in the Schedule, on the Customer’s lawful instructions, or as required by law. These operations may include practice records, scheduling, approved documentation, secure storage, controlled access, export, recovery and necessary support. Only approved integrations and recipients may be used.
+
+NuviaMy shall not use or disclose PHI in a way that would violate the Privacy Rule if done by the Customer, except to the extent expressly permitted by HIPAA and this agreement. It shall observe applicable minimum-necessary requirements and the Customer’s communicated lawful restrictions. It shall not sell PHI, use it for advertising, AI model training or an independent research or commercial purpose, or perform independent data aggregation or de-identification under this agreement.
+
+This agreement does not authorize a separate management-and-administration disclosure outside the approved service. A disclosure required by law shall be limited to what is required, with notice to the Customer where lawful. No blanket permission for marketing, analytics, public release or sharing with another practice is given.
+
+## 3 Safeguards and workforce
+
+NuviaMy shall use appropriate safeguards and comply with the applicable HIPAA Security Rule requirements for ePHI, including 45 CFR Part 164 Subpart C. It shall document and manage risks to confidentiality, integrity and availability, maintain appropriate administrative, physical and technical safeguards, and bind authorized personnel to confidentiality and role-appropriate access.
+
+The Schedule identifies the actual infrastructure, controls, responsibility allocation and approved administrative locations. Administration from Spain is disclosed. No representation of HIPAA certification, full encryption of every data category, completed external security review or availability guarantee is made by this agreement. Such statements require specific supporting evidence. These qualifications do not waive the Business Associate’s statutory duties.
+
+## 4 Incidents and breach notification
+
+NuviaMy shall report to the Customer any use or disclosure not permitted by this agreement and any Security Incident of which it becomes aware. It shall investigate, mitigate harmful effects where practicable, preserve relevant evidence and cooperate with the Customer. Any agreed summary reporting for unsuccessful security attempts must be defined in the Schedule and shall not suppress a successful compromise or Breach report.
+
+For a Breach of unsecured PHI, NuviaMy shall notify the Customer without unreasonable delay and within the outer limit in 45 CFR 164.410, currently no later than 60 calendar days after discovery, except a lawful delay under 45 CFR 164.412. Discovery includes what reasonable diligence would have revealed and knowledge attributed under that rule. The statutory ceiling is not a routine waiting period. A shorter applicable legal requirement or expressly agreed Schedule deadline shall be observed.
+
+The notice shall identify affected individuals to the extent possible and include available information needed for the Customer’s notices, including the event, dates, data types, mitigation and contact details. Further information shall be supplied promptly as it becomes available; uncertainty shall not delay the initial notice. Sensitive material shall use a secure channel. The Customer retains responsibility for notices to individuals, HHS and other authorities unless a lawful written delegation states otherwise. NuviaMy shall still make any notification independently required of it.
+
+## 5 Subcontractors
+
+Before any subcontractor creates, receives, maintains or transmits PHI on NuviaMy’s behalf, NuviaMy shall obtain a written agreement imposing the applicable restrictions, conditions and Security Rule duties required by 45 CFR 164.502(e) and 164.308(b). This includes a cloud provider that only holds encrypted PHI and lacks the key when it is a business associate under HIPAA.
+
+The Schedule shall identify the legal entity, exact service, region, eligible plan and executed agreement reference for each approved PHI subcontractor. A customer-signed BAA, ordinary GDPR DPA, provider brand listing or encrypted backup alone does not establish downstream BAA coverage. NuviaMy shall address a known material subcontractor violation through reasonable corrective steps and end the affected arrangement if required when correction is unsuccessful.
+
+## 6 Access and individual rights
+
+NuviaMy shall make PHI in the Designated Record Set available to the Customer as necessary for it to meet 45 CFR 164.524. It shall implement or facilitate Customer-directed amendments under 45 CFR 164.526 and maintain and provide information needed for an accounting of disclosures under 45 CFR 164.528. Signed clinical content shall retain its original with any linked amendment; the application must not silently replace the signed version.
+
+Requests from individuals shall be forwarded promptly to the verified Customer contact, rather than independently approved by NuviaMy unless expressly instructed and lawful. The parties shall cooperate sufficiently promptly to satisfy the applicable legal deadlines. A dispute about payment shall not be used to withhold PHI in violation of HIPAA.
+
+To the extent NuviaMy carries out a Customer obligation under the Privacy Rule, it shall comply with the requirements applicable to that obligation. It shall make its relevant internal practices, books and records available to the Secretary for determining HIPAA compliance. Contractual confidentiality or audit conditions shall not obstruct lawful HHS access.
+
+## 7 Customer instructions and special records
+
+The Customer shall provide relevant limitations in its privacy notices, changes in patient permissions and restrictions that affect the agreed service. It shall not instruct NuviaMy to perform an act that would be impermissible under HIPAA. The Customer remains responsible for clinical decisions, its workforce, lawful collection and its independent regulatory duties.
+
+The approved scope covers ordinary practice records and progress notes only as selected in the Schedule. Separately maintained psychotherapy notes as defined by HIPAA and records subject to 42 CFR Part 2 are excluded unless a separate signed addendum and suitable technical controls expressly approve that category. A substance-use reference in an ordinary record does not by itself settle Part 2 applicability; the Customer must identify regulated scope. State protections and other applicable confidentiality laws remain in force.
+
+## 8 Term and termination
+
+This BAA takes effect on the Customer’s electronic acceptance of NuviaMy’s published offer where the Customer is a HIPAA covered entity or business associate and the service involves PHI. It covers the free trial and paid service and continues while NuviaMy holds PHI. The Standard Processing Schedule defines the service scope. Duties for PHI actually received remain enforceable regardless of any scope error.
+
+The Customer may terminate this agreement and the affected service for a material breach by NuviaMy. It may provide a reasonable written cure period when correction is feasible; termination may be immediate when cure is not feasible or applicable law requires it. NuviaMy shall take reasonable steps to cure or end a known material violation in an upstream Customer relationship and terminate the affected arrangement where HIPAA requires if correction is unsuccessful.
+
+## 9 Return and protection after termination
+
+On termination, NuviaMy shall return or destroy PHI received, created or maintained for the Customer, including copies held by subcontractors, if feasible, as directed by the Customer and consistent with law. The Schedule specifies the return format, exit window, deletion process and backup expiry. No universal medical-record retention period is established by this agreement.
+
+If return or destruction is infeasible, NuviaMy shall explain why, preserve the agreement’s safeguards, and limit further use and disclosure to the purposes making return or destruction infeasible for as long as it retains the PHI. Any necessary statutory retention shall be identified and limited. NuviaMy shall document completed return or destruction and any continuing protected retention. Subscription cancellation alone is not an instruction to erase patient records.
+
+## 10 Interpretation and signing
+
+HIPAA-specific protections in this agreement prevail over conflicting service terms. Concurrent applicable data-protection duties remain enforceable; no party is required to act unlawfully. The parties shall amend the agreement where necessary for applicable HIPAA changes. A mutable public webpage does not amend an executed BAA, and any material change requires an attributable written agreement.
+
+The parties may execute this agreement in counterparts or with electronic signatures valid under applicable contract law. The evidence shall identify the parties, authorized representatives, versions, signing actions and dates. No nonparty’s signature is implied. Nothing in this agreement claims government approval, grants a clinical license, or removes the need to satisfy the documented safeguards and downstream contracts.
+
+
+## Electronic execution
+
+Richard Andres Marles Bonilla, trading as NuviaMy, expressly offers and agrees to this standard agreement. The Customer is the legal entity or sole practitioner identified in the electronic acceptance receipt. That receipt records its address, authorized representative, title, account email, workspace, exact texts, versions, document digest and acceptance time. The Customer’s explicit checkbox and submission conclude the agreement. Publication alone does not imply acceptance by any customer. Material amendments require a new attributable agreement; an existing signed copy is not silently replaced.

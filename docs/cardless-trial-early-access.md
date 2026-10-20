@@ -1,6 +1,6 @@
 # Cardless access
 
-New practices receive 15 days from account creation without a Stripe customer,
+New practices receive 30 days from account creation without a Stripe customer,
 card or subscription. The fixed deadline is not extended by checkout cancellation.
 At expiry subscription middleware keeps records readable and authorized exports
 available, blocks writes, and requires an explicit paid checkout for renewed access.
@@ -25,3 +25,9 @@ additional internal staff requires voluntary paid conversion, which starts ordin
 per-user billing immediately. Client portal accounts are not internal seats. The
 invitation is not a public first-ten-signups promotion. No invitations are issued
 by deployment and no conversion or charge is scheduled at expiry.
+
+## October 20, 2026 standard agreement rollout
+
+Signup explicitly accepts the standard Terms, DPA, applicable BAA and Processing Schedule and acknowledges the Privacy Notice. Acceptance is independent of payment and covers the trial and subsequent paid subscription. Existing owners accept from Contracts; no signatures are fabricated or backfilled.
+
+Migration `practices.0011` extends exactly 15-day ordinary trials to 30 days measured from their original signup timestamp. It is idempotent and also covers recently expired trials whose new deadline is still future. It leaves custom trial lengths, twelve-month invitations and practices with active/trialing/past-due/unpaid subscriptions unchanged. It does not restart a trial, create a Stripe subscription or rewrite billing dates. Rollback deliberately does not shorten granted trial periods.

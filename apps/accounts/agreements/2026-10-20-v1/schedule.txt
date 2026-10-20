@@ -1,0 +1,31 @@
+# NuviaMy Standard Processing Schedule
+Version NUVIA SCHEDULE 2026 10 20 standard v1
+
+## Parties and duration
+The Customer and authorized representative are identified in the electronic acceptance receipt. Provider: Richard Andres Marles Bonilla, trading as NuviaMy, Calle Paciente Inglés 22, 50019 Zaragoza, Spain. Privacy and incident contact: marleswebinfo@gmail.com; service contact: support@nuviamy.com. The Customer’s account email is its monitored contract and incident contact; keep it current. Sensitive details must use an authenticated secure channel, never general email.
+
+The DPA and, where applicable, BAA apply from explicit acceptance, including the 30-day cardless trial and any subsequent paid subscription. Ordinary service does not require preparation of a bespoke packet. The Customer remains responsible for lawful collection, patient information and consent, professional obligations, staff access and its own retention instructions.
+
+## Processing scope
+On Customer instructions, NuviaMy collects, stores, organizes, displays to authorized users, signs, amends, exports, backs up, restores and deletes ordinary practice records. Data subjects are clients, their representatives, emergency contacts and practice personnel. Data includes contact details, appointments, intake responses, health history, diagnoses, treatment plans, ordinary progress notes and signatures, documents, invoices and security records. The Customer selects relevant data through its authorized workspace actions. Real client records within this scope may be used during the trial under these agreements.
+
+Separately maintained HIPAA psychotherapy notes and records governed by 42 CFR Part 2 are excluded without an additional written arrangement and suitable controls. For minors, the Customer must establish lawful representative authority and appropriate access restrictions before entering their data. NuviaMy does not provide medical advice, emergency care, patient consent or a government compliance certification. Customer clinical data is not sold, used for advertising or used for independent AI training.
+
+## Infrastructure and external services
+The production application, PostgreSQL database and host logs run on Amazon EC2 in us-east-1 (Northern Virginia). Private documents and encrypted database backups use Amazon S3 in the same region. The operator confirms the AWS Business Associate Addendum for the production account. AWS is the authorized infrastructure subprocessor, under its applicable customer agreement, DPA and BAA for eligible services. Administration is from Spain; this is not a US-only access promise. Any applicable restricted international transfer requires the appropriate safeguards; this Schedule itself is not a standard contractual clause.
+
+Cloudflare provides DNS with DNS-only production routing. Account authentication and service notices may use Brevo SMTP, Cloudflare Email Routing and the operator’s Gmail inbox; do not put patient information into account identifiers or general email/support messages. Google Calendar, Gmail and Drive are optional connections and are outside the standard clinical-data scope. Do not transmit clinical information through them without a separate assessment and appropriate agreements for the exact account and service. Sentry, if enabled, receives minimized technical diagnostics; PHI is excluded. Stripe hosts subscription payment collection; do not put diagnoses or clinical notes in payment metadata. Patient payment processing requires assessment of the applicable service before use.
+
+Changes of clinical subprocessors follow the DPA notice and objection procedure. A provider name alone does not establish contractual coverage for additional flows. Legacy infrastructure is not an authorized destination for new clinical records.
+
+## Safeguards and assistance
+Controls include HTTPS, practice-scoped authorization, protected audit evidence, encrypted integration tokens, session expiration/revocation, email two-step sign-in, immutable signed notes with linked addenda, encrypted EC2 storage, private encrypted/versioned S3 storage, encrypted database backups and daily encrypted instance snapshots. The Customer manages workforce permissions and device security. No certification, guaranteed uptime or recovery time is promised. NuviaMy remains responsible for appropriate safeguards and downstream obligations under the DPA and applicable BAA.
+
+Incident reporting and cooperation follow the DPA and BAA. Initial reporting does not wait for a complete investigation. Individual requests go to the verified Customer; NuviaMy assists authorized requests promptly enough for applicable deadlines. Authorized exports include JSON records, available files and signature information; PDF summaries are not the complete archive.
+
+## Expiry, return and deletion
+Trial expiry and subscription cancellation do not automatically delete data. Authorized reading and export remain available while creation and edits are restricted by subscription status. There is no automatic charge at trial expiry, no universal medical-record retention period and no promise of indefinite storage. The Customer identifies its professional, state, age-related and legal-hold obligations.
+
+The Customer may request return or deletion through an authenticated owner request. NuviaMy verifies authority, offers a complete export and agrees a documented closure timetable before erasure, taking account of lawful holds. No unilateral routine deletion starts merely because a trial ends. If return/destruction is infeasible, safeguards continue and uses are limited to the reason for retention under the DPA/BAA. Completion or lawful restricted retention is documented.
+
+Current backup lifecycle: current S3 database backups expire after 35 days; noncurrent backup versions expire 35 days after becoming noncurrent, so this is not a maximum total age. Instance snapshots retain seven daily recovery points. Document versions have no automatic deletion lifecycle and must be included in verified closure instructions. Deletion requests must cover active copies, versions, snapshots and prevention of reintroduction on restore; a backup expiry guarantee is not implied by these operational settings.

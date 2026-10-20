@@ -39,7 +39,17 @@ class ContractsView(ContractOwnerMixin, PostRateLimitMixin, View):
     rate_limit_seconds = 900
 
     def get(self, request):
-        return self.show(request)
+        return self.show(request) if request.GET.get('custom') == '1' else self.show_standard(request)
+
+    def show_standard(self, request, form=None):
+        from .standard_agreements import StandardAgreementForm, AGREEMENT_VERSION
+        from .contract_models import StandardAgreementAcceptance
+        acceptance = StandardAgreementAcceptance.objects.filter(practice=self.practice, version=AGREEMENT_VERSION).first()
+        return render(request, 'accounts/standard_agreements.html', {
+            'acceptance': acceptance,
+            'form': form or StandardAgreementForm(initial={'legal_name': self.practice.name, 'representative_name': request.user.get_full_name()}),
+            'bundles': ClinicalContractBundle.objects.filter(request__practice=self.practice),
+        })
 
     def show(self, request, form=None):
         submission = ClinicalContractRequest.objects.filter(practice=self.practice).order_by('-created_at', '-pk').first()
@@ -58,6 +68,15 @@ class ContractsView(ContractOwnerMixin, PostRateLimitMixin, View):
 
     @transaction.atomic
     def post(self, request):
+        if 'hipaa_role' not in request.POST:
+            from .standard_agreements import StandardAgreementForm, accept_standard_agreement
+            form = StandardAgreementForm(request.POST)
+            if form.is_valid():
+                accept_standard_agreement(request.user, self.practice, form.cleaned_data)
+                messages.success(request, 'Practice agreements accepted. Your copy is ready to download.')
+                return redirect('clinical_contracts')
+            return self.show_standard(request, form)
+        # Retain legacy request handling for existing custom packets.
         # Lock the practice to serialize duplicate submissions, including the first request.
         from apps.practices.models import Practice
         Practice.objects.select_for_update().get(pk=self.practice.pk)

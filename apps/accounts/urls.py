@@ -11,7 +11,11 @@ from .email_security import EmailChallengeView
 
 from .contract_views import ContractsView, ContractReviewView, ContractSignView, ContractDownloadView
 
+from .standard_agreement_views import StandardAgreementOfferView, StandardAgreementDownloadView
+
 urlpatterns = [
+    path('agreements/', StandardAgreementOfferView.as_view(), name='standard_agreement_offer'),
+    path('agreements/<int:pk>/download/', StandardAgreementDownloadView.as_view(), name='standard_agreement_download'),
     path('contracts/', ContractsView.as_view(), name='clinical_contracts'),
     path('contracts/<uuid:pk>/', ContractReviewView.as_view(), name='clinical_contract_review'),
     path('contracts/<uuid:pk>/sign/', ContractSignView.as_view(), name='clinical_contract_sign'),

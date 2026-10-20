@@ -96,7 +96,14 @@ def permission_redirect(request, message='That area is not available with your c
 def permission_context(request):
     """Expose the same permission model to navigation and server-rendered actions."""
     user = getattr(request, 'user', None)
+    profile = getattr(user, 'nuvia_profile', None) if user and user.is_authenticated else None
+    needs_agreements = False
+    if profile and profile.role == UserProfile.Role.OWNER:
+        from .contract_models import StandardAgreementAcceptance
+        from .standard_agreements import AGREEMENT_VERSION
+        needs_agreements = not StandardAgreementAcceptance.objects.filter(practice_id=profile.practice_id, version=AGREEMENT_VERSION).exists()
     return {
+        'needs_standard_agreements': needs_agreements,
         'workspace_permissions': {
             resource: {
                 action: has_practice_permission(user, resource, action)

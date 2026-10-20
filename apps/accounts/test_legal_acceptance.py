@@ -1,3 +1,4 @@
+from apps.accounts.standard_agreements import offer_digest
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from apps.audit.models import AuditLog
@@ -7,7 +8,7 @@ from apps.accounts.legal import TERMS_VERSION, PRIVACY_VERSION
 @override_settings(MFA_REQUIRED=False)
 class LegalAcceptanceTests(TestCase):
     def payload(self, **extra):
-        data=dict(accept_terms=True, practice_name='Fictional legal test',practice_type='solo',first_name='Fictional',last_name='Owner',email='legal@example.invalid',password1='FictionalLegal2026!',password2='FictionalLegal2026!',license_number='fictional-legal',license_state='CA')
+        data=dict(accept_terms=True, legal_name='Test legal practice', registered_address='Test street, CA, USA', representative_title='Owner', agreement_digest=offer_digest(), practice_name='Fictional legal test',practice_type='solo',first_name='Fictional',last_name='Owner',email='legal@example.invalid',password1='FictionalLegal2026!',password2='FictionalLegal2026!',license_number='fictional-legal',license_state='CA')
         data.update(extra)
         return data
 
@@ -25,7 +26,7 @@ class LegalAcceptanceTests(TestCase):
         self.assertEqual(event.actor_id_snapshot,practice.therapists.get().user_id)
         self.assertEqual(event.metadata['terms_version'],TERMS_VERSION)
         self.assertEqual(event.metadata['privacy_notice_version'],PRIVACY_VERSION)
-        self.assertContains(self.client.get(reverse('terms_of_service')),'fictional data')
+        self.assertContains(self.client.get(reverse('terms_of_service')),'Real client records')
 
     @override_settings(OPERATOR_TAX_ID='FICTIONAL-TAX-ID')
     def test_public_notices_and_footer_links(self):
@@ -51,5 +52,5 @@ class LiveCommercialNoticeTests(TestCase):
         response = self.client.get(reverse('terms_of_service'))
         self.assertContains(response, 'authorizes real recurring payments')
         self.assertContains(response, 'prices exclude any applicable taxes')
-        self.assertContains(response, 'Do not enter identifiable patient')
+        self.assertContains(response, 'Real client records')
         self.assertNotContains(response, 'Stripe is in test mode')

@@ -10,20 +10,22 @@ Last documentation review: **October 20, 2026**. The application is commercially
 
 - Production at `nuviamy.com` runs on AWS EC2 in `us-east-1`, using Docker Compose, PostgreSQL, Gunicorn and host Nginx with HTTPS. Native S3 holds private documents and encrypted scheduled database backups in separate buckets. AWS is the sole active application origin; the former Contabo app and its timers are stopped.
 - Stripe mode follows the protected deployment credentials; the operator has authorized **live subscription billing**. Published pricing (excluding applicable taxes) is **USD 39 per active internal user/month** or **USD 421/user/year**.
-- New practices receive **15 days without a card**. Paid billing starts only after an explicit checkout confirmation.
+- New practices receive **30 days without a card**. Paid billing starts only after an explicit checkout confirmation.
 - Email two-step sign-in is implemented and recorded as enabled in the October 20 operational evidence. It is independent of optional authenticator TOTP MFA (`DJANGO_MFA_REQUIRED=false` in the documented baseline). See [Email two-step sign-in](#email-two-step-sign-in).
 - Authenticated sessions expire after **one hour of inactivity** and have an **eight-hour absolute limit**.
 - Release CI runs the full PostgreSQL test suite, JavaScript interaction checks, migration/deployment checks and database role/backup-restore checks. Production verification confirmed the initial consultation defaults, migrations and enabled clinical immutability guards.
 
 The AWS BAA is activated according to the operator; its four-page AWS Business Associate Addendum has also been reviewed locally. Account-specific acceptance is electronic through AWS Artifact; the PDF itself does not contain an account ID or acceptance timestamp. Keep the confidential agreement and acceptance evidence outside Git. This AWS agreement is distinct from the prepared customer BAA/DPA documents.
 
-The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See the [October 20 internal evidence audit](docs/compliance/internal-audit-2026-10-20.md) and the [clinical security dossier](docs/compliance/README.md). Older dossier entries still describe pre-migration infrastructure; use the dated AWS cutover evidence for current hosting. Google OAuth verification does not close the separate clinical release gates.
+The standard customer agreements now cover ordinary real-client records during the trial and paid service, subject to the Processing Schedule’s scope and exclusions. This contractual change does not establish HIPAA certification or close outstanding operational evidence, provider/integration assessment and independent security review. See the [October 20 internal evidence audit](docs/compliance/internal-audit-2026-10-20.md) and the [clinical security dossier](docs/compliance/README.md). Historical pre-migration entries are superseded for hosting by dated AWS cutover evidence. Google OAuth verification is separate from these obligations.
 
-## Clinical contract onboarding
+## Standard practice agreements and onboarding
 
-The onboarding code adds **Settings → Contracts** for practice owners, with a prompt on Overview. Owners submit legal details, review a completed customer-specific DPA/BAA/schedule packet, sign electronically after recent authentication and download the exact texts and both signature records. Authorized NuviaMy operators prepare and expressly execute the packet through Django admin; unfinished templates cannot be published for signature. Corrections create new request history and superseded unsigned packets cannot be signed.
+Signup collects the practice legal name and address, owner identity and representative title. One unchecked acceptance explicitly covers the Terms of Use, DPA, applicable BAA and Standard Processing Schedule, and acknowledges the Privacy Notice. The complete standard offer is public at `/accounts/agreements/`. It applies from acceptance through the 30-day trial and subsequent paid subscription; upgrading does not request another BAA signature or wait for manual contract preparation.
 
-Contract evidence is append-only with PostgreSQL mutation guards, practice-scoped access and audit records. Contract execution is separate from payment and clinical approval. This code change does not itself record a production rollout or authorize real patient data. See the [customer flow and operator instructions](docs/contracts/onboarding.md).
+Exact document texts, consent, customer identity, timestamp and versions are retained in immutable, SHA-256-verified acceptance snapshots with PostgreSQL mutation/truncation guards and audit evidence. **Settings → Contracts** lets owners download their accepted documents and receipt. Existing owners must expressly accept there; no acceptance is backfilled. The dashboard prompt disappears after acceptance. Authentication must be recent for an existing owner to accept. Downloads and acceptance remain available after trial expiry.
+
+Older custom requests, packets and signatures are preserved. Their historical terms are not silently replaced. The legacy custom workflow is available at `/accounts/contracts/?custom=1`; it is no longer the ordinary signup path. Clinical-data exclusions and external integration restrictions remain in the Standard Processing Schedule. See [the rollout and verification notes](docs/validation/standard-agreements-30-day-trial-2026-10-20.md).
 
 ## Main client workflow
 
@@ -111,7 +113,7 @@ See [Session documentation and signatures](docs/session-list-and-signatures.md).
 - Insurance payer/rate configuration is available; claims submission, eligibility, ERA/EOB and denial management are separate pending scope.
 - Stripe Connect is optional for receiving client invoice payments. Signed webhooks record paid invoices; creating an invoice does not collect a payment.
 - SaaS pricing is one plan per active internal user. Active owners, admins and therapists count; client portal users and inactive staff do not.
-- Signup starts the fixed **15-day cardless period**, without creating a Stripe subscription. Cancelling checkout does not extend that deadline.
+- Signup starts the fixed **30-day cardless period**, without creating a Stripe subscription. Cancelling checkout does not extend that deadline.
 - Expiry preserves authorized record reading and exports while restricting writes. Paid conversion requires explicit checkout confirmation and starts billing immediately, with no additional Stripe trial.
 - Before subscription Checkout, managers provide international professional billing details and an audited purchase declaration. Checkout also offers business tax ID collection. These declarations do not establish tax exemption. No country-based activation block is applied; international tax treatment remains a live-release requirement.
 - Get subscription uses the current internal-user quantity. Monthly/annual checkout, period-change proration previews, subscription state, invoice history and Stripe Customer Portal are supported.
@@ -141,7 +143,7 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 - Mobile navigation collapses into a top menu; forms/dialogs stack, period navigation stays on one row, and Messages becomes a floating circular button.
 - Pricing presents the single per-user plan centrally; mobile signup actions remain visible.
 - Public footer links to support, privacy, cookie policy and Cookie settings. The cookie choice controls optional tour storage; essential authentication/CSRF cookies remain functional. No advertising analytics are installed.
-- Help Center and support contact form are available. Versioned preview and commercial subscription conditions, privacy and operator legal notice are published in the footer. Subscription Checkout requires separate unchecked acceptance of the current commercial version, stored in audit and Checkout metadata. Signup requires explicit terms acceptance, recorded in append-only audit with the actor, timestamp and notice versions. The preview permits fictional records only; final international tax decisions, provider contracts and clinical readiness evidence remain pending.
+- Help Center and support contact form are available. Versioned service and commercial subscription conditions, privacy and operator legal notice are published in the footer. Subscription Checkout requires separate unchecked acceptance of the current commercial version, stored in audit and Checkout metadata. Signup requires explicit terms acceptance, recorded in append-only audit with the actor, timestamp and notice versions. The standard agreements cover ordinary real-client records during trial and paid use; special record categories and external clinical flows remain subject to the schedule. International tax decisions and outstanding provider/security evidence remain separate operational work.
 
 ### Profile settings
 
