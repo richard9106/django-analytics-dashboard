@@ -1,4 +1,6 @@
-# NuviaMy
+# NuviaMy Platform
+
+Repository: [richard9106/nuviamy-platform](https://github.com/richard9106/nuviamy-platform). Local checkout: `nuviamy-platform`. The production server retains its existing internal directory and Docker Compose project identity so the repository rename does not change persistent services or data volumes.
 
 NuviaMy is a Django-based practice management SaaS for solo therapists and multi-provider clinics. It brings clients, appointments, clinical documentation, billing, client forms and requests into one practice-scoped workspace. The intended clinical market is the United States.
 
