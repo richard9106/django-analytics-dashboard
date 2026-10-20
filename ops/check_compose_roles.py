@@ -17,6 +17,17 @@ def main():
         env_file = Path(directory) / 'fixture.env'
         env_file.write_text('\n'.join(key + '=' + value for key, value in fixtures.items()))
         configuration = json.loads(subprocess.check_output(['docker', 'compose', '--env-file', str(env_file), '--profile', 'maintenance', 'config', '--format', 'json'], env=dict(os.environ, **fixtures)))
+        rehearsal = json.loads(subprocess.check_output(['docker', 'compose', '--env-file', str(env_file), '-f', 'docker-compose.yml', '-f', 'ops/aws/rehearsal.compose.yml', '--profile', 'maintenance', 'config', '--format', 'json'], env=dict(os.environ, **fixtures)))
+        assert rehearsal['networks']['default']['internal'] is True
+        for service in ('web','migrate'):
+            isolated = rehearsal['services'][service]['environment']
+            assert isolated['MIGRATION_REHEARSAL'] == 'true'
+            assert isolated['AWS_EC2_METADATA_DISABLED'] == 'true'
+            assert isolated['EMAIL_BACKEND'] == 'django.core.mail.backends.dummy.EmailBackend'
+            for key in ('STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','GOOGLE_OAUTH_CLIENT_SECRET','AWS_ACCESS_KEY_ID','AWS_SESSION_TOKEN','DJANGO_STORAGE_BACKEND','SENTRY_DSN'):
+                assert not isolated[key]
+            assert rehearsal['services'][service]['image'] == 'nuviamy-rehearsal:local'
+
     services = configuration['services']
     assert services['db']['environment']['POSTGRES_USER'] == fixtures['POSTGRES_USER']
     assert services['db']['environment']['POSTGRES_PASSWORD'] == fixtures['POSTGRES_PASSWORD']

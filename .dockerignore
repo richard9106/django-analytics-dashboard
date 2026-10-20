@@ -15,3 +15,12 @@ graphify-out
 htmlcov
 .coverage
 staticfiles
+
+# Private migration material and restored files never enter application images.
+*.env
+*.dump
+*.cms
+*.gpg
+rehearsal-media
+docs/contracts
+docs/validation

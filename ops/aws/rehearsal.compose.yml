@@ -1,0 +1,37 @@
+# Layer over the main compose file; use a separate project and private env file.
+# Build images before attaching the internal-only runtime network.
+services:
+  db:
+    restart: "no"
+  web:
+    image: nuviamy-rehearsal:local
+    restart: "no"
+    environment: &rehearsal_environment
+      MIGRATION_REHEARSAL: "true"
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_ACCESS_KEY_ID: ""
+      AWS_SECRET_ACCESS_KEY: ""
+      AWS_SESSION_TOKEN: ""
+      DJANGO_STORAGE_BACKEND: ""
+      AWS_STORAGE_BUCKET_NAME: ""
+      AWS_S3_ENDPOINT_URL: ""
+      DJANGO_EMAIL_TWO_STEP_REQUIRED: "false"
+      EMAIL_BACKEND: django.core.mail.backends.dummy.EmailBackend
+      EMAIL_HOST_USER: ""
+      EMAIL_HOST_PASSWORD: ""
+      STRIPE_SECRET_KEY: ""
+      STRIPE_PUBLISHABLE_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      STRIPE_LIVE_VERIFY_WEBHOOK_SECRET: ""
+      STRIPE_LIVE_VERIFY_NONCE: ""
+      GOOGLE_OAUTH_CLIENT_ID: ""
+      GOOGLE_OAUTH_CLIENT_SECRET: ""
+      SENTRY_DSN: ""
+    volumes:
+      - ./rehearsal-media:/app/media
+  migrate:
+    image: nuviamy-rehearsal:local
+    environment: *rehearsal_environment
+networks:
+  default:
+    internal: true

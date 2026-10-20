@@ -60,3 +60,21 @@ application/clinical digests, tune Gunicorn to the 4 GiB host, and migrate deplo
 access and GitHub secrets deliberately. Only then freeze writes, take a fresh final
 copy and switch DNS. Until that point Contabo/R2 remain the live environment and
 are not covered by the AWS BAA. The BAA does not certify the application.
+
+## Native S3 and isolated rehearsal
+
+Set `DJANGO_STORAGE_BACKEND=s3`, `AWS_S3_REGION_NAME=us-east-1` and the documents
+bucket. Empty static access key/secret/token and endpoint select the instance role.
+Set `BACKUP_S3_BUCKET` to the separate backups bucket, `BACKUP_S3_PREFIX=postgres`.
+The backup uploader preserves the legacy R2 destination when BACKUP_S3_BUCKET is
+unset. GPG receives its passphrase on a private file descriptor, not a process argument.
+On a new host, install boto3 for the host backup interpreter (bootstrap does this).
+
+For restoration use a unique checkout, private prepared env, and Compose project:
+`docker compose -p nuviamy-rehearsal --env-file rehearsal.env -f docker-compose.yml
+-f ops/aws/rehearsal.compose.yml ...`. Build before restoring secrets/data. The
+runtime Docker network is internal-only, EC2 credential lookup disabled, and web
+uses isolated local media. Before starting web, restore the separate *_rehearsal
+DB and run `isolate_rehearsal --confirm-isolated` to clear stored integration tokens.
+Do not create reminder/backup timers on the rehearsal. Do not reuse its volume for
+production or activate its copied subscription identifiers against Stripe.

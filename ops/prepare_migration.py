@@ -27,7 +27,9 @@ def prepare(source,destination,revision):
     values.update(EMAIL_BACKEND='django.core.mail.backends.dummy.EmailBackend',SIGNUP_NOTIFICATION_EMAIL='',
         STRIPE_SECRET_KEY='',STRIPE_PUBLISHABLE_KEY='',STRIPE_WEBHOOK_SECRET='',STRIPE_LIVE_VERIFY_WEBHOOK_SECRET='',
         STRIPE_LIVE_VERIFY_NONCE='',SENTRY_DSN='',GOOGLE_OAUTH_CLIENT_ID='',GOOGLE_OAUTH_CLIENT_SECRET='',
-        AWS_ACCESS_KEY_ID='',AWS_SECRET_ACCESS_KEY='',DJANGO_STORAGE_BACKEND='')
+        AWS_ACCESS_KEY_ID='',AWS_SECRET_ACCESS_KEY='',AWS_SESSION_TOKEN='',AWS_EC2_METADATA_DISABLED='true',
+        AWS_S3_ENDPOINT_URL='',AWS_STORAGE_BUCKET_NAME='',DJANGO_STORAGE_BACKEND='',
+        EMAIL_HOST_USER='',EMAIL_HOST_PASSWORD='',DJANGO_EMAIL_TWO_STEP_REQUIRED='false')
     # JSON strings are valid dotenv quoted values, including secrets with whitespace.
     save('rehearsal.env',''.join(k+'='+json.dumps(v)+'\n' for k,v in sorted(values.items())))
     save('manifest.json',json.dumps({'revision':revision,'environment_credentials_disabled':True,'database_oauth_isolation_required':True,
