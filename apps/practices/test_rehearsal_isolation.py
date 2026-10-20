@@ -16,7 +16,9 @@ class RehearsalConfigTests(SimpleTestCase):
             (self.config(MIGRATION_REHEARSAL=False),'fictional_rehearsal',True),
             (self.config(EMAIL_BACKEND='smtp'),'fictional_rehearsal',True),
             (self.config(STRIPE_SECRET_KEY='synthetic'),'fictional_rehearsal',True),
-            (self.config(GOOGLE_OAUTH_CLIENT_ID='synthetic'),'fictional_rehearsal',True)]
+            (self.config(GOOGLE_OAUTH_CLIENT_ID='synthetic'),'fictional_rehearsal',True),
+            (self.config(DJANGO_STORAGE_BACKEND='s3'),'fictional_rehearsal',True),
+            (self.config(AWS_SESSION_TOKEN='synthetic'),'fictional_rehearsal',True)]
         for config,name,confirm in cases:
             with self.assertRaises(ValueError):validate_rehearsal(config,name,confirm)
 
@@ -44,3 +46,11 @@ class RestoredIntegrationTests(TestCase):
         with self.assertRaises(CommandError):call_command('isolate_rehearsal',confirm_isolated=True)
         self.integration.refresh_from_db()
         self.assertEqual(self.integration.access_token,'fictional-valid-access-token')
+
+    def test_restored_sessions_are_removed_before_starting_web(self):
+        from django.contrib.sessions.models import Session
+        from django.utils import timezone
+        from datetime import timedelta
+        Session.objects.create(session_key='fictional-source-session',session_data='fictional',expire_date=timezone.now()+timedelta(days=1))
+        clear_restored_integrations()
+        self.assertFalse(Session.objects.exists())

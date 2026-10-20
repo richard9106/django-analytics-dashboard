@@ -135,17 +135,9 @@ STORAGES = {
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
 
-if DJANGO_STORAGE_BACKEND == 'r2':
-    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
-    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'auto')
-    AWS_S3_SIGNATURE_VERSION = 's3v4'
-    AWS_S3_ADDRESSING_STYLE = 'path'
-    AWS_DEFAULT_ACL = None
-    AWS_QUERYSTRING_AUTH = True
-    AWS_S3_FILE_OVERWRITE = False
+if DJANGO_STORAGE_BACKEND in {'r2', 's3'}:
+    from apps.documents.storage_config import cloud_storage_settings
+    globals().update(cloud_storage_settings(os.environ))
     STORAGES['default'] = {'BACKEND': 'storages.backends.s3.S3Storage'}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Summernote attachments have no Practice/client authorization boundary.
