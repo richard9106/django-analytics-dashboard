@@ -182,7 +182,13 @@ class GoogleOAuthCallbackView(PracticeContextMixin, View):
         integration.granted_scopes = token_response.get('scope', '').split()
         integration.token_expires_at = token_expiry_from_response(token_response)
         integration.account_email = fetch_google_account_email(access_token) if access_token else ''
-        integration.status = ExternalIntegration.Status.CONNECTED
+        missing_scopes = set(integration.enabled_scopes) - set(integration.granted_scopes)
+        integration.status = (
+            ExternalIntegration.Status.NEEDS_REAUTH if missing_scopes
+            else ExternalIntegration.Status.CONNECTED
+        )
+        if missing_scopes:
+            messages.warning(request, 'Google did not grant all selected permissions. Reconnect Google and allow the selected services to enable synchronization.')
         integration.connected_at = timezone.now()
         integration.oauth_state = ''
         integration.full_clean()
@@ -195,7 +201,7 @@ class GoogleOAuthCallbackView(PracticeContextMixin, View):
             'practices.ExternalIntegration',
             integration.pk,
             practice=practice,
-            metadata={'provider': 'google', 'connected': True, 'granted_scopes': integration.granted_scopes},
+            metadata={'provider': 'google', 'connected': not missing_scopes, 'granted_scopes': integration.granted_scopes},
         )
         return redirect('practice_settings:integrations')
 
