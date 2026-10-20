@@ -27,12 +27,13 @@
     {% if workspace_permissions.intake.view %}<a class="nav-item{% if request.resolver_match.namespace == 'intake' %} active{% endif %}" data-tour-target="nav-intake" href="{% url 'intake:list' %}" aria-label="Client forms" title="Client forms">{% include "partials/nav_icon.html" with icon="intake" %}Client forms</a>{% endif %}
     {% if workspace_permissions.requests.view %}<a class="nav-item nav-item-with-badge{% if request.resolver_match.namespace == 'portal_requests' %} active{% endif %}" data-tour-target="nav-requests" href="{% url 'portal_requests:list' %}" aria-label="Requests{% if open_portal_request_count %}, {{ open_portal_request_count }} open{% endif %}" title="Requests">{% include "partials/nav_icon.html" with icon="requests" %}Requests{% if open_portal_request_count %}<strong class="nav-badge">{{ open_portal_request_count }}</strong>{% endif %}</a>{% endif %}
     {% if google_workspace_connected %}<a class="nav-item{% if request.resolver_match.url_name == 'google_workspace' %} active{% endif %}" href="{% url 'practice_settings:google_workspace' %}" aria-label="My Google workspace" title="My Google workspace">{% include "partials/nav_icon.html" with icon="google" %}My Google workspace</a>{% endif %}
-    <details class="sidebar-settings"{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'team_management' %} open{% endif %}>
-      <summary class="nav-item{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'team_management' %} active{% endif %}" data-tour-target="nav-settings" aria-label="Settings" title="Settings">{% include "partials/nav_icon.html" with icon="settings" %}Settings</summary>
+    <details class="sidebar-settings"{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'team_management' or request.resolver_match.url_name == 'clinical_contracts' or request.resolver_match.url_name == 'clinical_contract_review' %} open{% endif %}>
+      <summary class="nav-item{% if request.resolver_match.namespace == 'settings' or request.resolver_match.namespace == 'portal_settings' or request.resolver_match.url_name == 'integrations' or request.resolver_match.url_name == 'team_management' or request.resolver_match.url_name == 'clinical_contracts' or request.resolver_match.url_name == 'clinical_contract_review' %} active{% endif %}" data-tour-target="nav-settings" aria-label="Settings" title="Settings">{% include "partials/nav_icon.html" with icon="settings" %}Settings</summary>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'package_templates' %} active{% endif %}" href="{% url 'settings:package_templates' %}">Session packages</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'insurance' %} active{% endif %}" href="{% url 'settings:insurance' %}">Insurance</a>
       <a class="nav-item subitem{% if request.resolver_match.url_name == 'integrations' %} active{% endif %}" href="{% url 'practice_settings:integrations' %}">Integrations</a>
       {% if can_manage_team %}<a class="nav-item subitem{% if request.resolver_match.url_name == 'team_management' %} active{% endif %}" href="{% url 'team_management' %}">Team</a>{% endif %}
+      {% if can_manage_contracts %}<a class="nav-item subitem{% if request.resolver_match.url_name == 'clinical_contracts' or request.resolver_match.url_name == 'clinical_contract_review' %} active{% endif %}" href="{% url 'clinical_contracts' %}">Contracts</a>{% endif %}
       <a class="nav-item subitem{% if request.resolver_match.namespace == 'portal_settings' %} active{% endif %}" href="{% url 'portal_settings:portal_access' %}">Client portal</a>
     </details>
     <div class="mobile-account-menu" aria-label="Account navigation">
@@ -50,10 +51,10 @@
 
   {% if messages %}<section class="permission-toast-stack" aria-label="Workspace messages">{% for message in messages %}<div class="permission-toast permission-toast-{{ message.tags|default:'info' }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}"><span aria-hidden="true">i</span><p>{{ message }}</p></div>{% endfor %}</section>{% endif %}
 
-  {% if not practice_setup_complete %}
+  {% if not practice_setup_complete and request.resolver_match.url_name != 'profile_settings' %}
     <div class="setup-reminder" role="status">
       <strong>Optional connections</strong>
-      <p>Add Gmail for email delivery or Stripe for online client payments whenever you need them.</p>
+      <p>{% if google_workspace_connected %}Google is connected. Add online client payments whenever you need them.{% elif practice_setup_stripe %}Online payments are ready. Connect Google if you need email or calendar features.{% else %}Add Google or online client payments whenever you need them.{% endif %}</p>
       <a href="{% url 'profile_settings' %}">Manage connections</a>
     </div>
   {% endif %}

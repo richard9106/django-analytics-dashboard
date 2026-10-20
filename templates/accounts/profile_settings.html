@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/dashboard.css">
   {% load static %}<link rel="stylesheet" href="{% static 'subscription-status.css' %}">
+  <link rel="stylesheet" href="{% static 'profile-settings.css' %}">
 </head>
 <body class="app-page profile-settings-page">
   <div class="app-shell">
@@ -17,7 +18,7 @@
     <main class="app-main">
       {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Profile actions">
-        <div class="quick-actions"><a class="btn btn-secondary" href="{% url 'security_settings' %}">Account security</a><a class="btn btn-soft" href="{% url 'dashboard' %}">Back to dashboard</a></div>
+        <div class="quick-actions"><a class="btn btn-soft" href="{% url 'dashboard' %}">Back to dashboard</a></div>
         {% include 'partials/trial_toolbar_notice.html' %}<details class="profile-menu">
           <summary>{{ request.user.first_name|default:request.user.username }}</summary>
           <div class="profile-menu-panel">
@@ -32,25 +33,12 @@
         <div>
           <p class="eyebrow">Profile</p>
           <h1 id="account-settings-title">Profile settings</h1>
-          <p>Your profile, subscription, and practice account tools.</p>
+          <p>Manage your account, practice connections and subscription.</p>
         </div>
       </header>
 
-      <section class="account-settings-surface" aria-labelledby="account-settings-title">
-       {% if messages %}
-        <section class="message-list" aria-label="Profile messages">
-          {% for message in messages %}<div class="form-error">{{ message }}</div>{% endfor %}
-        </section>
-      {% endif %}
-
-       {% if not practice_setup_complete %}
-         <section class="setup-checklist-panel settings-section settings-setup-section">
-            <div><p class="eyebrow">Optional connections</p><h2>Add email and online payments when you need them.</h2><p>You can manage clients and appointments without connecting these services.</p></div>
-           <div class="setup-checklist-items"><a href="{% url 'practice_settings:integrations' %}" class="{% if practice_setup_gmail %}setup-complete{% endif %}"><strong>{% if practice_setup_gmail %}✓{% else %}1{% endif %}</strong>{% if practice_setup_gmail %}Gmail connected{% else %}Connect Gmail{% endif %}</a><a href="#client-payments" class="{% if practice_setup_stripe %}setup-complete{% endif %}"><strong>{% if practice_setup_stripe %}✓{% else %}2{% endif %}</strong>{% if practice_setup_stripe %}Stripe Connect ready{% else %}Set up Stripe Connect{% endif %}</a></div>
-         </section>
-       {% endif %}
-        <section class="profile-grid settings-overview settings-section">
-         <article class="panel settings-section-card">
+      <div class="profile-settings-layout">
+<article class="panel profile-personal-card">
            <div class="panel-head compact"><div><h2>Your profile</h2></div><button class="btn btn-secondary" type="button" data-modal-target="profile-edit-modal">Edit profile</button></div>
            <dl class="profile-detail-list">
              <div><dt>Name</dt><dd>{{ request.user.get_full_name|default:request.user.username }}</dd></div>
@@ -58,9 +46,9 @@
              <div><dt>Practice</dt><dd>{% if practice %}{{ practice.name }}{% else %}Not assigned{% endif %}</dd></div>
              <div><dt>Role</dt><dd>{{ profile_role_label }}</dd></div>
            </dl>
+           <div class="profile-account-links"><a class="inline-link" href="{% url 'security_settings' %}">Account security</a>{% if can_manage_contracts %}<a class="inline-link" href="{% url 'clinical_contracts' %}">Practice contracts</a>{% endif %}</div>
          </article>
-
-         <article class="panel subscription-panel settings-section-card">
+<div class="profile-billing-column"><article class="panel subscription-panel profile-subscription-card">
            <div class="panel-head compact"><div><h2>Subscription</h2></div></div>
            {% if request.subscription_access.free_access %}
              <div class="subscription-summary">
@@ -82,7 +70,7 @@
                  <p>Renews on {{ subscription.current_period_end|date:"M j, Y" }}.</p>
                {% endif %}
              </div>
-             {% if subscription.stripe_customer_id %}
+             {% if can_manage_client_payments %}{% if subscription.stripe_customer_id %}
                <form method="post" action="{% url 'billing:customer_portal' %}" class="profile-billing-actions">
                  {% csrf_token %}
                  <button class="btn btn-primary" type="submit">Manage billing in Stripe</button>
@@ -94,20 +82,17 @@
              <div class="plan-change-panel">
                <div><h3>Billing period</h3><p>Monthly or annual per active owner, admin, and therapist.</p></div>
                <button class="btn btn-primary" type="button" data-modal-target="plan-change-modal">Change billing period</button>
-             </div>
+             </div>{% else %}<p class="empty-state">Contact your practice owner to manage billing.</p>{% endif %}
           {% else %}
             <div class="subscription-summary muted-subscription">
               <span class="badge warning">No active subscription</span>
               <h3>Choose a NuviaMy plan</h3>
               <p>Choose a paid subscription when you are ready. Billing starts only after you confirm in Stripe.</p>
             </div>
-            <a class="btn btn-primary" href="{% url 'pricing' %}">Choose a plan</a>
+            {% if can_manage_client_payments %}<a class="btn btn-primary" href="{% url 'pricing' %}">Choose a plan</a>{% else %}<p>Contact your practice owner for billing.</p>{% endif %}
           {% endif %}
-        </article>
-       </section>
-       <dialog class="modal-dialog" id="profile-edit-modal"{% if profile_form.errors %} data-profile-errors{% endif %}><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Account</p><h2>Edit profile</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div><form class="appointment-form" method="post" action="{% url 'profile_settings' %}">{% csrf_token %}{% if profile_form.errors %}<div class="form-error">Please correct the profile details below.</div>{% endif %}<div class="field-grid two"><div class="field"><label for="id_first_name">First name</label>{{ profile_form.first_name }}{{ profile_form.first_name.errors }}</div><div class="field"><label for="id_last_name">Last name</label>{{ profile_form.last_name }}{{ profile_form.last_name.errors }}</div><div class="field full"><label for="id_email">Login email</label>{{ profile_form.email }}{{ profile_form.email.errors }}</div><div class="field full"><label for="id_phone">Phone</label>{{ profile_form.phone }}{{ profile_form.phone.errors }}</div></div><p class="empty-state">Changing this login email does not disconnect Gmail OAuth or change your Stripe subscription/Connect account.</p><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save profile</button></div></form></div></dialog>
-       <section class="panel subscription-invoices-panel settings-section">
-         <div class="panel-head compact"><div><h2>NuviaMy invoices</h2></div></div>
+        {% if can_manage_client_payments %}<details class="profile-invoices"{% if subscription_invoices or subscription_invoice_error %} open{% endif %}>
+         <summary>NuviaMy invoices <span class="profile-invoice-count">{{ subscription_invoices|length }}</span></summary>
          {% if subscription_invoice_error %}
            <p class="empty-state">Stripe invoices could not be loaded right now.</p>
          {% elif subscription_invoices %}
@@ -124,22 +109,29 @@
          {% else %}
            <p class="empty-state">No subscription invoices yet.</p>
          {% endif %}
-       </section>
-       {% if can_manage_client_payments %}
-        <div class="settings-sections-grid" aria-label="Practice settings">
-           <section class="panel client-payments-panel settings-section" id="client-payments">
-           <div class="panel-head compact"><div><h2>Client payments</h2></div><span class="badge {% if practice.can_receive_client_payments %}success{% else %}warning{% endif %}">{% if practice.can_receive_client_payments %}Ready{% else %}Setup needed{% endif %}</span></div>
-           {% if practice.can_receive_client_payments %}<p class="empty-state">Client payments route to {{ practice.name }}.</p>{% else %}<p class="empty-state">Set up Stripe Connect to collect client invoice payments.</p>{% endif %}
-           <a class="btn btn-primary" href="{% url 'practice_settings:stripe_connect' %}">{% if practice.stripe_connect_account_id %}Continue Stripe payout setup{% else %}Set up client payments{% endif %}</a>
-         </section>
-        </div>
-       {% endif %}
-       {% if can_manage_client_payments %}
-        <section class="panel practice-export-panel settings-section" id="practice-data-export" aria-labelledby="practice-export-title">
-           <div class="panel-head compact">
-             <div><p class="eyebrow">Owner &amp; admin only</p><h2 id="practice-export-title">Practice data export</h2></div>
-             <span class="badge warning">Sensitive download</span>
-           </div>
+       </details>{% endif %}</article></div>
+<section class="panel profile-connections-card" aria-labelledby="profile-connections-title">
+  <div class="panel-head compact"><div><h2 id="profile-connections-title">Connections</h2><p>Optional services for your practice.</p></div></div>
+  <div class="profile-connection-row">
+    <div class="profile-connection-info"><h3>Google <span class="badge {% if google_integration.status == 'connected' %}success{% elif google_integration.status == 'needs_reauth' %}warning{% else %}brand{% endif %}">{% if google_integration.status == 'connected' %}Connected{% elif google_integration.status == 'needs_reauth' %}Reconnect needed{% else %}Not connected{% endif %}</span></h3>
+    {% if google_integration.status == 'connected' %}
+      <p>{{ google_integration.account_email|default:'Google account connected' }}</p>
+      <ul class="profile-capabilities" aria-label="Enabled Google services">{% if google_integration.send_email_enabled %}<li>Gmail sending</li>{% endif %}{% if google_integration.read_email_enabled %}<li>Inbox</li>{% endif %}{% if google_integration.calendar_enabled %}<li>Calendar</li>{% endif %}{% if google_integration.file_storage_enabled %}<li>Drive</li>{% endif %}</ul>
+    {% elif google_integration.status == 'needs_reauth' %}<p>Review Google permissions to restore the selected services.</p>
+    {% else %}<p>Connect email, Calendar or Drive when you need them.</p>{% endif %}
+    </div><a class="btn btn-secondary" href="{% url 'practice_settings:integrations' %}">{% if google_integration.status == 'connected' %}Manage{% elif google_integration.status == 'needs_reauth' %}Reconnect Google{% else %}Connect Google{% endif %}</a>
+  </div>
+  {% if can_manage_client_payments %}
+  <div class="profile-connection-row" id="client-payments">
+    <div class="profile-connection-info"><h3>Client payments <span class="badge {% if practice.can_receive_client_payments %}success{% else %}brand{% endif %}">{% if practice.can_receive_client_payments %}Ready{% else %}Optional{% endif %}</span></h3>
+    {% if practice.can_receive_client_payments %}<p>Payments route to {{ practice.name }} through Stripe Connect.</p>{% elif practice.stripe_connect_account_id %}<p>Finish Stripe Connect setup to collect client payments.</p>{% else %}<p>Accept online invoice payments through Stripe Connect.</p>{% endif %}</div>
+    {% if practice.can_receive_client_payments %}<a class="btn btn-secondary" href="{% url 'practice_settings:stripe_connect' %}">Review setup</a>{% else %}<a class="btn btn-secondary" href="{% url 'practice_settings:stripe_connect' %}">{% if practice.stripe_connect_account_id %}Continue setup{% else %}Set up{% endif %}</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+      </div>
+      {% if can_manage_client_payments %}        <details class="panel profile-export-section" id="practice-data-export">
+<summary><span><strong>Practice data export</strong><small>Download practice records and documents securely</small></span><span class="badge warning">Owner &amp; admin only</span></summary>
           <div class="practice-export-layout">
             <div class="sensitive-download-note" role="note">
               <span class="sensitive-download-icon" aria-hidden="true">!</span>
@@ -166,10 +158,9 @@
               <p class="export-status" id="practice-export-status"><span aria-hidden="true">i</span> The ZIP includes JSON records and available document files.</p>
             </div>
           </div>
-        </section>
-       {% endif %}
-      </section>
-      {% if subscription %}
+        </details>{% endif %}
+       <dialog class="modal-dialog" id="profile-edit-modal"{% if profile_form.errors %} data-profile-errors{% endif %}><div class="modal-card"><div class="modal-head"><div><p class="eyebrow">Account</p><h2>Edit profile</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div><form class="appointment-form" method="post" action="{% url 'profile_settings' %}">{% csrf_token %}{% if profile_form.errors %}<div class="form-error">Please correct the profile details below.</div>{% endif %}<div class="field-grid two"><div class="field"><label for="id_first_name">First name</label>{{ profile_form.first_name }}{{ profile_form.first_name.errors }}</div><div class="field"><label for="id_last_name">Last name</label>{{ profile_form.last_name }}{{ profile_form.last_name.errors }}</div><div class="field full"><label for="id_email">Login email</label>{{ profile_form.email }}{{ profile_form.email.errors }}</div><div class="field full"><label for="id_phone">Phone</label>{{ profile_form.phone }}{{ profile_form.phone.errors }}</div></div><p class="empty-state">Changing this login email does not disconnect Gmail OAuth or change your Stripe subscription/Connect account.</p><div class="form-actions"><button class="btn btn-secondary" type="button" data-modal-close>Cancel</button><button class="btn btn-primary" type="submit">Save profile</button></div></form></div></dialog>
+      {% if subscription and can_manage_client_payments %}
         <dialog class="modal-dialog" id="plan-change-modal">
           <div class="modal-card">
             <div class="modal-head"><div><p class="eyebrow">Subscription</p><h2>Change billing period</h2></div><button class="modal-close" type="button" data-modal-close aria-label="Close">×</button></div>

@@ -104,6 +104,10 @@ def permission_context(request):
             }
             for resource, _label in PERMISSION_RESOURCES
         },
+        'can_manage_contracts': bool(
+            user and user.is_authenticated
+            and getattr(getattr(user, 'nuvia_profile', None), 'role', None) == UserProfile.Role.OWNER
+        ),
         'can_manage_team': bool(
             user and user.is_authenticated and not is_client_user(user)
             and getattr(getattr(user, 'nuvia_profile', None), 'role', None)

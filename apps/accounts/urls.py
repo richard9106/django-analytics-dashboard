@@ -9,7 +9,13 @@ from .security_views import (MFASetupView, MFAChallengeView, RecoveryCodesView,
 
 from .email_security import EmailChallengeView
 
+from .contract_views import ContractsView, ContractReviewView, ContractSignView, ContractDownloadView
+
 urlpatterns = [
+    path('contracts/', ContractsView.as_view(), name='clinical_contracts'),
+    path('contracts/<uuid:pk>/', ContractReviewView.as_view(), name='clinical_contract_review'),
+    path('contracts/<uuid:pk>/sign/', ContractSignView.as_view(), name='clinical_contract_sign'),
+    path('contracts/<uuid:pk>/download/', ContractDownloadView.as_view(), name='clinical_contract_download'),
     path('security/email/', EmailChallengeView.as_view(), name='email_security_challenge'),
     path('invitations/<uidb64>/<token>/', AccountInvitationView.as_view(), name='account_invitation'),
     path('security/', SecuritySettingsView.as_view(), name='security_settings'),

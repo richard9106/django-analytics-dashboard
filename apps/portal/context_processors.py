@@ -37,12 +37,12 @@ def portal_request_badge(request):
             'practice_setup_stripe': False,
         }
 
-    gmail_connected = ExternalIntegration.objects.filter(
-        practice=practice,
-        provider=ExternalIntegration.Provider.GOOGLE,
-        status=ExternalIntegration.Status.CONNECTED,
-        send_email_enabled=True,
-    ).exists()
+    google_integration = ExternalIntegration.objects.filter(
+        practice=practice, provider=ExternalIntegration.Provider.GOOGLE,
+    ).only('status', 'send_email_enabled', 'read_email_enabled').first()
+    google_connected = bool(google_integration and google_integration.status == ExternalIntegration.Status.CONNECTED)
+    gmail_connected = bool(google_connected and (
+        google_integration.send_email_enabled or google_integration.read_email_enabled))
     stripe_ready = practice.can_receive_client_payments
 
     portal_request_count = ClientPortalRequest.objects.filter(
@@ -67,8 +67,8 @@ def portal_request_badge(request):
         'chat_is_client': False,
         'chat_enabled': can_view_messages,
         'chat_open_id': request.GET.get('chat', ''),
-        'google_workspace_connected': gmail_connected,
-        'practice_setup_complete': gmail_connected and stripe_ready,
+        'google_workspace_connected': google_connected,
+        'practice_setup_complete': google_connected and stripe_ready,
         'practice_setup_gmail': gmail_connected,
         'practice_setup_stripe': stripe_ready,
     }

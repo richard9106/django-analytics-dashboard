@@ -1,0 +1,64 @@
+/* Scoped to account settings; other workspace layouts retain their spacing. */
+.profile-settings-page .app-main { width: 100%; max-width: 1320px; justify-self: center; align-content: start; gap: 16px; padding: 20px 24px 32px; }
+.profile-settings-page .settings-page-header { margin: 4px 0 0; padding-bottom: 0; }
+.profile-settings-page .settings-page-header p { margin: 8px 0 0; color: var(--slate-600); }
+.profile-settings-layout { display: grid; grid-template-columns: minmax(360px, 1.05fr) minmax(300px, .95fr); gap: 16px; align-items: start; }
+.profile-billing-column { display: grid; align-content: start; gap: 16px; min-width: 0; }
+.profile-settings-layout .panel, .profile-settings-page .profile-export-section { margin: 0; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: #fff; box-shadow: var(--shadow-1); min-width: 0; }
+.profile-settings-layout .panel-head { margin: 0 0 16px; align-items: center; }
+.profile-settings-layout h2 { font-size: 17px; letter-spacing: -.025em; }
+.profile-settings-layout .panel-head h2 { margin: 0; }
+.profile-settings-layout .panel-head p { margin: 5px 0 0; font-size: 13px; color: var(--slate-500); }
+.profile-personal-card { grid-column: 1 / -1; }
+.profile-settings-page .profile-detail-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 24px; }
+.profile-settings-page .profile-detail-list div { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+.profile-settings-page .profile-detail-list dd { font-size: 14px; line-height: 1.5; }
+.profile-account-links { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 13px; }
+.profile-connection-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
+.profile-connection-row:last-child { padding-bottom: 0; }
+.profile-connection-info { min-width: 0; }
+.profile-connection-info h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14px; }
+.profile-connection-info p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--slate-600); overflow-wrap: anywhere; }
+.profile-connection-row .btn { flex-shrink: 0; min-height: 36px; padding-inline: 12px; font-size: 12px; }
+.profile-capabilities { display: flex; flex-wrap: wrap; gap: 6px 12px; list-style: none; margin: 6px 0 0; padding: 0; color: var(--slate-500); font-size: 11px; }
+.profile-capabilities:empty { display: none; }
+.profile-settings-page .subscription-summary { padding: 14px; border-radius: 10px; background: var(--slate-50); gap: 8px; margin-bottom: 14px; }
+.profile-settings-page .subscription-summary > .badge { justify-self: start; }
+.profile-settings-page .subscription-summary h3 { font-size: 20px; }
+.profile-settings-page .subscription-summary p { font-size: 13px; line-height: 1.6; }
+.profile-settings-page .profile-billing-actions { margin: 12px 0 8px; }
+.profile-settings-page .plan-change-panel { margin-top: 16px; padding-top: 14px; gap: 10px; }
+.profile-settings-page .plan-change-panel h3 { font-size: 14px; }
+.profile-settings-page .plan-change-panel p { font-size: 13px; }
+.profile-invoices { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 14px; }
+.profile-invoices summary { display: flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; font-size: 14px; font-weight: 700; }
+.profile-invoices summary::after { content: '+'; margin-left: auto; font-size: 18px; color: var(--brand-700); }
+.profile-invoices[open] summary::after { content: '−'; }
+.profile-invoice-count { padding: 2px 7px; border-radius: 6px; background: var(--slate-100); color: var(--slate-600); font-size: 11px; }
+.profile-invoices > .empty-state { margin: 10px 0 0; }
+.profile-invoices table { font-size: 12px; }
+.profile-settings-page .profile-export-section { padding: 0; }
+.profile-export-section > summary { display: flex; align-items: center; gap: 16px; padding: 18px 20px; cursor: pointer; list-style: none; }
+.profile-export-section > summary > span:first-child { flex: 1; min-width: 0; }
+.profile-export-section > summary strong { display: block; font-size: 15px; }
+.profile-export-section > summary small { display: block; color: var(--slate-500); font-size: 12px; line-height: 1.5; margin-top: 4px; }
+.profile-export-section > summary::after { content: '+'; font-size: 20px; color: var(--brand-700); }
+.profile-export-section[open] > summary::after { content: '−'; }
+.profile-export-section > .practice-export-layout { padding: 0 20px 20px; grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr); }
+.profile-invoices summary::-webkit-details-marker, .profile-export-section > summary::-webkit-details-marker { display: none; }
+.profile-invoices summary:focus-visible, .profile-export-section > summary:focus-visible { outline: 3px solid var(--brand-600); outline-offset: 2px; border-radius: 6px; }
+@media (min-width: 1500px) { .profile-settings-page .app-main { padding-inline: 32px; } .profile-settings-layout { grid-template-columns: minmax(400px, 1.05fr) minmax(360px, .95fr); } }
+@media (max-width: 1100px) { .profile-settings-page .profile-detail-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .profile-settings-layout { grid-template-columns: minmax(0, 1fr); } .profile-settings-page .profile-export-section > .practice-export-layout { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+  .profile-settings-page .app-main { padding: 14px; gap: 12px; }
+  .profile-settings-layout { gap: 12px; }
+  .profile-settings-layout .panel { padding: 16px; }
+  .profile-settings-page .panel-head { display: flex; gap: 12px; }
+  .profile-settings-page .profile-detail-list { grid-template-columns: minmax(0, 1fr); }
+  .profile-settings-page .profile-detail-list div { grid-template-columns: 62px minmax(0, 1fr); gap: 12px; }
+  .profile-connection-row { align-items: flex-start; gap: 10px; }
+  .profile-export-section > summary { padding: 16px; gap: 10px; flex-wrap: wrap; }
+  .profile-export-section > summary > span:first-child { flex-basis: 100%; }
+  .profile-export-section > summary::after { margin-left: auto; }
+  .profile-export-section > .practice-export-layout { padding: 0 16px 16px; }
+}

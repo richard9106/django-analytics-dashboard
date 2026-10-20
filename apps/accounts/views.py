@@ -175,15 +175,15 @@ class ProfileSettingsView(LoginRequiredMixin, FormView):
         practice = get_practice_for_user(self.request.user)
         subscription = getattr(practice, "subscription", None) if practice else None
         google_integration = practice.external_integrations.filter(provider='google').first() if practice else None
-        subscription_invoices, subscription_invoice_error = self.get_subscription_invoices(subscription)
+        can_manage_account = bool(
+            getattr(getattr(self.request.user, 'nuvia_profile', None), 'role', None) in {'owner', 'admin'}
+        )
+        subscription_invoices, subscription_invoice_error = self.get_subscription_invoices(subscription) if can_manage_account else ([], False)
         context.update({
             "practice": practice,
-            "profile_form": self.get_form(),
+            "profile_form": context['form'],
             "google_integration": google_integration,
-            "can_manage_client_payments": bool(
-                hasattr(self.request.user, "nuvia_profile")
-                and self.request.user.nuvia_profile.role in {"owner", "admin"}
-            ),
+            "can_manage_client_payments": can_manage_account,
             "subscription": subscription,
             "subscription_invoices": subscription_invoices,
             "subscription_invoice_error": subscription_invoice_error,

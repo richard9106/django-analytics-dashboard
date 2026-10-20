@@ -47,6 +47,12 @@
       {% endif %}
 
 
+      {% if can_manage_contracts %}
+      <section class="panel" aria-labelledby="clinical-onboarding-title">
+        <div class="panel-head"><div><h2 id="clinical-onboarding-title">Prepare for clinical use</h2><p>Complete your practice agreements before using real patient data. Continue evaluating with fictional records while approval is pending.</p></div><a class="btn btn-secondary" href="{% url 'clinical_contracts' %}">Review contracts and next steps</a></div>
+      </section>
+      {% endif %}
+
       <section class="welcome-panel" data-tour-target="welcome">
         <div>
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
