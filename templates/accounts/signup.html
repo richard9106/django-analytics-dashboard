@@ -54,13 +54,11 @@
 
         <fieldset>
           <legend>Practice details</legend>
-          {% for field in form %}{% if field.name == 'legal_name' or field.name == 'registered_address' or field.name == 'representative_title' %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
           <div class="field-grid two">
-            <div class="field">
-              <label for="id_practice_name">Practice name</label>
-              {{ form.practice_name }}
-              {{ form.practice_name.errors }}
-            </div>
+            <div class="field"><label for="id_legal_name">{{ form.legal_name.label }}</label>{{ form.legal_name }}{{ form.legal_name.errors }}</div>
+            <div class="field"><label for="id_practice_name">Practice name</label>{{ form.practice_name }}{{ form.practice_name.errors }}</div>
+            <div class="field full"><label for="id_registered_address">{{ form.registered_address.label }}</label>{{ form.registered_address }}{{ form.registered_address.errors }}</div>
+            <div class="field"><label for="id_representative_title">{{ form.representative_title.label }}</label>{{ form.representative_title }}{{ form.representative_title.errors }}</div>
             <div class="field">
               <label for="id_practice_type">Practice type</label>
               {{ form.practice_type }}
