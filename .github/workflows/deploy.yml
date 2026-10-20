@@ -160,8 +160,9 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-          allowed-account-ids: '542468167125'
           role-session-name: nuviamy-deploy-${{ github.run_id }}
+      - name: Verify destination account
+        run: test "$(aws sts get-caller-identity --query Account --output text)" = "542468167125"
       - name: Install AWS client
         run: python -m pip install boto3==1.40.43
       - name: Validate or deploy the reviewed revision on AWS
