@@ -7,8 +7,9 @@
     },
     "Repository": {
       "Type": "String",
-      "Default": "richard9106/django-analytics-dashboard",
-      "AllowedPattern": "[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
+      "Default": "richard9106@114283158/django-analytics-dashboard@1371998866",
+      "AllowedPattern": "[A-Za-z0-9_.-]+@[0-9]+/[A-Za-z0-9_.-]+@[0-9]+",
+      "Description": "Immutable owner@ID/repository@ID from GitHub actions/oidc/customization/sub; exact main branch only."
     }
   },
   "Resources": {
