@@ -503,8 +503,7 @@
               "VolumeSize": 60,
               "Encrypted": true,
               "DeleteOnTermination": false,
-              "Iops": 3000,
-              "Throughput": 125
+              "Iops": 3000
             }
           }
         ],
@@ -588,7 +587,7 @@
     "DailySnapshots": {
       "Type": "AWS::DLM::LifecyclePolicy",
       "Properties": {
-        "Description": "NuviaMy daily encrypted instance snapshots, retain seven recovery points",
+        "Description": "NuviaMy daily encrypted instance snapshots - retain seven recovery points",
         "State": "ENABLED",
         "ExecutionRoleArn": {
           "Fn::GetAtt": [
