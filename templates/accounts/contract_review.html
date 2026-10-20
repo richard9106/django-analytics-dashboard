@@ -1,0 +1,18 @@
+{% extends 'accounts/contracts_base.html' %}
+{% block title %}Review practice agreements{% endblock %}
+{% block content %}
+<header class="topbar"><div><p class="eyebrow">Practice agreements</p><h1>Review your contract packet</h1><p>{{ bundle.request.details.legal_name }} · {{ bundle.version }}</p></div></header>
+<p class="contract-notice">Read all documents below before signing. Clinical use remains subject to separate approval. <a href="{% url 'clinical_contract_download' bundle.pk %}">Download the complete packet and signature receipt</a>.</p>
+<section class="panel"><h2>Data Processing Agreement</h2><pre class="contract-document">{{ bundle.dpa_text }}</pre></section>
+{% if bundle.baa_text %}<section class="panel"><h2>HIPAA Business Associate Agreement</h2><pre class="contract-document">{{ bundle.baa_text }}</pre></section>{% endif %}
+<section class="panel"><h2>Clinical Processing Schedule</h2><pre class="contract-document">{{ bundle.schedule_text }}</pre></section>
+<section class="panel"><h2>Signatures</h2><p>NuviaMy: {{ bundle.provider_name }}, {{ bundle.provider_title }}. Electronically signed {{ bundle.created_at|date:'M j, Y H:i' }} UTC.</p>
+{% if bundle.customer_signature %}<p>Customer: {{ bundle.customer_signature.signer_name }}, {{ bundle.customer_signature.signer_title }}. Electronically signed {{ bundle.customer_signature.created_at|date:'M j, Y H:i' }} UTC.</p><p><strong>Contract signed. Clinical approval remains pending separately.</strong></p>
+{% elif not is_latest %}<p>This packet has been superseded. <a href="{% url 'clinical_contracts' %}">Review the latest packet</a> before signing.</p>
+{% else %}<p>Sign only if you are {{ bundle.request.details.representative_name }} and authorized to bind this practice. You may be asked to verify your credentials again.</p>
+<form class="contract-form" method="post" action="{% url 'clinical_contract_sign' bundle.pk %}">{% csrf_token %}{{ form.non_field_errors }}{{ form.bundle_digest }}{{ form.bundle_digest.errors }}
+<div class="contract-field">{{ form.signer_name.errors }}{{ form.signer_name.label_tag }}{{ form.signer_name }}</div>
+<div class="contract-field">{{ form.consent.errors }}<label for="{{ form.consent.id_for_label }}">{{ form.consent }} {{ form.consent.label }}</label></div>
+<button class="btn btn-primary" type="submit">Sign agreements electronically</button></form>{% endif %}
+<p class="contract-help">Packet SHA256: <span class="contract-digest">{{ bundle.digest }}</span></p></section>
+{% endblock %}

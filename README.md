@@ -19,6 +19,12 @@ The AWS BAA is activated according to the operator; its four-page AWS Business A
 
 The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See the [October 20 internal evidence audit](docs/compliance/internal-audit-2026-10-20.md) and the [clinical security dossier](docs/compliance/README.md). Older dossier entries still describe pre-migration infrastructure; use the dated AWS cutover evidence for current hosting. Google OAuth verification does not close the separate clinical release gates.
 
+## Clinical contract onboarding
+
+The onboarding code adds **Settings → Contracts** for practice owners, with a prompt on Overview. Owners submit legal details, review a completed customer-specific DPA/BAA/schedule packet, sign electronically after recent authentication and download the exact texts and both signature records. Authorized NuviaMy operators prepare and expressly execute the packet through Django admin; unfinished templates cannot be published for signature. Corrections create new request history and superseded unsigned packets cannot be signed.
+
+Contract evidence is append-only with PostgreSQL mutation guards, practice-scoped access and audit records. Contract execution is separate from payment and clinical approval. This code change does not itself record a production rollout or authorize real patient data. See the [customer flow and operator instructions](docs/contracts/onboarding.md).
+
 ## Main client workflow
 
 1. Create the client and assign a therapist when appropriate.

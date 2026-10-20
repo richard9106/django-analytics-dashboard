@@ -82,9 +82,13 @@ class SecuritySessionMiddleware(MiddlewareMixin):
             return None
         sensitive = name == 'practice_data_export' or (
             request.method == 'POST' and name in {'team_management', 'team_member_action', 'profile_settings'})
-        if settings.MFA_REQUIRED and sensitive and now - session.get('security_auth_at', 0) >= settings.SECURITY_REAUTH_TIMEOUT:
+        contract_signing = name == 'clinical_contract_sign' and request.method == 'POST'
+        provider_signing = (name == 'admin:accounts_clinicalcontractbundle_add' and request.method == 'POST'
+                            and bool(request.POST.get('execute_as_provider')))
+        if ((settings.MFA_REQUIRED and sensitive) or contract_signing or provider_signing) and now - session.get('security_auth_at', 0) >= settings.SECURITY_REAUTH_TIMEOUT:
             request._audit_denied_reason = 'fresh_authentication_required'
-            return redirect(reverse('security_reauthenticate') + '?' + urlencode({'next': request.path}))
+            target = reverse('clinical_contract_review', kwargs={'pk': view_kwargs['pk']}) if contract_signing else request.path
+            return redirect(reverse('security_reauthenticate') + '?' + urlencode({'next': target}))
         return None
 
     def process_response(self, request, response):

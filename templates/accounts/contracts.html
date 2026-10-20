@@ -1,0 +1,21 @@
+{% extends 'accounts/contracts_base.html' %}
+{% block content %}
+<header class="topbar"><div><p class="eyebrow">Practice settings</p><h1>Contracts and clinical onboarding</h1><p>Prepare your practice agreements before using real patient data.</p></div></header>
+<p class="contract-notice"><strong>Clinical use is pending approval.</strong> Continue evaluating with fictional data. A subscription payment or contract signature does not activate clinical use.</p>
+<ol class="contract-steps"><li>Submit practice details</li><li>Review your complete contract packet</li><li>Sign and download your copy</li><li>Separate clinical approval</li></ol>
+{% if show_form %}
+<section class="panel"><h2>Request your practice agreements</h2><p>The practice owner submits these details on behalf of the legal entity or sole practitioner. NuviaMy will prepare a DPA, an applicable BAA and a shared service schedule. Do not include patient information.</p>
+<form method="post" class="contract-form">{% csrf_token %}<input type="hidden" name="request_revision" value="{{ request_revision }}">{{ form.non_field_errors }}
+{% for field in form %}<div class="contract-field">{{ field.errors }}{% if field.field.widget.input_type == 'checkbox' %}<label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% if field.help_text %}<p class="contract-help">{{ field.help_text }}</p>{% endif %}</div>{% endfor %}
+<button class="btn btn-primary" type="submit">Submit practice details</button></form></section>
+{% else %}
+<section class="panel"><h2>{{ submission.details.legal_name }}</h2><p>Submitted {{ submission.created_at|date:'M j, Y H:i' }} UTC by {{ submission.details.representative_name }}, {{ submission.details.representative_title }}.</p>
+<p>Existing submissions and signatures remain in your contract history. <a href="?revise=1">Submit corrected practice details</a> to request a new packet. Existing executed agreements are not cancelled by a new request.</p></section>
+<section class="panel"><h2>Your contract packets</h2>
+{% if not has_current_bundle %}<p><strong>Awaiting preparation by NuviaMy.</strong> Your completed agreements will appear here when ready. You have not signed a BAA by submitting this request.</p>{% endif %}
+{% for bundle in bundles %}<article class="contract-record"><h3>{{ bundle.version }}</h3>
+{% if bundle.customer_signature %}<p><strong>Signed by both parties.</strong> Clinical approval remains separate.</p>{% elif bundle.request_id != submission.pk or not forloop.first %}<p><strong>Superseded packet.</strong> Retained for your records.</p>{% else %}<p><strong>Ready for your review and signature.</strong> Published {{ bundle.created_at|date:'M j, Y' }}.</p>{% endif %}
+<a class="btn btn-primary" href="{% url 'clinical_contract_review' bundle.pk %}">Review agreements</a> <a class="btn btn-soft" href="{% url 'clinical_contract_download' bundle.pk %}">Download packet</a></article>
+{% empty %}<p>No contract packets have been published yet.</p>{% endfor %}</section>
+{% endif %}
+{% endblock %}

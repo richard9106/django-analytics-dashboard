@@ -12,7 +12,10 @@ class ProtectedRecordsTransactionTestCase(TransactionTestCase):
         guards = [('audit_auditlog', 'audit_reject_truncate'),
                   ('clinical_sessionnote', 'clinical_reject_truncate'),
                   ('clinical_sessionnotesignature', 'clinical_signature_reject_truncate'),
-                  ('clinical_sessionnoteaddendum', 'clinical_addendum_reject_truncate')]
+                  ('clinical_sessionnoteaddendum', 'clinical_addendum_reject_truncate'),
+                  ('accounts_clinicalcontractrequest', 'contract_reject_truncate'),
+                  ('accounts_clinicalcontractbundle', 'contract_reject_truncate'),
+                  ('accounts_clinicalcontractsignature', 'contract_reject_truncate')]
         with connection.cursor() as cursor:
             for table, trigger in guards:
                 cursor.execute(f'ALTER TABLE {table} DISABLE TRIGGER {trigger}')

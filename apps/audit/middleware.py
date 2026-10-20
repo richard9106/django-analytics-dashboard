@@ -8,7 +8,7 @@ from .utils import log_audit_event
 
 SENSITIVE_NAMESPACES = {'clients', 'clinical', 'documents', 'appointments', 'billing',
                         'portal', 'portal_requests', 'intake'}
-SENSITIVE_VIEWS = {'dashboard', 'tasks_list', 'practice_data_export',
+SENSITIVE_VIEWS = {'clinical_contracts', 'clinical_contract_review', 'clinical_contract_sign', 'clinical_contract_download', 'dashboard', 'tasks_list', 'practice_data_export',
                    'team_management', 'team_member_action', 'profile_settings'}
 SENSITIVE_ADMIN_APPS = {'clients', 'clinical', 'documents', 'appointments', 'billing',
                         'portal', 'intake', 'accounts', 'practices', 'audit'}
