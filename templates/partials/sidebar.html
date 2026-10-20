@@ -51,10 +51,10 @@
 
   {% if messages %}<section class="permission-toast-stack" aria-label="Workspace messages">{% for message in messages %}<div class="permission-toast permission-toast-{{ message.tags|default:'info' }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}"><span aria-hidden="true">i</span><p>{{ message }}</p></div>{% endfor %}</section>{% endif %}
 
-  {% if not practice_setup_complete %}
+  {% if not practice_setup_complete and request.resolver_match.url_name != 'profile_settings' %}
     <div class="setup-reminder" role="status">
       <strong>Optional connections</strong>
-      <p>Add Gmail for email delivery or Stripe for online client payments whenever you need them.</p>
+      <p>{% if google_workspace_connected %}Google is connected. Add online client payments whenever you need them.{% elif practice_setup_stripe %}Online payments are ready. Connect Google if you need email or calendar features.{% else %}Add Google or online client payments whenever you need them.{% endif %}</p>
       <a href="{% url 'profile_settings' %}">Manage connections</a>
     </div>
   {% endif %}

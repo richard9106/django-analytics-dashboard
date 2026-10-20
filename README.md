@@ -143,6 +143,10 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 - Public footer links to support, privacy, cookie policy and Cookie settings. The cookie choice controls optional tour storage; essential authentication/CSRF cookies remain functional. No advertising analytics are installed.
 - Help Center and support contact form are available. Versioned preview and commercial subscription conditions, privacy and operator legal notice are published in the footer. Subscription Checkout requires separate unchecked acceptance of the current commercial version, stored in audit and Checkout metadata. Signup requires explicit terms acceptance, recorded in append-only audit with the actor, timestamp and notice versions. The preview permits fictional records only; final international tax decisions, provider contracts and clinical readiness evidence remain pending.
 
+### Profile settings
+
+Personal details, subscription billing and optional connections are grouped in compact cards. Google connection status is independent of Gmail sending permission, with the connected account and selected services shown explicitly. Empty invoices and sensitive practice exports use expandable sections. See the [profile settings review](docs/profile-settings-review-2026-10-20.md) for validation and rollout scope.
+
 ### Technical protections and operations
 
 - Practice scoping, role/permission checks, protected audit evidence, denied-access/read events, encrypted OAuth tokens and environment-only secrets.
