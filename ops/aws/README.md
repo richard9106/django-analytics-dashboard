@@ -90,6 +90,13 @@ fast-forwards only to a revision on main, and runs as deploy rather than root.
 The deploy user has Docker privileges and must be treated as a privileged operator.
 GitHub workflow modification rights therefore control production deployment access.
 
+Read `gh api repos/OWNER/REPO/actions/oidc/customization/sub` before provisioning.
+This repository uses immutable subjects: its `sub_claim_prefix` includes owner and
+repository IDs. Pass `Repository=owner@OWNER_ID/repo@REPO_ID`, preserving those IDs;
+the template appends `:ref:refs/heads/main` and uses exact equality. A name-only
+subject does not authenticate this repository. Do not opt out of immutable claims
+or widen the trust with wildcards to work around a mismatch.
+
 Create the deployment stack after the template passes CI. Set repository variables
 `AWS_DEPLOY_ROLE_ARN`, `AWS_DEPLOY_INSTANCE`, `AWS_DEPLOY_DOCUMENT`. Leave
 `AWS_DEPLOY_ENABLED` unset/false: main CI still deploys Contabo and separately
