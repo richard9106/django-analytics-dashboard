@@ -1,0 +1,131 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Restricted GitHub main OIDC deployment to one NuviaMy instance; no static keys or inbound runner SSH.",
+  "Parameters": {
+    "InstanceId": {
+      "Type": "AWS::EC2::Instance::Id"
+    },
+    "Repository": {
+      "Type": "String",
+      "Default": "richard9106/django-analytics-dashboard",
+      "AllowedPattern": "[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
+    }
+  },
+  "Resources": {
+    "GithubProvider": {
+      "Type": "AWS::IAM::OIDCProvider",
+      "Properties": {
+        "Url": "https://token.actions.githubusercontent.com",
+        "ClientIdList": [
+          "sts.amazonaws.com"
+        ]
+      }
+    },
+    "DeployDocument": {
+      "Type": "AWS::SSM::Document",
+      "Properties": {
+        "DocumentType": "Command",
+        "Content": {
+          "schemaVersion": "2.2",
+          "description": "Validate/deploy a reviewed main SHA as deploy, without arbitrary command parameters.",
+          "parameters": {
+            "Revision": {
+              "type": "String",
+              "allowedPattern": "^[a-f0-9]{40}$"
+            },
+            "Mode": {
+              "type": "String",
+              "allowedValues": [
+                "Validate",
+                "Deploy"
+              ],
+              "default": "Validate"
+            }
+          },
+          "mainSteps": [
+            {
+              "action": "aws:runShellScript",
+              "name": "deployReviewedRevision",
+              "inputs": {
+                "timeoutSeconds": "3300",
+                "runCommand": [
+                  "set -eu\nrunuser -u deploy -- /bin/bash -c '\nset -euo pipefail\nexec 9>/home/deploy/.config/nuviamy-production/deploy.lock\nflock -n 9\ncd /home/deploy/apps/django-analytics-dashboard\ntest -z \"$(git status --porcelain)\"\ngit fetch origin main\ngit merge --ff-only \"{{ Revision }}\"\ntest \"$(git rev-parse HEAD)\" = \"{{ Revision }}\"\ngit merge-base --is-ancestor \"{{ Revision }}\" origin/main\nbash ops/deploy.sh \"{{ Revision }}\" \"{{ Mode }}\"\n'\n"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "GithubRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": {
+                  "Ref": "GithubProvider"
+                }
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                  "token.actions.githubusercontent.com:sub": {
+                    "Fn::Sub": "repo:${Repository}:ref:refs/heads/main"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "FixedDeploymentOnly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "ssm:SendCommand",
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${DeployDocument}"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanceId}"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "ssm:GetCommandInvocation",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "RoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "GithubRole",
+          "Arn"
+        ]
+      }
+    },
+    "DocumentName": {
+      "Value": {
+        "Ref": "DeployDocument"
+      }
+    }
+  }
+}

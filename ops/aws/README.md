@@ -78,3 +78,34 @@ uses isolated local media. Before starting web, restore the separate *_rehearsal
 DB and run `isolate_rehearsal --confirm-isolated` to clear stored integration tokens.
 Do not create reminder/backup timers on the rehearsal. Do not reuse its volume for
 production or activate its copied subscription identifiers against Stripe.
+
+## GitHub deployment with temporary credentials
+
+`deployment.json` creates a GitHub OIDC provider, a role trusted only by this
+repository's `refs/heads/main`, and a fixed SSM command document. Its permissions
+allow only that document on the selected instance, plus invocation status reads.
+No static AWS keys or runner SSH ingress are required. The document validates a
+full hexadecimal SHA, requires a clean checkout, serializes commands with flock,
+fast-forwards only to a revision on main, and runs as deploy rather than root.
+The deploy user has Docker privileges and must be treated as a privileged operator.
+GitHub workflow modification rights therefore control production deployment access.
+
+Create the deployment stack after the template passes CI. Set repository variables
+`AWS_DEPLOY_ROLE_ARN`, `AWS_DEPLOY_INSTANCE`, `AWS_DEPLOY_DOCUMENT`. Leave
+`AWS_DEPLOY_ENABLED` unset/false: main CI still deploys Contabo and separately
+validates the AWS candidate without starting the database, services or timers.
+The workflow also supports manual dispatch on main, still requiring all tests.
+
+Only after a fresh production restore and role/storage validation, create the
+private host marker `/home/deploy/.config/nuviamy-production/enable-deployment`
+and set `AWS_DEPLOY_ENABLED=true` as part of the coordinated cutover. Then the
+legacy SSH deployment is skipped. Do not set the marker on an empty or rehearsal
+volume. `ops/deploy.sh` rechecks the exact SHA and production configuration before
+migrations, role grants and service replacement. CI receives command status only;
+inspect detailed production command output privately in SSM. A timed-out polling
+client does not prove the server command stopped: inspect before retrying.
+
+TLS renewal uses Certbot webroot `/var/www/letsencrypt` and a deploy hook that
+checks and reloads Nginx. During preparation the existing origin may forward only
+`/.well-known/acme-challenge/` to AWS. Verify a real issuance and renewal dry-run
+before switching DNS; all ordinary traffic must continue to the active origin.
