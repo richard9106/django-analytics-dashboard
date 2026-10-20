@@ -1,5 +1,5 @@
 <aside class="sidebar" aria-label="Primary navigation">
-  <input class="mobile-nav-check" id="mobile-nav-toggle" type="checkbox" aria-label="Toggle primary navigation">
+  <input class="mobile-nav-check" id="mobile-nav-toggle" type="checkbox" aria-label="Toggle primary navigation" aria-controls="primary-navigation" aria-expanded="false">
   <div class="sidebar-head">
     <a class="brand" href="{% url 'home' %}" aria-label="NuviaMy home">
       <span class="logo-mark" aria-hidden="true">
@@ -13,7 +13,7 @@
     <label class="mobile-menu-button" for="mobile-nav-toggle"><span>Menu</span><span class="menu-bars" aria-hidden="true"></span></label>
   </div>
 
-  <nav class="nav-list">
+  <nav class="nav-list" id="primary-navigation">
     <a class="nav-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" data-tour-target="nav-overview" href="{% url 'dashboard' %}" aria-label="Overview" title="Overview">{% include "partials/nav_icon.html" with icon="overview" %}Overview</a>
     {% if workspace_permissions.appointments.view %}<a class="nav-item{% if request.resolver_match.namespace == 'appointments' %} active{% endif %}" data-tour-target="nav-appointments" href="{% url 'appointments:list' %}" aria-label="Appointments" title="Appointments">{% include "partials/nav_icon.html" with icon="appointments" %}Appointments</a>{% endif %}
     {% if workspace_permissions.clients.view %}<a class="nav-item{% if request.resolver_match.namespace == 'clients' %} active{% endif %}" data-tour-target="nav-clients" href="{% url 'clients:list' %}" aria-label="Clients" title="Clients">{% include "partials/nav_icon.html" with icon="clients" %}Clients</a>{% endif %}
@@ -64,6 +64,30 @@
   </div>
 </aside>
 <script>
+  (() => {
+    const toggle = document.getElementById('mobile-nav-toggle');
+    const navigation = document.getElementById('primary-navigation');
+    const compact = window.matchMedia('(max-width: 1024px)');
+    const sync = () => toggle.setAttribute('aria-expanded', String(toggle.checked));
+    const close = (restoreFocus = false) => {
+      toggle.checked = false;
+      sync();
+      if (restoreFocus) toggle.focus({ preventScroll: true });
+    };
+    toggle.addEventListener('change', sync);
+    navigation.addEventListener('click', (event) => {
+      if (compact.matches && event.target.closest('a[href]')) close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && compact.matches && toggle.checked) {
+        event.preventDefault();
+        close(true);
+      }
+    });
+    compact.addEventListener('change', () => close());
+    sync();
+  })();
+
   (() => {
     const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const labelDialogs = () => {

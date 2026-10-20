@@ -164,6 +164,32 @@ class IntegrationSettingsTests(TestCase):
         self.assertEqual(integration.access_token, "access-token")
         self.assertEqual(integration.refresh_token, "refresh-token")
 
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret")
+    def test_google_callback_requires_reauthorization_when_calendar_permission_is_declined(self):
+        user, practice = self.create_practice_user()
+        self.client.force_login(user)
+        integration = ExternalIntegration.objects.create(
+            practice=practice, provider=ExternalIntegration.Provider.GOOGLE,
+            oauth_state="partial-consent", calendar_enabled=True,
+            enabled_scopes=["https://www.googleapis.com/auth/calendar.events"],
+        )
+        session = self.client.session
+        session["google_oauth_state"] = "partial-consent"
+        session["google_oauth_integration_id"] = integration.pk
+        session.save()
+        with patch("apps.practices.views.exchange_google_code", return_value={
+            "access_token": "test-token", "expires_in": 3600, "scope": "openid email",
+        }), patch("apps.practices.views.fetch_google_account_email", return_value="clinic@example.com"):
+            response = self.client.get(reverse("practice_settings:google_callback"), {
+                "state": "partial-consent", "code": "test-code",
+            })
+        self.assertRedirects(response, reverse("practice_settings:integrations"))
+        integration.refresh_from_db()
+        self.assertEqual(integration.status, ExternalIntegration.Status.NEEDS_REAUTH)
+        self.assertTrue(integration.calendar_enabled)
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("did not grant" in str(message) for message in messages))
+
     def test_google_callback_rejects_state_mismatch(self):
         user, practice = self.create_practice_user()
         self.client.force_login(user)
