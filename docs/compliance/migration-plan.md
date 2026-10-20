@@ -74,3 +74,13 @@ Compose/volumen de producción ni restaurar sobre la DB activa.
 Pendiente: acceso al destino contratado, ensayo en otro host, medición/aprobación RPO/RTO,
 cifrado e infraestructura del destino y ejecución del corte. Las pruebas locales validan
 la generación de configuración; no sustituyen ese ensayo.
+
+## Destino AWS — 20 octubre 2026
+
+El titular confirmó el AWS Business Associate Addendum como Active el 20/10/2026.
+Se preparó acceso SSO temporal y un presupuesto de 80 USD/mes con avisos; no es un
+límite duro. `ops/aws/foundation.json` define el destino aislado del servidor actual:
+EC2 t3a.medium, disco cifrado, S3 privado/versionado y snapshots. La configuración
+reproducible y las limitaciones de coste/retención se describen en `ops/aws/README.md`.
+El acuerdo solo cubre la cuenta en que se aceptó; no extiende cobertura a Contabo/R2.
+La creación de esta base no equivale a migrar datos, cambiar DNS ni aprobar uso clínico.

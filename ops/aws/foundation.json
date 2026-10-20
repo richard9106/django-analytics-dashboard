@@ -1,0 +1,656 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "NuviaMy single-host migration foundation; no application data, secrets, DNS or live integrations.",
+  "Parameters": {
+    "OperatorCidr": {
+      "Type": "String",
+      "AllowedPattern": "(\\d{1,3}\\.){3}\\d{1,3}/32",
+      "Description": "Current operator IPv4 /32; never world-open SSH."
+    },
+    "OperatorPublicKey": {
+      "Type": "String",
+      "AllowedPattern": "ssh-ed25519 [A-Za-z0-9+/=]+.*",
+      "Description": "Public SSH key only; never private material."
+    },
+    "UbuntuImage": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/canonical/ubuntu/server/noble/stable/current/amd64/hvm/ebs-gp3/ami-id"
+    }
+  },
+  "Resources": {
+    "Vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.72.0.0/16",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy"
+          }
+        ]
+      }
+    },
+    "Gateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy"
+          }
+        ]
+      }
+    },
+    "GatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "Gateway"
+        }
+      }
+    },
+    "Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": "10.72.1.0/24",
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy-public"
+          }
+        ]
+      }
+    },
+    "Routes": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy"
+          }
+        ]
+      }
+    },
+    "DefaultRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "Routes"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "Gateway"
+        }
+      },
+      "DependsOn": "GatewayAttachment"
+    },
+    "SubnetRoute": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "Routes"
+        }
+      }
+    },
+    "S3Endpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "VpcEndpointType": "Gateway",
+        "RouteTableIds": [
+          {
+            "Ref": "Routes"
+          }
+        ]
+      }
+    },
+    "Firewall": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "NuviaMy: operator SSH, public HTTPS/HTTP; no database ingress",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIp": {
+              "Ref": "OperatorCidr"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy"
+          }
+        ]
+      }
+    },
+    "Documents": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Sub": "nuviamy-${AWS::AccountId}-${AWS::Region}-documents"
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy-documents"
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "DocumentsPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "Documents"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Documents",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${Documents.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Backups": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Sub": "nuviamy-${AWS::AccountId}-${AWS::Region}-backups"
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy-backups"
+          }
+        ],
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "EncryptedBackupRetention35Days",
+              "Status": "Enabled",
+              "Prefix": "postgres/",
+              "ExpirationInDays": 35,
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 35
+              },
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7
+              }
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "BackupsPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "Backups"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Backups",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${Backups.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "HostRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "NuviaMyStorageOnly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:ListBucket",
+                    "s3:GetBucketLocation"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "Documents",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::GetAtt": [
+                        "Backups",
+                        "Arn"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject",
+                    "s3:GetObjectVersion"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "${Documents.Arn}/*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectVersion",
+                    "s3:PutObject"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "${Backups.Arn}/postgres/*"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy-host"
+          }
+        ]
+      }
+    },
+    "HostProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "HostRole"
+          }
+        ]
+      }
+    },
+    "Host": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "UbuntuImage"
+        },
+        "InstanceType": "t3a.medium",
+        "IamInstanceProfile": {
+          "Ref": "HostProfile"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "AssociatePublicIpAddress": true,
+            "SubnetId": {
+              "Ref": "Subnet"
+            },
+            "GroupSet": [
+              {
+                "Ref": "Firewall"
+              }
+            ]
+          }
+        ],
+        "MetadataOptions": {
+          "HttpEndpoint": "enabled",
+          "HttpTokens": "required",
+          "HttpPutResponseHopLimit": 2
+        },
+        "CreditSpecification": {
+          "CPUCredits": "standard"
+        },
+        "Monitoring": false,
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeType": "gp3",
+              "VolumeSize": 60,
+              "Encrypted": true,
+              "DeleteOnTermination": false,
+              "Iops": 3000
+            }
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Sub": "#!/bin/bash\nset -Eeuo pipefail\numask 077\nexport DEBIAN_FRONTEND=noninteractive\nfor attempt in 1 2 3 4 5; do\n  if apt-get update && apt-get install -y docker.io docker-compose-v2 nginx git python3-venv python3-boto3 gnupg unattended-upgrades; then break; fi\n  sleep 10\ndone\ncommand -v docker\nsystemctl enable --now docker\nid deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy\nusermod -aG docker deploy\ninstall -d -m 700 -o deploy -g deploy /home/deploy/.ssh\ncat > /home/deploy/.ssh/authorized_keys <<'KEY'\n${OperatorPublicKey}\nKEY\nchown deploy:deploy /home/deploy/.ssh/authorized_keys\nchmod 600 /home/deploy/.ssh/authorized_keys\ninstall -d -m 750 -o deploy -g deploy /home/deploy/apps /home/deploy/backups\ncat > /etc/ssh/sshd_config.d/00-nuviamy.conf <<'SSH'\nPasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin no\nSSH\nsshd -t\nsystemctl reload ssh\ncat > /etc/nginx/sites-available/default <<'NGINX'\nserver {\n listen 80 default_server;\n server_name _;\n location / { return 404; }\n}\nNGINX\nnginx -t\nsystemctl enable --now nginx\nsystemctl reload nginx\n# Encrypted EBS also protects swap; small host needs headroom during image builds.\nfallocate -l 2G /swapfile\nchmod 600 /swapfile\nmkswap /swapfile\nswapon /swapfile\nprintf '/swapfile none swap sw 0 0\\n' >> /etc/fstab\nprintf 'bootstrap-complete\\n' > /var/lib/nuviamy-bootstrap-ready\n"
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy-production-candidate"
+          },
+          {
+            "Key": "SnapshotSchedule",
+            "Value": "nuviamy-daily"
+          }
+        ]
+      },
+      "DependsOn": [
+        "DefaultRoute",
+        "SubnetRoute"
+      ],
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "PublicIp": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "NuviaMy"
+          },
+          {
+            "Key": "Name",
+            "Value": "nuviamy"
+          }
+        ]
+      }
+    },
+    "IpAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "Host"
+        },
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "PublicIp",
+            "AllocationId"
+          ]
+        }
+      }
+    },
+    "SnapshotRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "dlm.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSDataLifecycleManagerServiceRole"
+        ]
+      }
+    },
+    "DailySnapshots": {
+      "Type": "AWS::DLM::LifecyclePolicy",
+      "Properties": {
+        "Description": "NuviaMy daily encrypted instance snapshots - retain seven recovery points",
+        "State": "ENABLED",
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "SnapshotRole",
+            "Arn"
+          ]
+        },
+        "PolicyDetails": {
+          "PolicyType": "EBS_SNAPSHOT_MANAGEMENT",
+          "ResourceTypes": [
+            "INSTANCE"
+          ],
+          "TargetTags": [
+            {
+              "Key": "SnapshotSchedule",
+              "Value": "nuviamy-daily"
+            }
+          ],
+          "Schedules": [
+            {
+              "Name": "DailySevenPoints",
+              "CopyTags": true,
+              "CreateRule": {
+                "Interval": 24,
+                "IntervalUnit": "HOURS",
+                "Times": [
+                  "03:30"
+                ]
+              },
+              "RetainRule": {
+                "Count": 7
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "Host"
+      }
+    },
+    "PublicIp": {
+      "Value": {
+        "Ref": "PublicIp"
+      }
+    },
+    "DocumentsBucket": {
+      "Value": {
+        "Ref": "Documents"
+      }
+    },
+    "BackupsBucket": {
+      "Value": {
+        "Ref": "Backups"
+      }
+    },
+    "SecurityGroupId": {
+      "Value": {
+        "Ref": "Firewall"
+      }
+    }
+  }
+}
