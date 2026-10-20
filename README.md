@@ -6,16 +6,18 @@ NuviaMy is a Django-based practice management SaaS for solo therapists and multi
 
 ## Current status
 
-Last documentation review: **October 16, 2026**. The latest functional release includes initial consultations, client-specific appointment selection in notes, session documentation warnings, explicit note signatures, navigation improvements and cardless access.
+Last documentation review: **October 20, 2026**. The application is commercially deployed on AWS, live subscription billing is enabled, and Google OAuth verification remains pending according to the operator. Recent releases include signed immutable addenda, email two-step sign-in, native S3 storage, AWS recovery validation and GitHub OIDC/SSM deployment.
 
-- Production uses Docker Compose, PostgreSQL, Gunicorn and host Nginx at `nuviamy.com`.
+- Production at `nuviamy.com` runs on AWS EC2 in `us-east-1`, using Docker Compose, PostgreSQL, Gunicorn and host Nginx with HTTPS. Native S3 holds private documents and encrypted scheduled database backups in separate buckets. AWS is the sole active application origin; the former Contabo app and its timers are stopped.
 - Stripe mode follows the protected deployment credentials; the operator has authorized **live subscription billing**. Published pricing (excluding applicable taxes) is **USD 39 per active internal user/month** or **USD 421/user/year**.
 - New practices receive **15 days without a card**. Paid billing starts only after an explicit checkout confirmation.
-- Sign-in currently uses credentials only (`DJANGO_MFA_REQUIRED=false`). TOTP MFA and recovery controls remain available for later activation.
+- Email two-step sign-in is implemented and recorded as enabled in the October 20 operational evidence. It is independent of optional authenticator TOTP MFA (`DJANGO_MFA_REQUIRED=false` in the documented baseline). See [Email two-step sign-in](#email-two-step-sign-in).
 - Authenticated sessions expire after **one hour of inactivity** and have an **eight-hour absolute limit**.
 - Release CI runs the full PostgreSQL test suite, JavaScript interaction checks, migration/deployment checks and database role/backup-restore checks. Production verification confirmed the initial consultation defaults, migrations and enabled clinical immutability guards.
 
-The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See the [current clinical security evidence and open release gates](docs/compliance/README.md); the [initial clinical review](docs/clinical-readiness-us.md) is historical.
+The AWS BAA is activated according to the operator; its four-page AWS Business Associate Addendum has also been reviewed locally. Account-specific acceptance is electronic through AWS Artifact; the PDF itself does not contain an account ID or acceptance timestamp. Keep the confidential agreement and acceptance evidence outside Git. This AWS agreement is distinct from the prepared customer BAA/DPA documents.
+
+The clinical-use goal remains open: this implementation is **not yet approved for real patient data**. Contracts, operating policies, clinical validation and independent security review still require evidence. A deployed feature or passing CI does not establish clinical readiness. See the [October 20 internal evidence audit](docs/compliance/internal-audit-2026-10-20.md) and the [clinical security dossier](docs/compliance/README.md). Older dossier entries still describe pre-migration infrastructure; use the dated AWS cutover evidence for current hosting. Google OAuth verification does not close the separate clinical release gates.
 
 ## Main client workflow
 
@@ -85,7 +87,7 @@ See [Session documentation and signatures](docs/session-list-and-signatures.md).
 - Signing locks the note and creates a separate signature record containing signer identity, name snapshot, timestamp and content/association digest.
 - **Lock without signing** is distinct from a signature. Existing locked notes remain unsigned until explicitly reviewed and signed; no historical signatures are invented.
 - Finalized notes and signature records have application and PostgreSQL protection against updates, deletion and truncation. Signature metadata is included in clinical exports.
-- Corrections require separate documentation; a dedicated addendum editor is still pending.
+- Signed notes support a dedicated reviewed and signed addendum workflow. Addenda preserve the original, record author/time/reason and a linked digest, are immutable, and are included in clinical exports. Only the responsible therapist with edit permission can sign them.
 - Treatment plans support goals, interventions, diagnoses, treatment progress, review dates and review completion.
 
 ### Requests and client forms
@@ -120,7 +122,7 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 
 ### Documents, portal and integrations
 
-- Authorized client document upload, download, portal visibility and optional Google Drive export; local filesystem and Cloudflare R2 storage backends.
+- Authorized client document upload, download, portal visibility and optional Google Drive export; local filesystem, Cloudflare R2 and native AWS S3 storage backends. Production uses native S3 with instance-role credentials; R2 is a legacy backend.
 - Portal accounts are restricted to client-facing routes and activated through emailed setup links; legacy temporary passwords still require a change. Clients can view their sessions/documents, submit requests/forms, message the practice and pay eligible invoices.
 - Google OAuth supports Gmail, Calendar and Drive; tokens are encrypted through `FIELD_ENCRYPTION_KEY`. NuviaMy remains the source of truth.
 - Optional client/team photos, team invitations and granular therapist permissions are implemented.
@@ -139,10 +141,10 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 
 - Practice scoping, role/permission checks, protected audit evidence, denied-access/read events, encrypted OAuth tokens and environment-only secrets.
 - Separate PostgreSQL runtime and migration roles; runtime cannot alter schema or mutate protected audit evidence.
-- Configurable TOTP MFA, recovery codes, shared rate limits, session revocation/expiry and sensitive-action reauthentication. Current credentials-only sign-in is a development setting, not completion of clinical readiness.
+- Configurable TOTP MFA, recovery codes, shared rate limits, session revocation/expiry and sensitive-action reauthentication. Email two-step sign-in is separate from optional TOTP; available authentication controls do not by themselves establish clinical readiness.
 - Owner/admin practice exports include tenant-scoped JSON records, available files and signature metadata. Export actions are audited.
 - Staff monitoring covers integrations and aggregate operational state. Sentry is optional, with default PII/local-variable capture disabled.
-- Backup tooling supports encrypted PostgreSQL backups to R2 and restore verification. CI validates isolated role separation and backup/restore; complete production recovery evidence remains a launch gate.
+- Production backup tooling uploads encrypted PostgreSQL backups to a separate private S3 bucket using the host role. The October 20 cutover records retrieval, authenticated decryption, an actual restore into a disposable database and comparison of all 52 SQL table counts. Private document hashes and protected note integrity were also checked. Versioned S3 documents and daily encrypted instance snapshots complement database backups; recovery objectives, alerts and key custody still need operational closure.
 
 ## Remaining work to review next
 
@@ -152,21 +154,29 @@ This is a checkpoint, not a new audit or a claim that every historical finding r
 
 - Walk through the complete solo/team journey with representative test users: client → consultation → ongoing session → note/signature → invoice → follow-up.
 - Therapist-specific availability; current availability is practice-wide.
-- Dedicated addendum/correction workflow for finalized notes and patient-focused record/export requests.
+- Validate the delivered signed-addendum workflow with a clinical reviewer; complete patient-focused record/export request procedures.
 - Periodic Stripe user-quantity reconciliation and visible failure/drift handling.
 - Broader insurance workflows and telehealth-provider integration, if included in the launch scope.
 
 ### Paid launch and clinical readiness
 
 - Finalize international taxes and tax-inclusive/exclusive price presentation, retention and provider agreements; published commercial conditions and separate versioned Checkout acceptance are implemented. SMTP, support forwarding and password reset have been verified with the operator.
-- Complete a separately approved Stripe live-mode rollout and validate the payment/subscription lifecycle.
-- Confirm launch states, provider contracts/BAAs, risk assessment, retention/legal-hold policy, incident response, patient rights workflows and production recovery evidence.
+- Stripe live rollout is complete. Observe subsequent real payment/subscription delivery after the AWS migration; no new charge was created by the cutover checks. Complete Google OAuth verification in Google Console; identity scopes were reduced to `openid email`, with additional scopes selected by integration.
+- Confirm launch states, provider contracts/BAAs, risk assessment, retention/legal-hold policy, incident response, patient rights workflows and remaining continuity controls. AWS migration and an actual database recovery are already documented.
 - Complete clinical workflow validation and independent security review before using real patient data.
 
 Older audits and status documents describe their review date. Recheck their findings against current code and operational evidence rather than treating every old gap as still open. The October 9 pricing/card-collection observations, for example, predate the current cardless workflow.
 
 ## Documentation map
 
+- [AWS production cutover and successful deployment — October 20](docs/validation/aws-cutover-2026-10-20.md)
+- [AWS foundation and infrastructure controls](docs/validation/aws-foundation-2026-10-20.md)
+- [AWS isolated rehearsal and restore proof](docs/validation/aws-rehearsal-2026-10-20.md)
+- [Stripe live activation](docs/live-billing-activation-2026-10-15.md)
+- [Stripe live webhook delivery proof](docs/stripe-live-webhook-proof-2026-10-15.md)
+- [Google OAuth scope minimization and deployment](docs/validation/google-oauth-scopes-2026-10-20.md)
+- [Current internal audit and remaining evidence](docs/compliance/internal-audit-2026-10-20.md)
+- [Prepared customer DPA, BAA and clinical schedule](docs/contracts/README.md)
 - [Deployment and operations](DEPLOYMENT.md)
 - [Architecture](docs/architecture.md)
 - [Initial consultations and client forms](docs/initial-consultation.md)
@@ -216,7 +226,7 @@ Release process:
 1. Work on a `codex/` branch; run relevant local checks and review the final diff.
 2. Push and open a pull request. CI checks deployment settings, migrations, dependencies, static assets, interaction behavior, PostgreSQL tests, role separation and backup/restore.
 3. Merge only the exact pull-request head whose required checks passed.
-4. Main runs validation before the automatic VPS deployment of the tested commit.
+4. Main runs validation before deploying the tested commit to AWS through GitHub OIDC and a restricted SSM document. No static AWS keys or inbound runner SSH are required. The legacy Contabo deployment is skipped.
 5. Verify health, migrations, assets and relevant behavior in production using read-only checks.
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for provisioning, roles, secrets, backups and rollback. Keep `.env`, credentials and uploaded files out of Git.
@@ -247,7 +257,7 @@ customer.subscription.deleted
 invoice.payment_failed
 ```
 
-Storage uses local `MEDIA_ROOT` by default. For R2, configure `DJANGO_STORAGE_BACKEND=r2` and the `AWS_*` variables documented in `.env.example` and `DEPLOYMENT.md`. Production currently uses R2; backend support alone does not establish the required vendor/clinical operating evidence.
+Storage uses local `MEDIA_ROOT` by default. For R2, configure `DJANGO_STORAGE_BACKEND=r2` and the `AWS_*` variables documented in `.env.example` and `DEPLOYMENT.md`. Production uses `DJANGO_STORAGE_BACKEND=s3`, `AWS_S3_REGION_NAME=us-east-1` and the private documents bucket, with no static S3 credentials or custom endpoint so the instance role is used. `BACKUP_S3_BUCKET` selects the separate backups bucket. R2 settings remain for legacy compatibility, not the active production destination.
 
 ## Design system
 
@@ -257,7 +267,7 @@ Prefer compact operational rows, clear client identity, labeled metadata, bounde
 
 New professional workspace registrations send an operator email after the account transaction commits. `SIGNUP_NOTIFICATION_EMAIL` defaults to `support@nuviamy.com` in Compose (set it empty to disable); notifications contain the registrant name, email, practice and registration date, never passwords or clinical data. SMTP failures are logged without blocking registration. Patient and team invitations do not trigger this signup alert.
 
-Live billing rollout: use the separately validated live prices, invoice template, API keys and endpoint signing secret. Archive and detach sandbox subscription/customer/session references before switching; do not carry a sandbox payment status into live access. Preserve existing local trial/invitation entitlements. Commercial availability does not authorize identifiable clinical records.
+Live billing rollout completed October 15: production uses the separately validated live prices, invoice template, API keys and endpoint signing secret. Sandbox subscription/customer/session references were archived and detached before activation; existing local trial/invitation entitlements were preserved. Commercial availability does not authorize identifiable clinical records.
 
 ## Clinical security baseline — October 15, 2026
 
