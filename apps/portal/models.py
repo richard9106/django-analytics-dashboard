@@ -201,6 +201,11 @@ class IntakePacketTemplate(models.Model):
             raise ValidationError({"questions": "Add at least one intake question."})
 
     @property
+    def page_count(self):
+        from .intake_schema import pages_from_questions
+        return len(pages_from_questions(self.questions))
+
+    @property
     def question_labels(self):
         return [intake_question_label(question) for question in self.questions]
 
@@ -269,7 +274,10 @@ class ClientIntakeAssignment(models.Model):
                 if index < len(self.packet_questions):
                     label = intake_question_label(self.packet_questions[index])
             if isinstance(value, dict):
-                items.append({'question': intake_question_label(value.get('question', label)), 'answer': value.get('answer', value)})
+                answer = value.get('answer', value)
+                if isinstance(answer, list):
+                    answer = '\n'.join(str(item) for item in answer)
+                items.append({'question': intake_question_label(value.get('question', label)), 'answer': answer})
             else:
                 items.append({'question': label, 'answer': value})
         return items

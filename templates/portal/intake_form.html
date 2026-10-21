@@ -1,4 +1,4 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7,22 +7,31 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body class="app-page portal-page">
   <main class="portal-shell">
     <section class="action-bar"><a class="brand" href="{% url 'portal:dashboard' %}"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16.5c3-1.8 3.4-7 7-8.2 2.1-.7 4 .3 7 2.4" stroke="white" stroke-width="2.1" stroke-linecap="round"/><path d="M5 8.3c2.8 1.7 4.2 6.3 7 7.3 2.3.9 4.2-.1 7-1.9" stroke="white" stroke-width="2.1" stroke-linecap="round"/></svg></span><span>NuviaMy Portal</span></a></section>
     <section class="panel form-panel">
       <div class="panel-head"><div><p class="eyebrow">Client forms</p><h1>{{ assignment.packet_name }}</h1><p>{{ assignment.packet_description|default:'Please complete the questions below for your practice.' }}</p></div></div>
-      <form class="appointment-form" method="post">
+      <form class="appointment-form" method="post" data-intake-pages>
         {% csrf_token %}
-        {% if form.errors %}<div class="form-error" role="alert"><strong>Please answer the highlighted questions before submitting.</strong>{{ form.non_field_errors }}</div>{% endif %}<p>All questions are required. Your responses will be shared with your care team. You can review them before submitting.</p>
-        <div class="field-grid">
-          {% for field in form %}<div class="field full"><label for="{{ field.id_for_label }}"><span class="intake-question-number" aria-hidden="true">{{ forloop.counter }}</span> {{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
-        </div>
-        <div class="form-actions"><a class="btn btn-secondary" href="{% url 'portal:dashboard' %}">Back to portal</a><button class="btn btn-primary" type="submit">Submit form</button></div>
+        {% if form.errors %}<div class="form-error" role="alert"><strong>Please answer the highlighted questions before submitting.</strong>{{ form.non_field_errors }}</div>{% endif %}<p>Questions marked * are required. Your responses will be shared with your care team.</p>
+        <p class="intake-page-progress" data-page-progress role="status" aria-live="polite"></p>
+        {% for page in form.pages %}
+        <section class="intake-answer-page" data-intake-page>
+          <h2 tabindex="-1">{{ page.title }}</h2>{% if page.description %}<p>{{ page.description }}</p>{% endif %}
+          {% for field in page.fields %}<div class="field full">
+            {% if field.widget_type == 'radioselect' or field.widget_type == 'checkboxselectmultiple' %}
+            <fieldset{% if field.widget_type == 'checkboxselectmultiple' and field.field.required %} data-required-multiple{% endif %}><legend>{{ field.label }}{% if field.field.required %} *{% else %} (optional){% endif %}</legend>{% if field.help_text %}<p class="intake-help">{{ field.help_text }}</p>{% endif %}{{ field }}{{ field.errors }}</fieldset>
+            {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% else %} (optional){% endif %}</label>{% if field.help_text %}<p class="intake-help" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}{{ field }}{{ field.errors }}{% endif %}
+          </div>{% endfor %}
+        </section>{% endfor %}
+        <div class="intake-page-controls" data-page-controls hidden><button class="btn btn-secondary" type="button" data-page-previous>Previous</button><button class="btn btn-primary" type="button" data-page-next>Next</button></div>
+        <div class="form-actions"><a class="btn btn-secondary" href="{% url 'portal:dashboard' %}">Back to portal</a><button class="btn btn-primary" type="submit" data-page-submit>Submit form</button></div>
       </form>
     </section>
   </main>
+<link rel="stylesheet" href="{% static 'intake-builder.css' %}"><script src="{% static 'intake-pages.js' %}" defer></script>
 {% include 'partials/security_session.html' %}</body>
 </html>

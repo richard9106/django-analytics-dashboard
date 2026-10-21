@@ -3,5 +3,10 @@
   <div class="field"><label for="{{ form.name.id_for_label }}">Template name</label>{{ form.name }}{{ form.name.errors }}</div>
   <div class="field checkbox-field intake-checkbox"><label for="{{ form.active.id_for_label }}">{{ form.active }} <span>Available for new assignments</span></label>{{ form.active.errors }}</div>
   <div class="field full"><label for="{{ form.description.id_for_label }}">Introduction for the client <span class="intake-optional">(optional)</span></label>{{ form.description }}{{ form.description.errors }}</div>
-  <div class="field full"><label for="{{ form.question_lines.id_for_label }}">Questions</label><p>Write one question per line. Clients answer each question in their own words.</p>{{ form.question_lines }}{{ form.question_lines.errors }}</div>
+  <div class="field full" data-intake-builder>
+    <h2>Pages and questions</h2><p>Create pages, choose answer types, and mark questions as required.</p>
+    {{ form.form_structure }}{{ form.form_structure.errors }}{{ form.question_lines.errors }}
+    <div data-builder-fallback><label for="{{ form.question_lines.id_for_label }}">Questions — one per line</label>{{ form.question_lines }}<noscript><p>Enable JavaScript for pages, answer types and live preview.</p></noscript></div>
+  </div>
 </div>
+{% load static %}<link rel="stylesheet" href="{% static 'intake-builder.css' %}"><script src="{% static 'intake-builder.js' %}" defer></script>

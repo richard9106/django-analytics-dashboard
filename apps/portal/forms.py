@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 from django import forms
@@ -289,8 +290,9 @@ class PublicBookingRequestForm(forms.ModelForm):
 
 
 class IntakePacketTemplateForm(forms.ModelForm):
+    form_structure = forms.CharField(required=False, max_length=250000, widget=forms.HiddenInput(attrs={'disabled': True}))
     question_lines = forms.CharField(
-        label='Questions',
+        label='Questions', required=False,
         widget=forms.Textarea(attrs={'rows': 8}),
         help_text='Enter one client-facing intake question per line.',
     )
@@ -306,6 +308,9 @@ class IntakePacketTemplateForm(forms.ModelForm):
         self.instance.practice = practice
         if self.instance.pk and not self.is_bound:
             self.fields['question_lines'].initial = '\n'.join(self.instance.question_labels)
+        from .intake_schema import pages_from_questions
+        if not self.is_bound:
+            self.fields['form_structure'].initial = json.dumps({'version': 1, 'pages': pages_from_questions(self.instance.questions or [])})
 
     def clean_name(self):
         name = self.cleaned_data['name']
@@ -316,7 +321,19 @@ class IntakePacketTemplateForm(forms.ModelForm):
             raise forms.ValidationError('A template with this name already exists. Choose a different name.')
         return name
 
+    def clean_form_structure(self):
+        value = self.cleaned_data.get('form_structure')
+        if not value:
+            return None
+        from .intake_schema import flatten_schema
+        try:
+            return flatten_schema(json.loads(value))
+        except (ValueError, TypeError, RecursionError):
+            raise forms.ValidationError('The form structure is invalid. Please review the editor.')
+
     def clean_question_lines(self):
+        if self.data.get(self.add_prefix('form_structure')):
+            return self.cleaned_data.get('form_structure') or []
         questions = [line.strip() for line in self.cleaned_data['question_lines'].splitlines() if line.strip()]
         if not questions:
             raise forms.ValidationError('Add at least one intake question.')
@@ -346,9 +363,9 @@ class IntakePacketTemplateForm(forms.ModelForm):
         super()._post_clean()
 
     def _update_errors(self, errors):
-        # The editor exposes JSON questions through a multiline text field.
+        # Route model validation back to the active editor field.
         if hasattr(errors, 'error_dict') and 'questions' in errors.error_dict:
-            errors.error_dict['question_lines'] = errors.error_dict.pop('questions')
+            errors.error_dict['form_structure' if self.data.get(self.add_prefix('form_structure')) else 'question_lines'] = errors.error_dict.pop('questions')
         super()._update_errors(errors)
 
     def save(self, commit=True):
@@ -399,11 +416,30 @@ class ClientIntakeResponseForm(forms.Form):
             key = f'question_{index}'
             legacy_key = question.get('id') if isinstance(question, dict) else None
             stored = existing.get(key, existing.get(legacy_key, ''))
-            self.fields[key] = forms.CharField(
-                label=intake_question_label(question),
-                initial=stored.get('answer', '') if isinstance(stored, dict) else stored,
-                widget=forms.Textarea(attrs={'rows': 3}),
-            )
+            authored = isinstance(question, dict) and question.get('_builder_version') == 1
+            kind = question.get('type', 'long_text') if authored else 'long_text'
+            kwargs = {'label': intake_question_label(question),
+                      'initial': stored.get('answer', '') if isinstance(stored, dict) else stored,
+                      'required': question.get('required', True) if authored else True,
+                      'help_text': question.get('help_text', '') if authored else ''}
+            if kind in {'single_choice', 'multiple_choice', 'dropdown', 'yes_no'}:
+                options = ['Yes', 'No'] if kind == 'yes_no' else question.get('options', [])
+                kwargs['choices'] = [(option, option) for option in options]
+                if kind == 'multiple_choice':
+                    field = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple, **kwargs)
+                elif kind == 'dropdown':
+                    kwargs['choices'].insert(0, ('', 'Select an option'))
+                    field = forms.ChoiceField(**kwargs)
+                else:
+                    field = forms.ChoiceField(widget=forms.RadioSelect, **kwargs)
+            else:
+                field = forms.CharField(max_length=10000 if kind == 'long_text' else 500,
+                    widget=forms.Textarea(attrs={'rows': 3}) if kind == 'long_text' else forms.TextInput(), **kwargs)
+            self.fields[key] = field
+        from .intake_schema import pages_from_questions
+        self.pages = []
+        for page in pages_from_questions(assignment.packet_questions):
+            self.pages.append({**page, 'fields': [self[f"question_{q['index']}"] for q in page['questions']]})
 
     def save(self):
         answers = {}
