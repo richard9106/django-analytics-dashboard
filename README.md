@@ -142,7 +142,6 @@ python manage.py issue_early_access_invitation SLOT EMAIL
 ### Navigation, mobile and public pages
 
 - Consistent SVG sidebar icons, permission-aware menus, compact tables and native dialogs.
-- Shared breadcrumbs use routes and validated origin context. Moving from Appointments List/Agenda into note review and draft editing retains that origin and its filters; visiting the notes list keeps that step. Direct entry from Notes retains its own hierarchy.
 - Mobile navigation collapses into a top menu; forms/dialogs stack, period navigation stays on one row, and Messages becomes a floating circular button.
 - Pricing presents the single per-user plan centrally; mobile signup actions remain visible.
 - Public footer links to support, privacy, cookie policy and Cookie settings. The cookie choice controls optional tour storage; essential authentication/CSRF cookies remain functional. No advertising analytics are installed.

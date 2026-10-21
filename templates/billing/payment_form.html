@@ -5,7 +5,7 @@
 <body class="app-page"><div class="app-shell">
 {% include 'partials/sidebar.html' with card_title='Billing workspace' card_text='Manage invoices, payments, and prepaid sessions.' %}
 <main class="app-main">
-  {% include 'partials/breadcrumbs.html' %}
+  {% include 'partials/workspace_status.html' %}
   <section class="panel form-panel"><div class="panel-head"><div><p class="eyebrow">Manual payment</p><h1>Record payment</h1><p>Record a payment already received for an invoice.</p></div></div>
 {% endif %}
 <form class="appointment-form" method="post" action="{% url 'billing:payment_create' %}">

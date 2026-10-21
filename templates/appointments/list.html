@@ -15,7 +15,7 @@
     {% include 'partials/sidebar.html' with card_title='Practice calendar' card_text='Appointments are scoped to your practice and validated before save.' %}
 
     <main class="app-main">
-      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
+      {% include 'partials/workspace_status.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.clients.create %}<a class="btn btn-soft" href="{% url 'clients:create' %}" data-modal-target="client-create-modal">+ New client</a>{% endif %}

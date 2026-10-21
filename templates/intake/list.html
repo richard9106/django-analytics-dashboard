@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Client forms | NuviaMy</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/dashboard.css"></head>
 <body class="app-page"><div class="app-shell">{% include 'partials/sidebar.html' with card_title='Client forms' card_text='Collect client information and review it before their session.' %}<main class="app-main intake-page">
-      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
+      {% include 'partials/workspace_status.html' with hide_free_trial=True %}
 
 <section class="action-bar"><div class="quick-actions">{% if can_create_intake %}<button class="btn btn-primary" type="button" data-modal-target="assignment-create-modal">Assign form</button><button class="btn btn-secondary" type="button" data-modal-target="template-create-modal">New template</button>{% endif %}</div><a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>{% include 'partials/trial_toolbar_notice.html' %}</section>
 <header class="topbar compact-topbar"><div><p class="eyebrow">Before the first session</p><h1>Client forms</h1><p>Create a question set, assign it to a client, then review their responses here.</p></div></header>

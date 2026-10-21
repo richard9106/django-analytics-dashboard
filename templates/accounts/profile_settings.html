@@ -16,7 +16,7 @@
     {% include 'partials/sidebar.html' with card_title='Account settings' card_text='Profile and subscription details live in your user menu.' %}
 
     <main class="app-main">
-      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
+      {% include 'partials/workspace_status.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Profile actions">
         <div class="quick-actions"><a class="btn btn-soft" href="{% url 'dashboard' %}">Back to dashboard</a></div>
         {% include 'partials/trial_toolbar_notice.html' %}<details class="profile-menu">

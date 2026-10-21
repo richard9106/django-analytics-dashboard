@@ -14,7 +14,7 @@
     {% include 'partials/sidebar.html' with card_title='Billing workspace' card_text='Track invoices, payments, and prepaid session packages.' %}
 
     <main class="app-main">
-      {% include 'partials/breadcrumbs.html' with hide_free_trial=True %}
+      {% include 'partials/workspace_status.html' with hide_free_trial=True %}
       <section class="action-bar" aria-label="Workspace actions">
         <div class="quick-actions">
           {% if workspace_permissions.billing.create %}<a class="btn btn-primary" href="{% url 'billing:invoice_create' %}" data-modal-target="invoice-create-modal">+ New invoice</a>
