@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import UserProfile
@@ -102,7 +103,7 @@ def permission_context(request):
         from .contract_models import StandardAgreementAcceptance
         from .standard_agreements import AGREEMENT_VERSION
         needs_agreements = not StandardAgreementAcceptance.objects.filter(practice_id=profile.practice_id, version=AGREEMENT_VERSION).exists()
-    return {
+    context = {
         'needs_standard_agreements': needs_agreements,
         'workspace_permissions': {
             resource: {
@@ -121,6 +122,20 @@ def permission_context(request):
             in {UserProfile.Role.OWNER, UserProfile.Role.ADMIN}
         ),
     }
+
+    if user and user.is_authenticated and not is_client_user(user):
+        from apps.dashboard.activities import setup_steps
+        activities = []
+        if context['can_manage_contracts'] and needs_agreements:
+            activities.append({
+                'label': 'Review and accept agreements',
+                'detail': 'Accept your practice agreements before using real client records.',
+                'url': reverse('clinical_contracts'),
+            })
+        activities.extend(setup_steps(request))
+        context['workspace_activities'] = activities
+        context['workspace_activities_enabled'] = get_practice_for_user(user) is not None
+    return context
 
 
 class PracticePermissionMixin:

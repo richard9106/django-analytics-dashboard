@@ -132,17 +132,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return months
 
     def get_onboarding_steps(self, practice):
-        if not practice:
-            return []
-        steps = []
-        if has_practice_permission(self.request.user, 'clients', 'create') and not practice.clients.exists():
-            steps.append({'label': 'Add your first client', 'url': reverse('clients:create'), 'complete': False})
-        if has_practice_permission(self.request.user, 'appointments', 'edit'):
-            if not practice.working_hours.exists() and not practice.availability_overrides.exists():
-                steps.append({'label': 'Set practice availability', 'url': reverse('appointments:list') + '?view=week#availability-changes', 'complete': False})
-        if has_practice_permission(self.request.user, 'appointments', 'create') and not practice.appointments.exists():
-            steps.append({'label': 'Schedule your first session', 'url': reverse('appointments:create'), 'complete': False})
-        return steps
+        from .activities import setup_steps
+        return setup_steps(self.request, practice)
 
     def get_dashboard_charts(self, practice, today, months):
         # Fixed SVG geometry and locale-independent numbers; labels retain exact values.

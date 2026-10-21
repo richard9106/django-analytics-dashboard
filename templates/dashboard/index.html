@@ -1,4 +1,4 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body class="app-page dashboard-page">
   <div class="app-shell">
@@ -37,22 +37,6 @@
           </div>
         </details>
       </section>
-      {% if dashboard_onboarding_steps %}
-      <section class="onboarding-panel dashboard-setup" aria-label="Recommended first steps" data-tour-target="setup">
-        <div><p class="eyebrow">First steps</p><h2>Finish setting up your practice</h2><p>Only the steps you still need to complete.</p></div>
-        <div class="onboarding-steps">
-          {% for step in dashboard_onboarding_steps %}<a href="{{ step.url }}"><strong>{{ forloop.counter }}</strong><span>{{ step.label }}</span><span aria-hidden="true">→</span></a>{% endfor %}
-        </div>
-      </section>
-      {% endif %}
-
-
-      {% if can_manage_contracts and needs_standard_agreements %}
-      <section class="panel" aria-labelledby="clinical-onboarding-title">
-        <div class="panel-head"><div><h2 id="clinical-onboarding-title">Accept your practice agreements</h2><p>Accept the standard DPA, applicable BAA and Processing Schedule before using real client records. Your agreements cover the trial and paid subscription.</p></div><a class="btn btn-secondary" href="{% url 'clinical_contracts' %}">Review and accept agreements</a></div>
-      </section>
-      {% endif %}
-
       <section class="welcome-panel" data-tour-target="welcome">
         <div>
           <h2>{{ dashboard_greeting }}, <span class="serif">{{ dashboard_display_name }}</span></h2>
@@ -307,8 +291,8 @@
       {
         title: 'Start your daily workflow',
         copy: 'Add a client, set availability in your calendar, and schedule a session. Connect email and online payments later when you need them.',
-        route: 'Dashboard → Setup checklist',
-        target: '{% if dashboard_onboarding_steps %}[data-tour-target="setup"]{% else %}[data-tour-target="welcome"]{% endif %}',
+        route: 'Toolbar → Activities',
+        target: '[data-tour-target="activities"]',
       },
     ];
     const tourOverlay = document.querySelector('[data-tour-overlay]');

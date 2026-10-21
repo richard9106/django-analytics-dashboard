@@ -123,8 +123,10 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(len(response.context['dashboard_onboarding_steps']), 3)
         html = response.content.decode()
-        self.assertLess(html.index('aria-label="Workspace actions"'), html.index('aria-label="Recommended first steps"'))
-        self.assertLess(html.index('aria-label="Recommended first steps"'), html.index('class="welcome-panel"'))
+        self.assertLess(html.index('aria-label="Workspace actions"'), html.index('aria-label="Activities: 4 pending"'))
+        self.assertNotIn('aria-label="Recommended first steps"', html)
+        self.assertNotIn('clinical-onboarding-title', html)
+        self.assertLess(html.index('data-activity-menu'), html.index('class="welcome-panel"'))
         client = Client.objects.create(practice=practice, first_name='First', last_name='Client')
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(len(response.context['dashboard_onboarding_steps']), 2)
@@ -136,6 +138,35 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.context['dashboard_onboarding_steps'], [])
         self.assertNotContains(response, 'aria-label="Recommended first steps"')
+        self.assertContains(response, 'aria-label="Activities: 1 pending"')
+        from apps.accounts.contract_models import StandardAgreementAcceptance
+        from apps.accounts.standard_agreements import AGREEMENT_VERSION, digest
+        snapshot = {'fixture': 'synthetic test agreement'}
+        StandardAgreementAcceptance.objects.create(practice=practice, signer=user,
+            version=AGREEMENT_VERSION, snapshot=snapshot, digest=digest(snapshot))
+        response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'aria-label="Activities: 0 pending"')
+        self.assertNotContains(response, 'activity-menu__badge')
+
+    def test_activity_menu_is_shared_and_agreements_remain_owner_only(self):
+        user, practice, _ = self.create_practice_user()
+        other = Practice.objects.create(name='Another practice')
+        Client.objects.create(practice=other, first_name='Foreign', last_name='Client')
+        self.client.force_login(user)
+        for route in ['dashboard', 'clients:list', 'settings:insurance']:
+            with self.subTest(route=route):
+                response = self.client.get(reverse(route))
+                self.assertContains(response, 'aria-label="Activities: 4 pending"', count=1)
+                self.assertContains(response, 'Review and accept agreements')
+                self.assertNotContains(response, 'Foreign Client')
+        profile = user.nuvia_profile
+        profile.role = UserProfile.Role.THERAPIST
+        profile.permissions = {'tasks': {'view': True}}
+        profile.save()
+        response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'aria-label="Activities: 0 pending"')
+        self.assertNotContains(response, 'Review and accept agreements')
+        self.assertContains(response, 'No pending setup activities.')
 
     def test_first_steps_do_not_offer_actions_without_permission(self):
         user, _, _ = self.create_practice_user()
@@ -391,10 +422,10 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Start guided tour')
         self.assertContains(response, 'Guided setup')
-        self.assertContains(response, 'Finish setting up your practice')
+        self.assertContains(response, 'aria-label="Activities: 4 pending"')
         self.assertContains(response, 'show-dashboard-tour')
         self.assertContains(response, 'data-tour-spotlight')
-        self.assertContains(response, 'target: \'[data-tour-target="setup"]\'')
+        self.assertContains(response, 'target: \'[data-tour-target="activities"]\'')
         self.assertContains(response, 'data-tour-target="nav-appointments"')
         self.assertContains(response, 'data-tour-target="nav-clients"')
         self.assertContains(response, 'data-tour-target="nav-billing"')
