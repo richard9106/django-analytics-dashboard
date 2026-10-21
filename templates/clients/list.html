@@ -132,10 +132,7 @@
                   {% endfor %}
                 </select>
               </div>
-              <div class="field">
-                <label for="client-create-insurance">Insurance provider</label>
-                <input id="client-create-insurance" name="insurance_provider">
-              </div>
+              {% include 'clients/partials/insurance_fields.html' with insurance_client=None uid='create' %}
               <div class="field">
                 <label for="client-create-member">Insurance member ID</label>
                 <input id="client-create-member" name="insurance_member_id">
@@ -388,10 +385,7 @@
                     {% endfor %}
                   </select>
                 </div>
-                <div class="field">
-                  <label for="client-insurance-{{ client.pk }}">Insurance provider</label>
-                  <input id="client-insurance-{{ client.pk }}" name="insurance_provider" value="{{ client.insurance_provider }}">
-                </div>
+                {% include 'clients/partials/insurance_fields.html' with insurance_client=client uid=client.pk %}
                 <div class="field">
                   <label for="client-member-{{ client.pk }}">Insurance member ID</label>
                   <input id="client-member-{{ client.pk }}" name="insurance_member_id" value="{{ client.insurance_member_id }}">

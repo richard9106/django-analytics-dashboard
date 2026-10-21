@@ -110,7 +110,10 @@ See [Session documentation and signatures](docs/session-list-and-signatures.md).
 ### Billing, subscriptions and access
 
 - Invoices, partial/manual payments, balances, printable invoices/superbills, prepaid packages and package usage are implemented.
-- Insurance payer/rate configuration is available; claims submission, eligibility, ERA/EOB and denial management are separate pending scope.
+- Insurance has a shared available catalogue and practice-local payer enable/disable controls. Existing configured catalogue rates are enabled by migration; the global catalogue is not modified. Custom payer removal deactivates it and preserves references.
+- Clients can link an enabled payer, billing type, rate state and expected client share; legacy insurance text is retained without automatic name matching. Invoice forms explicitly load rate suggestions by payer/state/service, require a confirmed patient share and retain the accepted payer/rate snapshot. Catalogue changes do not recalculate saved invoices.
+- Insurance invoices split the recorded charge between client and insurer. The client portal and Stripe Checkout collect only the remaining client share; manual insurance payments are allocated separately. Stripe client-share events are recorded idempotently and do not mark the insurer portion paid. Exports include payer configuration and saved allocation details.
+- Electronic claims, credentialing/enrollment, eligibility, ERA/EOB import, contractual write-offs, secondary coverage and denial management remain separate pending scope. Rates and shares are practice-entered references, not verified coverage or guaranteed reimbursement. See [insurance workflow](docs/insurance-workflow.md).
 - Stripe Connect is optional for receiving client invoice payments. Signed webhooks record paid invoices; creating an invoice does not collect a payment.
 - SaaS pricing is one plan per active internal user. Active owners, admins and therapists count; client portal users and inactive staff do not.
 - Signup starts the fixed **30-day cardless period**, without creating a Stripe subscription. Cancelling checkout does not extend that deadline.

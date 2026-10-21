@@ -1,6 +1,12 @@
 <form class="appointment-form" method="post" action="{% if object %}{% url action_url object.pk %}{% else %}{% url action_url %}{% endif %}">
   {% csrf_token %}
   <div class="field-grid two">
+    <div class="field"><label>Billing type</label><select name="billing_type"><option value="self_pay">Self-pay</option><option value="insurance" {% if object.billing_type == 'insurance' %}selected{% endif %}>Insurance</option></select></div>
+    <div class="field"><label>Service code</label><select name="service_code"><option value="">Choose service</option>{% for code,label in insurance_service_codes %}<option value="{{ code }}" {% if object.service_code == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Insurance rate state</label><input name="insurance_state" maxlength="2" value="{{ object.insurance_state }}" placeholder="CA"></div>
+    <div class="field"><label>Confirmed client share (USD)</label><input name="client_responsibility" type="number" min="0" step="0.01" value="{{ object.client_responsibility|default_if_none:'' }}"></div>
+    {% include 'billing/partials/insurance_suggestion.html' %}
+
     <div class="field"><label>Client</label><select name="client">{% for client in billing_clients %}<option value="{{ client.pk }}" {% if object.client_id == client.pk %}selected{% endif %}>{{ client }}</option>{% endfor %}</select></div>
     <div class="field"><label>Appointment</label><select name="appointment" data-invoice-appointment-select><option value="">No appointment</option>{% for appointment in billing_appointments %}<option value="{{ appointment.pk }}" data-client="{{ appointment.client_id }}" {% if object.appointment_id == appointment.pk %}selected{% endif %}>{{ appointment.client }} at {{ appointment.starts_at|date:"M j g:i A" }}</option>{% endfor %}</select></div>
     <div class="field"><label>Package</label><select name="package" data-invoice-package-select><option value="">No package</option>{% for package in billing_packages %}<option value="{{ package.pk }}" data-client="{{ package.client_id }}" data-amount="{{ package.total_price }}" {% if object.package_id == package.pk %}selected{% endif %}>{{ package.name }} - {{ package.client }} - ${{ package.total_price }}</option>{% endfor %}</select></div>

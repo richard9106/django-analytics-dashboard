@@ -36,6 +36,10 @@ class Client(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.ACTIVE
     )
+    billing_type = models.CharField(max_length=12, choices=[('self_pay', 'Self-pay'), ('insurance', 'Insurance')], default='self_pay')
+    insurance_payer = models.ForeignKey('billing.InsurancePayer', on_delete=models.PROTECT, null=True, blank=True, related_name='insured_clients')
+    insurance_state = models.CharField(max_length=2, blank=True)
+    insurance_copay = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     insurance_provider = models.CharField(max_length=140, blank=True)
     insurance_member_id = models.CharField(max_length=80, blank=True)
     emergency_contact_name = models.CharField(max_length=120, blank=True)
@@ -50,6 +54,15 @@ class Client(models.Model):
         verbose_name = "Client"
 
     def clean(self):
+        errors = {}
+        if self.insurance_payer_id and self.insurance_payer.practice_id not in (None, self.practice_id):
+            errors['insurance_payer'] = 'Payer must belong to the same practice.'
+        if self.insurance_copay is not None and self.insurance_copay < 0:
+            errors['insurance_copay'] = 'Client share cannot be negative.'
+        if self.billing_type == 'insurance' and not self.insurance_payer_id:
+            errors['insurance_payer'] = 'Select a payer from your practice insurance list.'
+        if errors:
+            raise ValidationError(errors)
         if (
             self.primary_therapist
             and self.practice

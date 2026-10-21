@@ -29,6 +29,13 @@ class Invoice(models.Model):
         blank=True,
         related_name="invoices",
     )
+    billing_type = models.CharField(max_length=12, choices=[('self_pay', 'Self-pay'), ('insurance', 'Insurance')], default='self_pay')
+    insurance_payer = models.ForeignKey('billing.InsurancePayer', on_delete=models.PROTECT, null=True, blank=True, related_name='invoices')
+    insurance_payer_name = models.CharField(max_length=140, blank=True)
+    service_code = models.CharField(max_length=20, blank=True)
+    insurance_state = models.CharField(max_length=2, blank=True)
+    contracted_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    client_responsibility = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     invoice_number = models.CharField(max_length=40)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
@@ -49,7 +56,8 @@ class Invoice(models.Model):
     class Meta:
         ordering = ["-created_at"]
         constraints = [
-            models.UniqueConstraint(fields=["practice", "invoice_number"], name="unique_invoice_number_per_practice")
+            models.UniqueConstraint(fields=["practice", "invoice_number"], name="unique_invoice_number_per_practice"),
+            models.CheckConstraint(condition=(~models.Q(billing_type='insurance') | models.Q(insurance_payer__isnull=False, client_responsibility__isnull=False, client_responsibility__gte=0, client_responsibility__lte=models.F('amount'))), name='insurance_invoice_valid_client_share')
         ]
 
     def clean(self):
@@ -68,6 +76,13 @@ class Invoice(models.Model):
                 errors["package"] = "Invoice package must belong to the same practice."
             if self.package.client_id != self.client_id:
                 errors["package"] = "Invoice package must match the invoice client."
+        if self.billing_type == 'insurance':
+            if not self.insurance_payer_id:
+                errors['client'] = 'An insurance invoice needs an identified payer.'
+            elif self.insurance_payer.practice_id not in (None, self.practice_id):
+                errors['client'] = 'Payer must belong to this practice.'
+            if self.client_responsibility is None or self.client_responsibility < 0 or (self.amount is not None and self.client_responsibility > self.amount):
+                errors['client_responsibility'] = 'Enter the confirmed client share between zero and the invoice total.'
         if self.status == self.Status.PAID and not self.paid_at:
             errors["paid_at"] = "Paid invoices must include paid_at."
         if errors:
@@ -83,6 +98,23 @@ class Invoice(models.Model):
     @property
     def balance_due(self):
         return max(self.amount - self.payment_total, Decimal('0.00'))
+
+
+    @property
+    def insurance_responsibility(self):
+        return self.amount - (self.client_responsibility or Decimal('0.00')) if self.billing_type == 'insurance' else Decimal('0.00')
+
+    @property
+    def client_balance_due(self):
+        if self.billing_type != 'insurance':
+            return self.balance_due
+        paid = self.payments.exclude(method='insurance').aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
+        return max((self.client_responsibility or Decimal('0.00')) - paid, Decimal('0.00'))
+
+    @property
+    def insurance_balance_due(self):
+        paid = self.payments.filter(method='insurance').aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
+        return max(self.insurance_responsibility - paid, Decimal('0.00'))
 
 
 class ServicePackage(models.Model):
@@ -191,6 +223,15 @@ class InsurancePayer(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class PracticeInsurancePayer(models.Model):
+    practice = models.ForeignKey('practices.Practice', on_delete=models.CASCADE, related_name='payer_selections')
+    payer = models.ForeignKey(InsurancePayer, on_delete=models.PROTECT, related_name='practice_selections')
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['practice', 'payer'], name='unique_practice_payer_selection')]
 
 
 class InsuranceRate(models.Model):

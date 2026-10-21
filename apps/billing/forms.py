@@ -10,9 +10,11 @@ from .models import InsurancePayer, InsuranceRate, Invoice, PackageUsage, Paymen
 
 
 class InvoiceForm(forms.ModelForm):
+    service_code = forms.ChoiceField(choices=[('', 'Choose service')] + list(InsuranceRate.ServiceCode.choices), required=False)
+
     class Meta:
         model = Invoice
-        fields = ['client', 'appointment', 'package', 'invoice_number', 'amount', 'status', 'due_date', 'paid_at', 'notes']
+        fields = ['client', 'appointment', 'package', 'billing_type', 'service_code', 'insurance_state', 'client_responsibility', 'invoice_number', 'amount', 'status', 'due_date', 'paid_at', 'notes']
         widgets = {
             'due_date': forms.DateInput(attrs={'type': 'date'}),
             'paid_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
@@ -23,6 +25,8 @@ class InvoiceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
+        self.fields['billing_type'].required = False
+        self.fields['client_responsibility'].label = 'Confirmed client share (USD)'
         self.fields['client'].required = False
         self.fields['amount'].required = False
         self.fields['invoice_number'].required = False
@@ -61,6 +65,45 @@ class InvoiceForm(forms.ModelForm):
         if not invoice_number and not self.instance.pk:
             cleaned_data['invoice_number'] = self.build_invoice_number(package)
             self.instance.invoice_number = cleaned_data['invoice_number']
+
+        client = cleaned_data.get('client')
+        if not client:
+            self.add_error('client', 'Choose a client, appointment or package.')
+        billing_type = cleaned_data.get('billing_type') or 'self_pay'
+        cleaned_data['billing_type'] = billing_type
+        self.instance.billing_type = billing_type
+        if billing_type == 'insurance':
+            from .insurance import available_payers, rate_suggestion
+            same_reference = self.instance.pk and not any(key in self.changed_data for key in ('client', 'service_code', 'insurance_state', 'billing_type'))
+            payer = self.instance.insurance_payer if same_reference else (client.insurance_payer if client else None)
+            state = (cleaned_data.get('insurance_state') or '').upper()
+            cleaned_data['insurance_state'] = state
+            if not payer or (not same_reference and not available_payers(self.practice).filter(pk=payer.pk).exists()):
+                self.add_error('client', 'Select a client with an enabled insurance payer.')
+            if package:
+                self.add_error('package', 'Insurance allocation applies to individual services, not prepaid packages.')
+            if not cleaned_data.get('service_code'):
+                self.add_error('service_code', 'Choose the service for this insurance invoice.')
+            if len(state) != 2 or not state.isascii() or not state.isalpha():
+                self.add_error('insurance_state', 'Enter a two-letter US state code.')
+            share = cleaned_data.get('client_responsibility')
+            total = cleaned_data.get('amount')
+            if share is None or share < 0 or (total is not None and share > total):
+                self.add_error('client_responsibility', 'Confirm the client share between zero and the invoice total.')
+            rate = rate_suggestion(self.practice, client, state, cleaned_data.get('service_code')) if client else None
+            self.instance.insurance_payer = payer
+            if not same_reference:
+                self.instance.insurance_payer_name = payer.name if payer else ''
+            # Snapshot reference only; never silently replace a user-entered invoice amount.
+            if not same_reference:
+                self.instance.contracted_amount = rate.reimbursement_amount if rate else None
+        else:
+            self.instance.insurance_payer = None
+            self.instance.insurance_payer_name = ''
+            self.instance.contracted_amount = None
+            cleaned_data['client_responsibility'] = None
+        if self.instance.pk and self.instance.payments.exists() and any(key in self.changed_data for key in ('client', 'amount', 'billing_type', 'client_responsibility', 'service_code', 'insurance_state')):
+            self.add_error(None, 'An invoice with recorded payments cannot change its billing allocation.')
 
         if cleaned_data.get('status') == Invoice.Status.PAID and not cleaned_data.get('paid_at'):
             cleaned_data['paid_at'] = timezone.now()
@@ -118,6 +161,8 @@ class PaymentForm(forms.ModelForm):
         if invoice and amount:
             paid_total = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
             remaining = invoice.amount - paid_total
+            if invoice.billing_type == 'insurance':
+                remaining = invoice.insurance_balance_due if cleaned_data.get('method') == 'insurance' else invoice.client_balance_due
             if amount > remaining:
                 self.add_error('amount', f'Payment cannot exceed the invoice balance of ${remaining:.2f}.')
         return cleaned_data
@@ -222,12 +267,20 @@ class InsuranceRateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.practice = practice
         self.instance.practice = practice
-        payer_queryset = InsurancePayer.objects.filter(practice__isnull=True) | InsurancePayer.objects.filter(practice=practice)
-        self.fields['payer'].queryset = payer_queryset.filter(active=True).order_by('name') if practice else InsurancePayer.objects.none()
+        from .insurance import available_payers
+        from django.db.models import Q
+        payers = available_payers(practice)
+        if self.instance.pk:
+            payers = InsurancePayer.objects.filter(Q(pk__in=payers.values('pk')) | Q(pk=self.instance.payer_id))
+        self.fields['payer'].queryset = payers
+        self.fields['reimbursement_amount'].label = 'Contracted total (including client share)'
         self.fields['state'].widget.attrs.update({'maxlength': 2, 'placeholder': 'CA'})
 
     def clean_state(self):
-        return self.cleaned_data['state'].upper()
+        state = self.cleaned_data['state'].upper()
+        if len(state) != 2 or not state.isascii() or not state.isalpha():
+            raise forms.ValidationError('Use a two-letter US state code.')
+        return state
 
     def save(self, commit=True):
         rate = super().save(commit=False)

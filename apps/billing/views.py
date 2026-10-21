@@ -138,6 +138,7 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
         context['practice'] = practice
+        context['insurance_service_codes'] = InsuranceRate.ServiceCode.choices
         if practice:
             context['billing_clients'] = practice.clients.all()
             context['billing_appointments'] = practice.appointments.select_related('client')
@@ -195,7 +196,15 @@ class PaymentCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeCon
         kwargs['practice'] = self.get_practice()
         return kwargs
 
+    @transaction.atomic
     def form_valid(self, form):
+        invoice = Invoice.objects.select_for_update().get(pk=form.cleaned_data['invoice'].pk, practice=self.get_practice())
+        cap = invoice.balance_due
+        if invoice.billing_type == 'insurance':
+            cap = invoice.insurance_balance_due if form.cleaned_data['method'] == 'insurance' else invoice.client_balance_due
+        if form.cleaned_data['amount'] > cap:
+            form.add_error('amount', 'The available balance changed. Review the payment allocation.')
+            return self.form_invalid(form)
         response = super().form_valid(form)
         invoice = self.object.invoice
         if invoice.balance_due <= 0:
@@ -226,7 +235,14 @@ class InvoiceCreateView(LoginRequiredMixin, PracticePermissionMixin, SessionWork
         kwargs['practice'] = self.get_practice()
         return kwargs
 
+    @transaction.atomic
     def form_valid(self, form):
+        if self.object:
+            locked = Invoice.objects.select_for_update().get(pk=self.object.pk, practice=self.get_practice())
+            financial = {'client', 'amount', 'billing_type', 'client_responsibility', 'service_code', 'insurance_state'}
+            if locked.status != Invoice.Status.DRAFT or (locked.payments.exists() and financial.intersection(form.changed_data)):
+                form.add_error(None, 'The invoice has been published or payments were recorded. Refresh before editing.')
+                return self.form_invalid(form)
         action = AuditLog.Action.UPDATE if self.object else AuditLog.Action.CREATE
         response = super().form_valid(form)
         log_audit_event(
@@ -515,7 +531,10 @@ class InsuranceSettingsView(LoginRequiredMixin, PracticePermissionMixin, Practic
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         practice = self.get_practice()
-        context['system_payers'] = InsurancePayer.objects.filter(practice__isnull=True, active=True)
+        from .insurance import available_payers
+        context['system_payers'] = available_payers(practice).filter(practice__isnull=True)
+        context['enabled_payer_ids'] = list(available_payers(practice).values_list('pk', flat=True))
+        context['catalog_payers'] = InsurancePayer.objects.filter(practice__isnull=True, active=True).exclude(pk__in=context['system_payers'].values('pk'))
         context['custom_payers'] = InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
         context['payer_form'] = InsurancePayerForm(practice=practice)
         context['rate_form'] = InsuranceRateForm(practice=practice)
@@ -558,6 +577,15 @@ class InsurancePayerDeleteView(LoginRequiredMixin, PracticePermissionMixin, Prac
     def get_queryset(self):
         practice = self.get_practice()
         return InsurancePayer.objects.filter(practice=practice) if practice else InsurancePayer.objects.none()
+
+
+    def form_valid(self, form):
+        self.object.active = False
+        self.object.save(update_fields=['active', 'updated_at'])
+        log_audit_event(self.request, AuditLog.Action.UPDATE, 'billing.InsurancePayer', self.object.pk,
+                        practice=self.object.practice, metadata={'active': False})
+        messages.success(self.request, 'Payer disabled; rates and historical records were retained.')
+        return redirect('settings:insurance')
 
 
 class InsuranceRateCreateView(LoginRequiredMixin, PracticePermissionMixin, PracticeContextMixin, CreateView):
@@ -943,6 +971,28 @@ class StripeWebhookView(View):
                 _sync_subscription_from_stripe(stripe_subscription, allow_replacement=True)
             invoice_id = (data_object.get('metadata') or {}).get('invoice_id')
             if invoice_id and data_object.get('payment_status', 'paid') == 'paid':
+                with transaction.atomic():
+                    insured = Invoice.objects.select_for_update().filter(pk=invoice_id,
+                        practice_id=(data_object.get('metadata') or {}).get('practice_id'),
+                        client_id=(data_object.get('metadata') or {}).get('client_id'), billing_type='insurance').exclude(status=Invoice.Status.VOID).first()
+                    if insured:
+                        from decimal import Decimal
+                        cents = data_object.get('amount_total')
+                        reference = data_object.get('payment_intent') or data_object.get('id')
+                        if data_object.get('currency') != 'usd' or not isinstance(cents, int) or cents <= 0 or not reference:
+                            return HttpResponseBadRequest('Missing insurance invoice payment details.')
+                        payment, created = Payment.objects.get_or_create(invoice=insured, external_payment_id=reference,
+                            defaults={'practice': insured.practice, 'client': insured.client, 'method': Payment.Method.CARD,
+                                      'amount': Decimal(cents) / 100, 'paid_at': timezone.now()})
+                        if created:
+                            log_audit_event(request, AuditLog.Action.CREATE, 'billing.Payment', payment.pk,
+                                practice=insured.practice, actor=None,
+                                metadata={'invoice_id': insured.pk, 'event': 'stripe_client_share_recorded'})
+                        if insured.balance_due <= 0:
+                            insured.status = Invoice.Status.PAID
+                            insured.paid_at = timezone.now()
+                            insured.save(update_fields=['status', 'paid_at', 'updated_at'])
+                        return HttpResponse(status=200)
                 Invoice.objects.filter(
                     pk=invoice_id,
                     practice_id=(data_object.get('metadata') or {}).get('practice_id'),
