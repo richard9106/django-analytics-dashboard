@@ -1,0 +1,17 @@
+{% load static %}{% if workspace_activities_enabled %}
+<link rel="stylesheet" href="{% static 'workspace-activities.css' %}">
+<script defer src="{% static 'workspace-activities.js' %}"></script>
+<details class="activity-menu" data-activity-menu>
+  <summary data-tour-target="activities" aria-label="Activities: {{ workspace_activities|length }} pending" title="Activities">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="m8 9 1 1 2-2M14 9h2m-8 6 1 1 2-2m3 1h2"/></svg>
+    {% if workspace_activities %}<span class="activity-menu__badge" aria-hidden="true">{{ workspace_activities|length }}</span>{% endif %}
+  </summary>
+  <section class="activity-menu__panel" aria-label="Pending activities">
+    <header><h2>Activities</h2><span>{{ workspace_activities|length }} pending</span></header>
+    {% if workspace_activities %}
+    <p class="activity-menu__intro">Needs your attention</p>
+    <ul>{% for activity in workspace_activities %}<li><a href="{{ activity.url }}"><span class="activity-menu__dot" aria-hidden="true"></span><span><strong>{{ activity.label }}</strong>{% if activity.detail %}<small>{{ activity.detail }}</small>{% endif %}</span><span class="activity-menu__arrow" aria-hidden="true">→</span></a></li>{% endfor %}</ul>
+    {% else %}<p class="activity-menu__empty">You're all set. No pending setup activities.</p>{% endif %}
+  </section>
+</details>
+{% endif %}

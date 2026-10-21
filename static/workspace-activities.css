@@ -1,0 +1,24 @@
+.activity-menu { position: relative; flex: 0 0 auto; }
+.activity-menu > summary { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--slate-700); background: #fff; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; list-style: none; }
+.activity-menu > summary::-webkit-details-marker { display: none; }
+.activity-menu[open] > summary, .activity-menu > summary:hover { color: var(--brand-700); background: var(--brand-50); }
+.activity-menu > summary:focus-visible, .activity-menu__panel a:focus-visible { outline: 3px solid var(--brand-600); outline-offset: 3px; }
+.activity-menu__badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; display: grid; place-items: center; background: var(--brand-600); color: #fff; border: 2px solid #fff; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.activity-menu__panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 40; width: 360px; max-width: calc(100vw - 32px); max-height: min(480px, 75vh); overflow-y: auto; padding: 18px; box-sizing: border-box; background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-2); text-align: left; }
+.activity-menu__panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.activity-menu__panel h2 { margin: 0; font-size: 16px; color: var(--slate-900); }
+.activity-menu__panel header > span { color: var(--slate-500); font-size: 12px; }
+.activity-menu__intro { margin: 8px 0 12px; color: var(--slate-500); font-size: 12px; }
+.activity-menu__panel ul { list-style: none; padding: 0; margin: 0; }
+.activity-menu__panel li + li { border-top: 1px solid var(--border); }
+.activity-menu__panel a { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 12px 4px; color: var(--slate-800); text-decoration: none; border-radius: 6px; }
+.activity-menu__panel a:hover { background: var(--brand-50); }
+.activity-menu__panel strong { display: block; font-size: 13px; line-height: 1.5; }
+.activity-menu__panel small { display: block; margin-top: 4px; color: var(--slate-500); font-size: 12px; line-height: 1.6; }
+.activity-menu__dot { flex: 0 0 7px; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: var(--brand-600); }
+.activity-menu__arrow { margin-left: auto; color: var(--brand-700); }
+.activity-menu__empty { margin: 16px 0 4px; font-size: 13px; color: var(--slate-500); line-height: 1.6; }
+@media(max-width:600px) {
+  .app-main .action-bar > .activity-menu { justify-self: end; margin-left: auto; }
+  .activity-menu__panel { position: fixed; right: 16px; top: auto; margin-top: 10px; width: min(360px, calc(100vw - 32px)); }
+}

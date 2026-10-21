@@ -57,7 +57,7 @@ See [Initial consultations](docs/initial-consultation.md).
 
 ### Overview
 
-- Conditional first steps appear at the top, only while permitted setup actions remain incomplete.
+- An Activities icon beside the account menu groups permitted setup actions and owner agreement acceptance into a compact dropdown. Its badge counts pending setup items and clears as they are completed; trial status remains in the toolbar.
 - KPI cards summarize today's sessions, pending tasks, active clients and monthly revenue.
 - Charts come before Billing at a glance; appointments and tasks follow at the bottom.
 - Revenue line/area, session columns, session-status donut and invoice-status bars use practice-scoped data, numerical summaries and truthful empty states.
