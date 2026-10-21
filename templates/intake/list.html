@@ -3,7 +3,7 @@
 <body class="app-page"><div class="app-shell">{% include 'partials/sidebar.html' with card_title='Client forms' card_text='Collect client information and review it before their session.' %}<main class="app-main intake-page">
       {% include 'partials/workspace_status.html' with hide_free_trial=True %}
 
-<section class="action-bar"><div class="quick-actions">{% if can_create_intake %}<button class="btn btn-primary" type="button" data-modal-target="assignment-create-modal">Assign form</button><a class="btn btn-secondary" href="{% url 'intake:template_create' %}">New template</a>{% endif %}</div><a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>{% include 'partials/trial_toolbar_notice.html' %}</section>
+<section class="action-bar"><div class="quick-actions">{% if can_create_intake %}<button class="btn btn-primary" type="button" data-modal-target="assignment-create-modal">Assign form</button><a class="btn btn-secondary" href="{% url 'intake:template_create' %}">New template</a>{% endif %}</div><a class="btn btn-soft" href="{% url 'clients:list' %}">Client directory</a>{% include 'partials/trial_toolbar_notice.html' %}{% include 'partials/account_menu.html' %}</section>
 <header class="topbar compact-topbar"><div><p class="eyebrow">Before the first session</p><h1>Client forms</h1><p>Create a question set, assign it to a client, then review their responses here.</p></div></header>
 <section class="intake-summary" aria-label="Client form totals">
   <a href="?status=assigned"><strong>{{ intake_counts.assigned }}</strong><span>Awaiting client</span></a>
