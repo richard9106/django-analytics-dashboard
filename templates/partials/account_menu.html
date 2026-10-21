@@ -1,0 +1,10 @@
+{% if request.user.is_authenticated %}
+<details class="profile-menu">
+  <summary>{{ request.user.first_name|default:request.user.username }}</summary>
+  <div class="profile-menu-panel">
+    <a href="{% url 'profile_settings' %}">Profile settings</a>
+    {% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+  </div>
+</details>
+{% endif %}

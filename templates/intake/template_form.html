@@ -3,6 +3,6 @@
 <body class="app-page"><div class="app-shell">{% include 'partials/sidebar.html' with card_title='Client forms' card_text='Collect client information and review it before their session.' %}<main class="app-main intake-page">
       {% include 'partials/workspace_status.html' with hide_free_trial=True %}
 
-<section class="action-bar"><a class="btn btn-secondary" href="{% url 'intake:list' %}">Back to client forms</a>{% include 'partials/trial_toolbar_notice.html' %}</section>
+<section class="action-bar"><a class="btn btn-secondary" href="{% url 'intake:list' %}">Back to client forms</a>{% include 'partials/trial_toolbar_notice.html' %}{% include 'partials/account_menu.html' %}</section>
 <section class="panel intake-form-panel"><div class="panel-head"><div><p class="eyebrow">Form templates</p><h1>{% if intake_template %}Edit form template{% else %}New form template{% endif %}</h1><p>Changes apply to future assignments. Forms already assigned to clients keep their original content.</p></div></div><form class="appointment-form" method="post">{% csrf_token %}{% include 'intake/partials/template_fields.html' %}<p>Turn off availability to stop assigning this template. Existing client forms remain available.</p><div class="form-actions"><a class="btn btn-secondary" href="{% url 'intake:list' %}">Cancel</a><button class="btn btn-primary" type="submit">{% if intake_template %}Save template{% else %}Create template{% endif %}</button></div></form></section>
 </main></div>{% include 'partials/security_session.html' %}</body></html>
