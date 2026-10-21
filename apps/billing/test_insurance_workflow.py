@@ -235,3 +235,30 @@ class InsuranceWorkflowTests(TestCase):
         invoice = self.client.get(reverse('billing:invoice_create'))
         self.assertContains(invoice, 'Load client insurance suggestion')
         self.assertContains(invoice, 'name="client_responsibility"')
+
+    def test_insurance_shares_and_payment_balances_are_visible_in_billing(self):
+        invoice = self.invoice()
+        Payment.objects.create(practice=self.practice, client=self.client_record, invoice=invoice, amount=Decimal('10'), method='cash', paid_at=timezone.now())
+        Payment.objects.create(practice=self.practice, client=self.client_record, invoice=invoice, amount=Decimal('30'), method='insurance', paid_at=timezone.now())
+        # Invoice snapshots, rather than later changes to the client's insurance, identify the payer.
+        self.client_record.billing_type = 'self_pay'
+        self.client_record.save(update_fields=['billing_type'])
+        for path in (reverse('billing:list'), reverse('clients:detail', args=[self.client_record.pk]) + '?tab=billing'):
+            response = self.client.get(path)
+            self.assertContains(response, self.payer.name)
+            self.assertContains(response, 'Client: $20.00')
+            self.assertContains(response, 'Insurance: $100.00')
+            self.assertContains(response, 'Client due: $10.00')
+            self.assertContains(response, 'Insurance due: $70.00')
+
+    def test_client_overview_exposes_insurance_assignment_and_zero_share(self):
+        self.client_record.insurance_copay = Decimal('0')
+        self.client_record.save(update_fields=['insurance_copay'])
+        path = reverse('clients:detail', args=[self.client_record.pk])
+        response = self.client.get(path)
+        self.assertContains(response, 'Edit insurance')
+        self.assertContains(response, 'Expected client share / session')
+        self.assertContains(response, '$0.00')
+        self.client_record.billing_type = 'self_pay'
+        self.client_record.save(update_fields=['billing_type'])
+        self.assertContains(self.client.get(path), 'Assign insurance')

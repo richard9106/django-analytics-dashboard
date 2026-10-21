@@ -1,0 +1,1 @@
+{% if invoice.billing_type == 'insurance' %}<span class="badge brand">Insurance</span><small class="table-subtext">{{ invoice.insurance_payer_name|default:'Insurance payer not recorded' }}</small>{% else %}<span class="badge">Self-pay</span>{% endif %}
