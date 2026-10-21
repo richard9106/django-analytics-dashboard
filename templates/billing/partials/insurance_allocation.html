@@ -1,0 +1,1 @@
+{% if invoice.billing_type == 'insurance' %}<small class="table-subtext">Client: ${{ invoice.client_responsibility|floatformat:2 }}</small><small class="table-subtext">Insurance: ${{ invoice.insurance_responsibility|floatformat:2 }}</small>{% endif %}

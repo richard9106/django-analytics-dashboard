@@ -18,3 +18,9 @@ JSON/ZIP exports include structured client insurance, payer selections and rates
 ## Scope
 
 This phase does not enroll clinicians, verify coverage, transmit claims, import ERA/EOB, calculate deductibles/coinsurance from a policy, process secondary insurance or apply contractual write-offs. An expected client share must be reviewed against actual responsibility. If the practice changes the total from the suggested contracted reference, the invoice uses the reviewed total; the original reference remains identifiable. Neither an insurer name nor a Payer ID establishes an electronic connection.
+
+## Finding insurance and balances
+
+The client overview has an **Insurance & billing** card with **Assign insurance** / **Edit insurance**. The client editor groups the existing payer, state and expected-share fields under the same heading; member ID remains in that editor. The client directory shows the linked payer or Self-pay.
+
+Billing and the client's Billing tab identify each invoice using its stored payer snapshot and show the client/insurance allocation and each side's outstanding balance. Recorded insurance payments reduce only the insurance balance; other payment methods reduce the client balance. Self-pay invoices keep the standard total balance. Changing a client's current insurance does not relabel historical invoices.

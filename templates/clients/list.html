@@ -69,7 +69,7 @@
                   </td>
                   <td>{% if client.primary_therapist %}{{ client.primary_therapist.user.get_full_name|default:client.primary_therapist.user.username }}{% else %}<span class="muted-cell">Unassigned</span>{% endif %}</td>
                   <td>{{ client.phone|default:"Not provided" }}</td>
-                  <td>{{ client.insurance_provider|default:"Not provided" }}</td>
+                  <td>{% if client.billing_type == 'insurance' %}{{ client.insurance_payer.name|default:'Not linked' }}{% else %}Self-pay{% endif %}</td>
                   <td><span class="badge success">{{ client.get_status_display }}</span></td>
                  <td><div class="tree-actions"><a class="inline-link" href="{% url 'clients:detail' client.pk %}">Open</a>{% if workspace_permissions.clients.edit %}<a class="inline-link" href="{% url 'clients:edit' client.pk %}" data-modal-target="client-modal-{{ client.pk }}">Edit</a>{% endif %}</div></td>
                 </tr>
