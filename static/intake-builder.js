@@ -13,9 +13,9 @@
     const expanded=new Set([data.pages[0]?.questions[0]?.id]);
     const sync=()=>{ hidden.value=JSON.stringify(data); };
     const button=(label,action,cls='btn btn-secondary')=>{ const e=make('button',label,cls);e.type='button';e.addEventListener('click',action);return e; };
-    const input=(parent,label,value,change,{multiline=false,required=false,maxLength=500}={})=>{
+    const input=(parent,label,value,change,{multiline=false,required=false,maxLength=500,rows=3}={})=>{
       const wrap=make('label',null,'field builder-field');wrap.append(make('span',label));
-      const e=make(multiline?'textarea':'input'); if(!multiline)e.type='text'; else e.rows=3;
+      const e=make(multiline?'textarea':'input'); if(!multiline)e.type='text'; else e.rows=rows;
       e.value=value||'';e.required=required;e.maxLength=maxLength;
       e.addEventListener('input',()=>{change(e.value);sync();});wrap.append(e);parent.append(wrap);return e;
     };
@@ -57,8 +57,28 @@
           input(card,'Question title',q.label,v=>{q.label=v;caption.textContent=v||'New question';},{required:true});
           const label=make('label',null,'field');label.append(make('span','Answer type'));const select=make('select');types.forEach(([value,text])=>{const o=make('option',text);o.value=value;o.selected=q.type===value;select.append(o);});
           select.addEventListener('change',()=>{q.type=select.value;sync();render();});label.append(select);card.append(label);
-          input(card,'Help text (optional)',q.help_text,v=>q.help_text=v,{multiline:true,maxLength:2000});
-          if(choices.has(q.type))input(card,'Answer options — one per line',q.options.join('\n'),v=>q.options=v.split('\n').map(s=>s.trim()).filter(Boolean),{multiline:true,required:true,maxLength:12000});
+          const help=input(card,'Help text (optional)',q.help_text,v=>q.help_text=v,{multiline:true,maxLength:2000,rows:2});help.classList.add('builder-help-input');
+          if(choices.has(q.type)){
+            while(q.options.length<2)q.options.push('');
+            const group=make('section',null,'builder-options');
+            const table=make('table',null,'builder-options-table');table.append(make('caption','Answer options'));
+            const head=make('thead'),headRow=make('tr');
+            ['Order','Value','Actions'].forEach(title=>{const th=make('th',title);th.scope='col';headRow.append(th);});head.append(headRow);table.append(head);
+            const body=make('tbody');table.append(body);
+            const add=button('+ Add option',()=>{q.options.push('');sync();renderOptions();body.lastElementChild.querySelector('input').focus();});
+            const renderOptions=()=>{
+              body.replaceChildren();
+              q.options.forEach((value,index)=>{
+                const row=make('tr'),sequence=make('th',String(index+1));sequence.scope='row';row.append(sequence);
+                const cell=make('td'),control=make('input');control.type='text';control.value=value;control.required=true;control.maxLength=200;control.setAttribute('aria-label',`Option ${index+1} value`);
+                control.addEventListener('input',()=>{q.options[index]=control.value;sync();});cell.append(control);row.append(cell);
+                const actions=make('td');const remove=button('×',()=>{q.options.splice(index,1);sync();renderOptions();body.children[Math.min(index,q.options.length-1)].querySelector('input').focus();},'btn btn-secondary builder-option-remove');
+                remove.setAttribute('aria-label',`Remove option ${index+1}`);remove.disabled=q.options.length<=2;actions.append(remove);row.append(actions);body.append(row);
+              });
+              add.disabled=q.options.length>=50;
+            };
+            group.append(table,make('p','Add 2–50 options. Their order matches the client form.','intake-help'),add);card.append(group);renderOptions();
+          }
           const required=make('label',null,'builder-required');const checkbox=make('input');checkbox.type='checkbox';checkbox.checked=q.required;checkbox.addEventListener('change',()=>{q.required=checkbox.checked;summary.lastElementChild.textContent=(types.find(([type])=>type===q.type)?.[1]||'Long text')+(q.required?' · Required':' · Optional');sync();});required.append(checkbox,document.createTextNode('Required question'));card.append(required);
           if(data.pages.length>1){const destination=make('label',null,'field');destination.append(make('span','Move question to page'));const list=make('select');data.pages.forEach((target,i)=>{const o=make('option',`${i+1}. ${target.title||'Untitled page'}`);o.value=i;o.selected=i===pi;list.append(o);});list.addEventListener('change',()=>{data.pages[Number(list.value)].questions.push(q);p.questions.splice(qi,1);sync();render();});destination.append(list);card.append(destination);}
           page.append(card);
