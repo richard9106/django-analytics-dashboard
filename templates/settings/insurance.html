@@ -1,4 +1,4 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body class="app-page">
   <div class="app-shell">
@@ -33,13 +33,13 @@
         <div>
           <p class="eyebrow">Settings</p>
           <h1>Insurance</h1>
-          <p>Common US payers are preloaded as templates. Add your contracted rates manually by state and CPT/service code.</p>
+          <p>Enable the payers your practice uses, assign them to clients, and add your contracted rates by state and service. No electronic claims connection is created.</p>
         </div>
       </header>
 
-      <section class="billing-grid">
+      <section class="billing-grid insurance-settings-grid">
         <article class="panel">
-          <div class="panel-head"><div><h2 id="insurance-rates-heading">Reimbursement rates</h2><p>Practice-specific rates. These are not official payer rates.</p></div></div>
+          <div class="panel-head"><div><h2 id="insurance-rates-heading">Reimbursement rates</h2><p>Practice-specific allowed totals, including the client share. Review existing amounts before using them. These are not official payer rates.</p></div></div>
           <div class="table-wrap" role="region" aria-labelledby="insurance-rates-heading" aria-describedby="insurance-rates-scroll-help" tabindex="0">
             <p class="sr-only" id="insurance-rates-scroll-help">Scroll horizontally to view all reimbursement rate columns.</p>
             <table>
@@ -50,8 +50,8 @@
                     <td>{{ rate.payer.name }}</td>
                     <td>{{ rate.state }}</td>
                     <td>{{ rate.get_service_code_display }}</td>
-                    <td>{% if rate.reimbursement_amount %}${{ rate.reimbursement_amount }}{% else %}Not set{% endif %}</td>
-                     <td><span class="badge {% if rate.active %}success{% else %}brand{% endif %}">{% if rate.active %}Active{% else %}Inactive{% endif %}</span></td>
+                    <td>{% if rate.reimbursement_amount != None %}${{ rate.reimbursement_amount }}{% else %}Not set{% endif %}</td>
+                     <td><span class="badge {% if rate.active %}success{% else %}brand{% endif %}">{% if rate.active and rate.payer_id in enabled_payer_ids %}Active{% elif rate.active %}Payer disabled{% else %}Inactive{% endif %}</span></td>
                      <td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ rate.payer.name }} {{ rate.state }}" aria-expanded="false" aria-controls="rate-actions-{{ rate.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="rate-actions-{{ rate.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'settings:insurance_rate_edit' rate.pk %}" data-modal-target="rate-modal-{{ rate.pk }}">Edit rate</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td>
                   </tr>
                 {% empty %}
@@ -63,22 +63,24 @@
         </article>
 
         <aside class="panel">
-          <div class="panel-head"><div><h2 id="insurance-payers-heading">Payers</h2><p>System templates and your custom payers.</p></div></div>
+          <div class="panel-head"><div><h2 id="insurance-payers-heading">My payers</h2><p>Enabled catalogue payers and your custom payers. Disabling preserves existing records.</p></div></div>
           <div class="table-wrap" role="region" aria-labelledby="insurance-payers-heading" aria-describedby="insurance-payers-scroll-help" tabindex="0">
             <p class="sr-only" id="insurance-payers-scroll-help">Scroll horizontally to view all payer columns.</p>
             <table>
               <thead><tr><th scope="col">Payer</th><th scope="col">Type</th><th scope="col">Payer ID</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {% for payer in system_payers %}
-                  <tr><td><strong>{{ payer.name }}</strong></td><td>System</td><td>{{ payer.payer_id|default:'Not set' }}</td><td><span class="badge success">Active</span></td><td class="invoice-actions-cell"><span class="sr-only">No actions available</span></td></tr>
+                  <tr><td><strong>{{ payer.name }}</strong></td><td>System</td><td>{{ payer.payer_id|default:'Not set' }}</td><td><span class="badge success">Active</span></td><td>{% if workspace_permissions.billing.edit %}<form method="post" action="{% url 'settings:insurance_payer_selection' payer.pk %}">{% csrf_token %}<input type="hidden" name="active" value="0"><button type="submit" class="inline-button">Disable</button></form>{% endif %}</td></tr>
                 {% endfor %}
                 {% for payer in custom_payers %}
                   <tr><td><strong>{{ payer.name }}</strong>{% if payer.notes %}<small class="table-subtext">{{ payer.notes|truncatechars:80 }}</small>{% endif %}</td><td>Custom</td><td>{{ payer.payer_id|default:'Not set' }}</td><td><span class="badge {% if payer.active %}success{% else %}brand{% endif %}">{% if payer.active %}Active{% else %}Inactive{% endif %}</span></td><td class="invoice-actions-cell">{% if workspace_permissions.billing.edit %}<button class="invoice-actions-trigger" type="button" aria-label="Actions for {{ payer.name }}" aria-expanded="false" aria-controls="payer-actions-{{ payer.pk }}" data-row-actions-trigger><span aria-hidden="true">⋮</span></button><div class="invoice-actions-menu" id="payer-actions-{{ payer.pk }}" role="menu" hidden data-row-actions-menu><a role="menuitem" class="inline-link" href="{% url 'settings:insurance_payer_edit' payer.pk %}" data-modal-target="payer-modal-{{ payer.pk }}">Edit payer</a></div>{% else %}<span class="sr-only">No actions available</span>{% endif %}</td></tr>
                 {% endfor %}
-                {% if not system_payers and not custom_payers %}<tr><td colspan="5" class="empty-state">No payers available yet.</td></tr>{% elif not custom_payers %}<tr><td colspan="5" class="empty-state">No custom payers yet.</td></tr>{% endif %}
+                {% if not system_payers and not custom_payers %}<tr><td colspan="5" class="empty-state">No payers enabled yet. Open the catalogue below to add one.</td></tr>{% elif not custom_payers %}<tr><td colspan="5" class="empty-state">No custom payers yet.</td></tr>{% endif %}
               </tbody>
             </table>
           </div>
+          <details class="panel"><summary>Available payer catalogue ({{ catalog_payers|length }})</summary><p>Add only the payers your practice uses. This does not enroll you with an insurer.</p>
+          {% for payer in catalog_payers %}<div class="form-actions"><span>{{ payer.name }}</span>{% if workspace_permissions.billing.edit %}<form method="post" action="{% url 'settings:insurance_payer_selection' payer.pk %}">{% csrf_token %}<input type="hidden" name="active" value="1"><button type="submit" class="btn btn-secondary">Enable {{ payer.name }}</button></form>{% endif %}</div>{% empty %}<p>All catalogue payers have been added.</p>{% endfor %}</details>
         </aside>
       </section>
 

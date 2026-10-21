@@ -35,9 +35,12 @@ from .views import (
     SubscriptionAccessView,
 )
 
+from .insurance_views import PracticePayerToggleView, InsuranceRateSuggestionView
+
 app_name = 'billing'
 
 urlpatterns = [
+    path('insurance/rate-suggestion/', InsuranceRateSuggestionView.as_view(), name='insurance_rate_suggestion'),
     path('subscription/', SubscriptionAccessView.as_view(), name='subscription_access'),
     path('', BillingListView.as_view(), name='list'),
     path('invoices/new/', InvoiceCreateView.as_view(), name='invoice_create'),
@@ -67,6 +70,7 @@ settings_patterns = [
     path('session-packages/<int:pk>/edit/', SessionPackageTemplateUpdateView.as_view(), name='package_template_edit'),
     path('session-packages/<int:pk>/delete/', SessionPackageTemplateDeleteView.as_view(), name='package_template_delete'),
     path('insurance/', InsuranceSettingsView.as_view(), name='insurance'),
+    path('insurance/payers/<int:pk>/selection/', PracticePayerToggleView.as_view(), name='insurance_payer_selection'),
     path('insurance/payers/new/', InsurancePayerCreateView.as_view(), name='insurance_payer_create'),
     path('insurance/payers/<int:pk>/edit/', InsurancePayerUpdateView.as_view(), name='insurance_payer_edit'),
     path('insurance/payers/<int:pk>/delete/', InsurancePayerDeleteView.as_view(), name='insurance_payer_delete'),

@@ -103,5 +103,5 @@
       if (form && option?.dataset.client) form.elements.client.value = option.dataset.client;
     });
   </script>
-</body>
+{% load static %}<script src="{% static 'insurance-billing.js' %}" defer></script></body>
 </html>

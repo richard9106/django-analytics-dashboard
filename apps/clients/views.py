@@ -27,6 +27,8 @@ class PracticeContextMixin(ClientPortalRedirectMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['practice'] = self.get_practice()
+        from apps.billing.insurance import available_payers
+        context['insurance_payers'] = available_payers(context['practice'])
         return context
 
 
@@ -43,7 +45,7 @@ class ClientListView(LoginRequiredMixin, PracticePermissionMixin, PracticeContex
 
         return (
             Client.objects.filter(practice=practice)
-            .select_related('primary_therapist__user')
+            .select_related('primary_therapist__user', 'insurance_payer')
             .order_by('last_name', 'first_name')
         )
 
@@ -67,7 +69,7 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
         practice = self.get_practice()
         if not practice:
             return Client.objects.none()
-        return Client.objects.filter(practice=practice).select_related('primary_therapist__user')
+        return Client.objects.filter(practice=practice).select_related('primary_therapist__user', 'insurance_payer')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

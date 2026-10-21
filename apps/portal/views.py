@@ -175,7 +175,7 @@ class ClientPortalDashboardView(ClientPortalAccessMixin, TemplateView):
             'next_appointment': upcoming_appointments[0] if upcoming_appointments else None,
             'visible_documents': visible_documents[:8],
             'open_invoices': open_invoices[:8],
-            'open_invoice_total': sum(invoice.balance_due for invoice in open_invoices),
+            'open_invoice_total': sum(invoice.client_balance_due for invoice in open_invoices),
             'service_packages': service_packages[:6],
             'remaining_sessions': sum(package.sessions_remaining for package in service_packages),
             'shared_document_count': visible_documents.count(),
@@ -201,7 +201,7 @@ class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
             practice=access.practice,
             client=access.client,
         )
-        if invoice.status not in {Invoice.Status.SENT, Invoice.Status.OVERDUE} or invoice.balance_due <= 0:
+        if invoice.status not in {Invoice.Status.SENT, Invoice.Status.OVERDUE} or invoice.client_balance_due <= 0:
             messages.error(request, 'This invoice is not available for online payment.')
             return redirect('portal:dashboard')
         if not settings.STRIPE_SECRET_KEY:
@@ -219,7 +219,7 @@ class ClientInvoicePaymentView(ClientPortalAccessMixin, View):
                     'price_data': {
                         'currency': 'usd',
                         'product_data': {'name': f'Invoice {invoice.invoice_number}'},
-                         'unit_amount': int(invoice.balance_due * 100),
+                         'unit_amount': int(invoice.client_balance_due * 100),
                     },
                     'quantity': 1,
                 }],
@@ -280,7 +280,7 @@ class ClientPortalRequestCreateView(ClientPortalAccessMixin, View):
             'next_appointment': upcoming_appointments.first(),
             'visible_documents': visible_documents[:8],
             'open_invoices': open_invoices[:8],
-            'open_invoice_total': sum(invoice.balance_due for invoice in open_invoices),
+            'open_invoice_total': sum(invoice.client_balance_due for invoice in open_invoices),
             'service_packages': service_packages[:6],
             'remaining_sessions': sum(package.sessions_remaining for package in service_packages),
             'shared_document_count': visible_documents.count(),
