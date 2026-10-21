@@ -26,9 +26,9 @@ class PracticePayerToggleView(LoginRequiredMixin, PracticePermissionMixin, Pract
         # A practice lock serializes repeated enable/disable requests.
         type(practice).objects.select_for_update().get(pk=practice.pk)
         active = request.POST['active'] == '1'
-        PracticeInsurancePayer.objects.update_or_create(practice=practice, payer=payer, defaults={'active': active})
-        log_audit_event(request, AuditLog.Action.UPDATE, 'billing.PracticeInsurancePayer', payer.pk,
-                        practice=practice, metadata={'active': active})
+        selection, _ = PracticeInsurancePayer.objects.update_or_create(practice=practice, payer=payer, defaults={'active': active})
+        log_audit_event(request, AuditLog.Action.UPDATE, 'billing.PracticeInsurancePayer', selection.pk,
+                        practice=practice, metadata={'payer_id': payer.pk, 'active': active})
         messages.success(request, 'Payer enabled for your practice.' if active else 'Payer disabled. Existing client and invoice records are retained.')
         return redirect('settings:insurance')
 
