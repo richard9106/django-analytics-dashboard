@@ -1,4 +1,4 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body class="app-page">
   <div class="app-shell">
@@ -37,7 +37,7 @@
         </div>
       </header>
 
-      <section class="billing-grid">
+      <section class="billing-grid insurance-settings-grid">
         <article class="panel">
           <div class="panel-head"><div><h2 id="insurance-rates-heading">Reimbursement rates</h2><p>Practice-specific allowed totals, including the client share. Review existing amounts before using them. These are not official payer rates.</p></div></div>
           <div class="table-wrap" role="region" aria-labelledby="insurance-rates-heading" aria-describedby="insurance-rates-scroll-help" tabindex="0">

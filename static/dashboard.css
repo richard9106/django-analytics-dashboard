@@ -1719,3 +1719,8 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
 .integration-capabilities .field.checkbox-field { min-width: 0; padding: 0; border: 0; background: transparent; align-items: stretch; }
 .integration-capabilities .checkbox-field label { width: 100%; min-width: 0; padding: 10px 12px; cursor: pointer; }
 .integration-capabilities .checkbox-field input[type="checkbox"] { flex: 0 0 16px; }
+
+/* Insurance tables retain their own scroll region and stack on narrower workspaces. */
+.insurance-settings-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); }
+.insurance-settings-grid > .panel { min-width: 0; }
+@media (max-width: 1280px) { .insurance-settings-grid { grid-template-columns: minmax(0, 1fr); } }
