@@ -79,8 +79,31 @@
               </tbody>
             </table>
           </div>
-          <details class="panel"><summary>Available payer catalogue ({{ catalog_payers|length }})</summary><p>Add only the payers your practice uses. This does not enroll you with an insurer.</p>
-          {% for payer in catalog_payers %}<div class="form-actions"><span>{{ payer.name }}</span>{% if workspace_permissions.billing.edit %}<form method="post" action="{% url 'settings:insurance_payer_selection' payer.pk %}">{% csrf_token %}<input type="hidden" name="active" value="1"><button type="submit" class="btn btn-secondary">Enable {{ payer.name }}</button></form>{% endif %}</div>{% empty %}<p>All catalogue payers have been added.</p>{% endfor %}</details>
+          <details class="payer-catalogue" data-payer-catalogue>
+            <summary><span>Available payer catalogue</span><span class="payer-catalogue__count">{{ catalog_payers|length }}</span></summary>
+            <div class="payer-catalogue__content">
+              <p class="payer-catalogue__help">Add the payers your practice uses. Adding a payer does not enroll you with the insurer.</p>
+              {% if catalog_payers %}
+              <label class="payer-catalogue__label" for="payer-catalogue-search">Find an insurance payer</label>
+              <input class="payer-catalogue__search" id="payer-catalogue-search" type="search" placeholder="Search by name…" autocomplete="off" data-payer-search aria-controls="payer-catalogue-list">
+              <p class="payer-catalogue__results" data-payer-results role="status" aria-live="polite">{{ catalog_payers|length }} payers available</p>
+              <ul class="payer-catalogue__list" id="payer-catalogue-list">
+              {% for payer in catalog_payers %}
+                <li class="payer-catalogue__row" data-payer-row>
+                  <span class="payer-catalogue__name" data-payer-name>{{ payer.name }}</span>
+                  {% if workspace_permissions.billing.edit %}
+                  <form method="post" action="{% url 'settings:insurance_payer_selection' payer.pk %}">
+                    {% csrf_token %}<input type="hidden" name="active" value="1">
+                    <button type="submit" class="btn btn-secondary payer-catalogue__add" aria-label="Add {{ payer.name }} to my payers"><span aria-hidden="true">+</span> Add</button>
+                  </form>
+                  {% endif %}
+                </li>
+              {% endfor %}
+              </ul>
+              <p class="payer-catalogue__empty" data-payer-empty hidden>No payers match your search. Try another name.</p>
+              {% else %}<p class="payer-catalogue__empty">All catalogue payers have been added.</p>{% endif %}
+            </div>
+          </details>
         </aside>
       </section>
 
@@ -91,5 +114,6 @@
     </main>
   </div>
   <script>document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-target]');if(!trigger)return;const dialog=document.getElementById(trigger.dataset.modalTarget);if(!dialog||typeof dialog.showModal!=='function')return;event.preventDefault();dialog.showModal();});document.addEventListener('click',(event)=>{const trigger=event.target.closest('[data-modal-close]');if(trigger)trigger.closest('dialog')?.close();});</script>
+<script src="{% static 'insurance-catalogue.js' %}" defer></script>
 </body>
 </html>

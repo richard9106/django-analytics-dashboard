@@ -1724,3 +1724,25 @@ body.cookie-notice-open { padding-bottom:var(--cookie-notice-space,300px); }
 .insurance-settings-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); }
 .insurance-settings-grid > .panel { min-width: 0; }
 @media (max-width: 1280px) { .insurance-settings-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.payer-catalogue { margin-top: 22px; border-top: 1px solid var(--border); }
+.payer-catalogue > summary { display: flex; align-items: center; gap: 10px; padding: 20px 0 12px; cursor: pointer; list-style: none; font-weight: 800; color: var(--slate-900); }
+.payer-catalogue > summary::-webkit-details-marker { display: none; }
+.payer-catalogue > summary::after { content: ''; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-left: auto; margin-right: 4px; flex: none; }
+.payer-catalogue[open] > summary::after { transform: rotate(225deg); }
+.payer-catalogue > summary:focus-visible { outline: 3px solid var(--brand-600); outline-offset: 4px; border-radius: 6px; }
+.payer-catalogue__count { padding: 3px 8px; border-radius: 999px; background: var(--brand-50); color: var(--brand-700); font-size: 12px; }
+.payer-catalogue__help { margin: 0 0 18px; color: var(--slate-500); font-size: 13px; line-height: 1.6; }
+.payer-catalogue__label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 700; }
+.payer-catalogue__search { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font: inherit; background: #fff; }
+.payer-catalogue__search:focus-visible { outline: 3px solid rgba(112, 82, 217, .22); border-color: var(--brand-600); }
+.payer-catalogue__results { margin: 10px 0 4px; color: var(--slate-500); font-size: 12px; }
+.payer-catalogue__list { list-style: none; padding: 0; margin: 0; }
+.payer-catalogue__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.payer-catalogue__row:last-child { border-bottom: 0; }
+.payer-catalogue__row[hidden], .payer-catalogue__empty[hidden] { display: none; }
+.payer-catalogue__name { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.payer-catalogue__row form { margin: 0; }
+.payer-catalogue__add { min-width: 82px; min-height: 44px; padding: 9px 13px; white-space: nowrap; }
+.payer-catalogue__empty { padding: 20px 0 8px; margin: 0; color: var(--slate-500); font-size: 14px; line-height: 1.6; }
+@media (max-width: 480px) { .payer-catalogue__row { gap: 10px; } .payer-catalogue__add { min-width: 72px; } }
