@@ -33,6 +33,5 @@ Production guards are never disabled by application code.
 List actions open session details and note creation in dialogs. The note form is
 loaded on demand, pins the tenant-checked session/client/therapist, retains invalid
 input inside the dialog, and leads to review after saving. Full-page links remain
-available without JavaScript. Breadcrumbs retain a validated Appointments return
-path, including List/Agenda and filters, through note review and draft editing.
-When entering through the notes list, that visited step is retained as well.
+available without JavaScript. Validated return links retain the Appointments
+origin and filters through note review and draft editing.

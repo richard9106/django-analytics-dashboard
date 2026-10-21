@@ -1,0 +1,2 @@
+{% include 'partials/subscription_banner.html' with hide_free_trial=True %}
+{% if not hide_free_trial %}{% include 'partials/trial_status_bar.html' %}{% endif %}

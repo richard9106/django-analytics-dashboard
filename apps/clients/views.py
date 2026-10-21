@@ -82,7 +82,6 @@ class ClientDetailView(LoginRequiredMixin, PracticePermissionMixin, PracticeCont
             requested_tab = 'clinical'
         active_tab = requested_tab if requested_tab in allowed_tabs else 'overview'
         context.update({
-            'breadcrumbs': [{'label': 'Clients', 'url': reverse('clients:list')}, {'label': str(client)}],
             'workspace_tab': active_tab,
         })
         if has_practice_permission(self.request.user, 'clients', 'edit'):
