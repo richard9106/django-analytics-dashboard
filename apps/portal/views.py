@@ -847,6 +847,10 @@ class IntakeTemplateCreateView(PracticePermissionMixin, PracticeContextMixin, Vi
     permission_resource = 'intake'
     permission_action = 'create'
 
+    def get(self, request):
+        form = IntakePacketTemplateForm(practice=self.get_practice())
+        return TemplateResponse(request, 'intake/template_form.html', {'form': form, 'intake_template': None})
+
     def post(self, request):
         practice = self.get_practice()
         form = IntakePacketTemplateForm(request.POST, practice=practice)

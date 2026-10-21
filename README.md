@@ -103,7 +103,7 @@ See [Session documentation and signatures](docs/session-list-and-signatures.md).
 - Requests is one compact inbox for public bookings and registered-client requests, with source filters and trailing three-dot actions.
 - Public bookings retain approval/create-appointment and decline actions. Available slots follow practice availability and existing bookings.
 - Registered requests retain review/resolve actions. **Initial consultation request** provides Schedule consultation with the client and session purpose preselected; resolving the request remains explicit.
-- Client forms has a paginated assignment queue, search/status filters, review totals, form templates, question previews and permission-aware editing.
+- Client forms has a paginated assignment queue, search/status filters, review totals and a [page-based form builder](docs/intake-form-builder.md). Templates support short/long text, single/multiple choice, dropdown and yes/no answers, required questions, page titles/instructions, ordering and a client preview. Assigned forms retain their original snapshot; portal clients complete pages with Previous/Next controls.
 - Clients complete assigned forms in the portal; staff review numbered responses and record review status.
 - Assigned questions are snapshotted. Editing a template affects future assignments, while existing assignments and responses retain their original content.
 
