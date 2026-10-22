@@ -1,6 +1,6 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Contact Support | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">{% include "marketing/partials/seo.html" with seo_title="Contact Support | NuviaMy" seo_description="Contact NuviaMy with product questions or account support requests. Tell us how we can help without sharing sensitive client or clinical information." seo_path="/help/contact/" %}<link rel="stylesheet" href="{% static 'dashboard.css' %}"></head>
 <body class="marketing-page support-page">
   {% include 'marketing/partials/nav.html' %}
   <main class="support-shell support-contact-shell">

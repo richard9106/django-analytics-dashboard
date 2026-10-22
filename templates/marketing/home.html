@@ -1,26 +1,15 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NuviaMy | Therapy Practice Management Software for Therapists</title>
-  <meta name="description" content="NuviaMy is therapy practice management software for therapists, counselors, psychologists, mental health clinics, and private practices. Manage scheduling, clinical notes, treatment plans, billing, documents, intake forms, client portal workflows, reminders, and Google integrations in one HIPAA-aware workspace.">
-  <meta name="keywords" content="therapy practice management software, therapist software, mental health practice management, counseling practice management, private practice software for therapists, behavioral health EHR, therapy scheduling software, clinical notes software, treatment plan software, therapist billing software, client portal for therapists, intake forms for therapists, HIPAA aware therapy software, psychotherapy practice management, psychology practice management software, mental health billing, appointment reminders for therapists, therapy documentation software">
-  <link rel="canonical" href="https://nuviamy.com/">
-  <meta property="og:title" content="NuviaMy | Therapy Practice Management Software">
-  <meta property="og:description" content="A calm, HIPAA-aware SaaS workspace for therapists and mental health practices: scheduling, notes, treatment plans, billing, documents, intake, portal, reminders, and Google integrations.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://nuviamy.com/">
-  <meta property="og:site_name" content="NuviaMy">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="NuviaMy | Therapy Practice Management Software">
-  <meta name="twitter:description" content="Practice management software for therapists, counselors, psychologists, and mental health clinics.">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include "marketing/partials/seo.html" with seo_title="NuviaMy | Therapy Practice Management Software" seo_description="NuviaMy therapy practice management software connects scheduling, clinical notes, forms and billing. Try it free for 30 days, no card required." seo_path="/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="/static/marketing/therapy-practice-hero-banner.webp" type="image/webp">
-  <link rel="stylesheet" href="/static/dashboard.css">
+
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -30,42 +19,28 @@
     "operatingSystem": "Web",
     "url": "https://nuviamy.com/",
     "description": "Therapy practice management software for therapists, counselors, psychologists, mental health clinics, and private practices.",
-    "offers": { "@type": "Offer", "priceCurrency": "USD" },
+    "offers": { "@type": "Offer", "price": "39", "priceCurrency": "USD", "url": "https://nuviamy.com/pricing/", "description": "$39 per active user per month, excluding applicable taxes. Optional annual billing: $421 per active user per year." },
     "audience": { "@type": "Audience", "audienceType": "Therapists, counselors, psychologists, and mental health practices" }
   }
   </script>
 </head>
-<body id="top" class="marketing-page">
+{% load static %}<body id="top" class="marketing-page website-home">
   {% include 'marketing/partials/nav.html' %}
 
   <main>
     <section class="marketing-hero">
       <div class="hero-copy">
-        <p class="eyebrow coral-eyebrow">Therapy Practice Management SaaS</p>
-        <h1>Practice management software for therapists who want calmer clinical operations.</h1>
-        <p>NuviaMy helps therapists, counselors, psychologists, behavioral health providers, and mental health practices manage appointments, clinical notes, treatment plans, client intake, billing, documents, reminders, and portal workflows from one polished workspace.</p>
-        <div class="hero-actions"><a class="btn btn-primary" href="{% url 'signup' %}">Create a practice account</a><a class="btn btn-secondary" href="{% url 'pricing' %}">View pricing</a></div>
-        <div class="trust-list"><span>HIPAA-aware architecture</span><span>Practice-scoped data</span><span>Server-rendered Django SaaS</span><span>Built for therapists</span></div>
+        <p class="eyebrow coral-eyebrow">For your therapy practice</p>
+        <h1>More time for care.
+Less time on admin.</h1>
+        <p>Scheduling, notes, client forms and billing, together in one workspace built for therapists.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="{% url 'signup' %}">Start your free trial</a><a class="btn btn-secondary" href="{% url 'pricing' %}">View pricing</a></div>
+        <p class="hero-trial">30 days free · No card required</p>
       </div>
-      <aside class="hero-card product-illustration" aria-label="NuviaMy product overview">
-        <div class="hero-card-top"><span class="badge coral">Today</span><strong>Gentle operating rhythm</strong></div>
-        <div class="hero-metric coral-line"><span>Appointments</span><strong>12</strong><small>sessions scheduled with conflict checks</small></div>
-        <div class="hero-metric"><span>Clinical notes</span><strong>4</strong><small>drafts ready to review and lock</small></div>
-        <div class="hero-metric aqua-line"><span>Treatment plans</span><strong>2</strong><small>reviews due with clear follow-up</small></div>
-      </aside>
+      <figure class="product-preview hero-product"><div class="preview-bar"><span class="preview-dots" aria-hidden="true">● ● ●</span><span>Your practice at a glance</span><span class="badge brand">Product preview</span></div><a href="#product-tour" aria-label="Explore the NuviaMy product tour"><img src="{% static 'marketing/product-overview.webp' %}" width="1265" height="712" alt="NuviaMy dashboard showing sessions, active clients and follow-up tasks in a fictional demo practice" fetchpriority="high"></a><figcaption>Actual NuviaMy interface · Fictional demonstration data</figcaption></figure>
     </section>
 
-    <section class="visual-band calm-banner" aria-label="NuviaMy clinical workflow illustration">
-      <div>
-        <p class="eyebrow coral-eyebrow">From inquiry to follow-up</p>
-        <h2>A calmer path through every client workflow.</h2>
-        <p>Shape intake, scheduling, therapy documentation, billing, and portal communication into one steady practice rhythm—without making sensitive clinical work feel like generic admin software.</p>
-      </div>
-      <div class="workflow-media narrative-media">
-        <img class="marketing-photo workflow-photo" src="/static/marketing/therapy-office-workflow.webp" alt="Therapy office workflow with client-centered practice operations" width="1400" height="933" loading="lazy">
-        <div class="workflow-river" aria-hidden="true"><span>Intake</span><span>Session</span><span>Notes</span><span>Billing</span><span>Portal</span></div>
-      </div>
-    </section>
+    {% include 'marketing/partials/product_tour.html' %}
 
     <section class="marketing-section feature-proof" id="features">
       <div class="section-heading">
@@ -75,7 +50,7 @@
       </div>
       <div class="proof-layout">
         <figure class="proof-photo-card">
-          <img class="marketing-photo" src="/static/marketing/therapist-client-session.webp" alt="Therapist and client session in a welcoming practice environment" width="900" height="1350" loading="lazy">
+          <img class="marketing-photo" src="{% static 'marketing/therapist-client-session.webp' %}" alt="Therapist and client session in a welcoming practice environment" width="900" height="1350" loading="lazy">
           <figcaption><strong>Feature proof</strong><span>Clinical workflows stay connected to client care.</span></figcaption>
         </figure>
         <div class="marketing-grid three feature-grid">
@@ -103,13 +78,13 @@
 
     <section class="marketing-band team-operations" id="workflows">
       <figure class="operations-photo-card">
-        <img class="marketing-photo" src="/static/marketing/mental-health-clinic-team.webp" alt="Mental health clinic team collaborating around practice workflows" width="1400" height="933" loading="lazy">
+        <img class="marketing-photo" src="{% static 'marketing/mental-health-clinic-team.webp' %}" alt="Mental health clinic team collaborating around practice workflows" width="1400" height="933" loading="lazy">
         <figcaption>Team and operations workflows stay visible without feeling noisy.</figcaption>
       </figure>
       <div>
         <p class="eyebrow">Built for Mental Health Teams</p>
         <h2>For solo therapists, group practices, counselors, psychologists, and behavioral health clinics.</h2>
-        <div class="keyword-cloud" aria-label="Supported therapy practice keywords"><span>private practice EHR</span><span>mental health EMR</span><span>therapy billing</span><span>psychotherapy notes</span><span>counseling software</span><span>client scheduling</span><span>therapy intake forms</span><span>behavioral health practice management</span><span>HIPAA-aware workflows</span></div>
+        <p>Start with one clinician or coordinate a team. Keep each client’s appointments, documentation and invoices connected as your practice grows.</p><a class="inline-link" href="{% url 'therapy_practice_management' %}">Explore your practice workflow →</a>
       </div>
     </section>
 
@@ -117,16 +92,16 @@
       <p class="eyebrow">Security-Minded Foundation</p>
       <h2>Designed with healthcare privacy patterns from the start.</h2>
       <div class="marketing-grid two">
-        <article><h3>Tenant isolation</h3><p>Every sensitive object belongs to a practice, and internal workflows are scoped so teams only see their own clients, notes, appointments, invoices, documents, and plans.</p></article>
-        <article><h3>Client-only portal access</h3><p>Client users are restricted to the portal, temporary passwords require change, and sensitive workflows are protected from accidental internal access.</p></article>
+        <article><h3>A workspace for your practice</h3><p>Keep your team’s client records together in a practice-specific workspace, with access based on each person’s role.</p></article>
+        <article><h3>Client-only portal access</h3><p>Clients have a separate portal for their appointments, forms, shared documents and invoices. Your team controls what is shared.</p></article>
       </div>
     </section>
 
     <section class="marketing-cta">
       <p class="eyebrow">NuviaMy for Therapists</p>
       <h2>Launch a calmer therapy practice workspace.</h2>
-      <p>Organize scheduling, clinical documentation, treatment plans, billing, documents, intake, reminders, and client communication in one focused SaaS platform.</p>
-      <a class="btn btn-primary" href="{% url 'signup' %}">Start with NuviaMy</a>
+      <p>No card required. When you’re ready, one complete plan is $39 per active user per month or $421 per year, excluding applicable taxes.</p>
+      <a class="btn btn-primary" href="{% url 'signup' %}">Start your 30-day free trial</a>
     </section>
   </main>
   <a class="back-to-top" href="#top" aria-label="Back to top">↑ Top</a>

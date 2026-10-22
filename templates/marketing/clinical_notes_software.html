@@ -1,12 +1,10 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clinical Notes Software for Therapists | NuviaMy</title>
-  <meta name="description" content="Clinical notes software for therapists, counselors, psychologists, and mental health practices: progress notes, intake notes, treatment plans, diagnoses, and review workflows.">
-  <link rel="canonical" href="https://nuviamy.com/clinical-notes-software-for-therapists/">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/dashboard.css">
+  {% include "marketing/partials/seo.html" with seo_title="Clinical Notes Software for Therapists | NuviaMy" seo_description="Keep progress notes, diagnoses and treatment plans connected to client care. Explore documentation and review workflows for your therapy practice." seo_path="/clinical-notes-software-for-therapists/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body id="top" class="marketing-page article-page">
   {% include 'marketing/partials/nav.html' %}
@@ -15,7 +13,7 @@
     <section><h2>Progress notes, intake notes, and general notes</h2><p>NuviaMy supports core therapy documentation workflows and keeps notes tied to clients, practices, appointments, diagnoses, and treatment plans.</p></section>
     <section><h2>Treatment planning and review</h2><ul><li>Create treatment plans with goals, objectives, interventions, and target dates.</li><li>Track plan status and review dates so follow-up does not disappear.</li><li>Connect diagnoses and clinical context to the right client record.</li><li>Lock documentation when notes are ready for a stronger recordkeeping workflow.</li></ul></section>
     <section><h2>Documentation as part of operations</h2><p>Notes are most useful when they connect with scheduling, billing, documents, and portal workflows. NuviaMy keeps those connections close while maintaining a calm interface for sensitive work.</p></section>
-    <div class="article-cta"><h2>Make documentation feel manageable.</h2><a class="btn btn-primary" href="{% url 'signup' %}">Create your workspace</a></div>
+<section><h2>Example: from a session to a reviewed note</h2><div class="guide-example"><p>Open the client’s appointment, create the appropriate note and connect relevant treatment-plan context. Review the content before locking the record. Keep clinical details inside the practice workflow rather than in calendar descriptions or general support messages.</p></div><h3>Keep the plan connected to the work</h3><p>A treatment plan can track goals, objectives, interventions and review dates. Use those review dates to return to the plan as care progresses, rather than treating the plan as an isolated document.</p></section><section class="guide-faq"><h2>Questions before you start</h2><details><summary>Are my clinical notes automatically shared with clients?</summary><p>The client portal is separate from the internal workspace. Share only the documents and information you intend the client to see, and review visibility before sharing.</p></details><details><summary>Does the software replace my recordkeeping obligations?</summary><p>No. Your practice remains responsible for the accuracy, review, retention and lawful use of its clinical records. Review the service agreements and applicable requirements for your practice. </p></details></section><nav class="guide-related" aria-label="Related product guides"><a href="{% url 'therapy_scheduling_software' %}">Scheduling</a><a href="{% url 'clinical_notes_software' %}">Clinical notes</a><a href="{% url 'client_portal_software' %}">Client portal &amp; forms</a><a href="{% url 'mental_health_billing_software' %}">Billing</a><a href="{% url 'pricing' %}">Pricing &amp; free trial</a></nav>    <div class="article-cta"><h2>Make documentation feel manageable.</h2><p>30 days free. No card required.</p><a class="btn btn-primary" href="{% url 'signup' %}">Create your workspace</a></div>
   </article></main>
 {% include 'marketing/partials/footer.html' %}
 {% include 'partials/security_session.html' %}</body>

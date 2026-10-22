@@ -1,0 +1,17 @@
+{% load static %}<title>{{ seo_title }}</title>
+<meta name="description" content="{{ seo_description }}">
+<link rel="canonical" href="https://nuviamy.com{{ seo_path }}">
+<meta property="og:title" content="{{ seo_title }}">
+<meta property="og:description" content="{{ seo_description }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NuviaMy">
+<meta property="og:url" content="https://nuviamy.com{{ seo_path }}">
+<meta property="og:image" content="https://nuviamy.com{% static 'marketing/nuviamy-social.jpg' %}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="NuviaMy therapy practice management software. 30-day free trial, no card required.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ seo_title }}">
+<meta name="twitter:description" content="{{ seo_description }}">
+<meta name="twitter:image" content="https://nuviamy.com{% static 'marketing/nuviamy-social.jpg' %}">
+{% if seo_path == '/help/' and request.GET.q or seo_path == '/help/contact/' and request.GET.sent %}<meta name="robots" content="noindex,follow">{% endif %}
+<link rel="stylesheet" href="{% static 'marketing/site.css' %}">

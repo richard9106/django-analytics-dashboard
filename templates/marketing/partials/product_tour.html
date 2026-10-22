@@ -1,0 +1,7 @@
+{% load static %}<section class="marketing-section product-tour" id="product-tour" aria-labelledby="product-tour-title">
+  <div class="tour-heading"><div><p class="eyebrow coral-eyebrow">See it in action</p><h2 id="product-tour-title">One practice. A more connected day.</h2></div><p>A look inside NuviaMy, using fictional demonstration records.</p></div>
+  <div class="tour-grid">
+    <article><a class="tour-image" href="{% url 'therapy_scheduling_software' %}"><img src="{% static 'marketing/product-scheduling.webp' %}" width="1265" height="712" loading="lazy" alt="NuviaMy appointment list showing six fictional clients scheduled throughout a day"></a><div class="tour-copy"><span class="tour-step">01 · Plan your day</span><h3>Know who’s next.</h3><p>See sessions, check availability and keep appointment requests moving.</p><a class="inline-link" href="{% url 'therapy_scheduling_software' %}">Explore scheduling →</a></div></article>
+    <article><a class="tour-image" href="{% url 'client_portal_software' %}"><img src="{% static 'marketing/product-forms.webp' %}" width="1265" height="712" loading="lazy" alt="NuviaMy client forms showing fictional assignments awaiting completion, ready for review and reviewed"></a><div class="tour-copy"><span class="tour-step">02 · Prepare for care</span><h3>Keep forms moving.</h3><p>Assign a questionnaire, let the client respond and see what’s ready to review.</p><a class="inline-link" href="{% url 'client_portal_software' %}">Explore client forms &amp; portal →</a></div></article>
+  </div>
+</section>

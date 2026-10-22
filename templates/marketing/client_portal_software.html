@@ -1,15 +1,13 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Client Portal Software for Therapists | NuviaMy</title>
-  <meta name="description" content="Client portal software for therapists and mental health practices with appointment visibility, intake packets, shared documents, invoices, and secure request workflows.">
-  <link rel="canonical" href="https://nuviamy.com/client-portal-software-for-therapists/">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include "marketing/partials/seo.html" with seo_title="Client Portal Software for Therapists | NuviaMy" seo_description="Give clients one place for appointments, intake forms, shared documents and invoices. See how the NuviaMy client portal supports your practice." seo_path="/client-portal-software-for-therapists/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body id="top" class="marketing-page article-page">
   {% include 'marketing/partials/nav.html' %}
@@ -20,7 +18,7 @@
     <section><h2>What clients can handle in a focused portal</h2><p>NuviaMy gives clients a dedicated portal experience for upcoming appointments, shared documents, visible invoices, intake packets, service package context, and appointment change requests.</p></section>
     <section><h2>Why portal boundaries matter</h2><ul><li>Client users are redirected away from internal practice pages.</li><li>Portal access links each login to one client record and one practice.</li><li>Practices decide which documents are visible to the client.</li><li>Requests flow into an inbox so therapists can review before changing schedules or records.</li></ul></section>
     <section><h2>Better intake and follow-up</h2><p>Therapy intake forms, appointment requests, shared files, and client questions become easier to track when they live near scheduling, billing, and documentation instead of scattered across email threads.</p></section>
-    <div class="article-cta"><h2>Create a calmer client experience.</h2><p>Use NuviaMy to connect intake, appointment visibility, documents, invoices, and portal requests in one practice-scoped workspace.</p><a class="btn btn-primary" href="{% url 'signup' %}">Create your workspace</a></div>
+<section><h2>Example: send and review an intake form</h2><div class="guide-example"><p>Create a template with pages and question types, assign it to a client and have them complete it in their portal. Submitted responses become ready for your team to review. A later template edit does not rewrite the questions already assigned.</p></div><h3>A clear boundary between client and team</h3><p>Clients see their own portal information, not your internal dashboard. Choose which documents to share. Appointment change requests go to the practice for review instead of silently changing the calendar.</p></section>{% load static %}<figure class="guide-preview"><img src="{% static 'marketing/product-forms.webp' %}" width="1265" height="712" loading="lazy" alt="NuviaMy client forms using fictional demonstration records"><figcaption>Actual NuviaMy interface · Fictional demonstration data</figcaption></figure><section class="guide-faq"><h2>Questions before you start</h2><details><summary>Can I customize the questions?</summary><p>Yes. Form templates support page titles, help text, required answers, text questions and choice-based questions. Preview the form before assigning it.</p></details><details><summary>Can clients pay invoices in the portal?</summary><p>Online client invoice payments require the practice to set up Stripe Connect. Without that optional connection, your team can still manage invoices and record payments.</p></details></section><nav class="guide-related" aria-label="Related product guides"><a href="{% url 'therapy_scheduling_software' %}">Scheduling</a><a href="{% url 'clinical_notes_software' %}">Clinical notes</a><a href="{% url 'client_portal_software' %}">Client portal &amp; forms</a><a href="{% url 'mental_health_billing_software' %}">Billing</a><a href="{% url 'pricing' %}">Pricing &amp; free trial</a></nav>    <div class="article-cta"><h2>Create a calmer client experience.</h2><p>Use NuviaMy to connect intake, appointment visibility, documents, invoices, and portal requests in one practice-scoped workspace.</p><p>30 days free. No card required.</p><a class="btn btn-primary" href="{% url 'signup' %}">Create your workspace</a></div>
   </article></main>
 {% include 'marketing/partials/footer.html' %}
 {% include 'partials/security_session.html' %}</body>

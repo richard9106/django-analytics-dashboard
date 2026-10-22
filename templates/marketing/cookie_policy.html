@@ -1,6 +1,6 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Cookie Policy | NuviaMy</title><link rel="canonical" href="https://nuviamy.com/cookie-policy/"><link rel="stylesheet" href="/static/dashboard.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">{% include "marketing/partials/seo.html" with seo_title="Cookie Policy | NuviaMy" seo_description="Learn about essential cookies and optional browser storage in NuviaMy, and how to manage your cookie preferences." seo_path="/cookie-policy/" %}<link rel="stylesheet" href="{% static 'dashboard.css' %}"></head>
 <body class="marketing-page support-page">
   {% include 'marketing/partials/nav.html' %}
   <main class="legal-shell">

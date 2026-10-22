@@ -1,15 +1,13 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Therapy Practice Management Software | NuviaMy</title>
-  <meta name="description" content="Therapy practice management software guide for therapists, counselors, psychologists, and mental health clinics comparing scheduling, notes, billing, intake, portal, and security workflows.">
-  <link rel="canonical" href="https://nuviamy.com/therapy-practice-management-software/">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include "marketing/partials/seo.html" with seo_title="Therapy Practice Management Software | NuviaMy" seo_description="Bring appointments, client records, notes and billing together. See a practical therapy practice workflow and try NuviaMy free for 30 days." seo_path="/therapy-practice-management-software/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body id="top" class="marketing-page article-page">
   {% include 'marketing/partials/nav.html' %}
@@ -20,8 +18,8 @@
       <p class="lead">A therapy practice management platform should help clinicians protect time, reduce administrative drift, and keep sensitive client workflows organized without feeling cold or complicated.</p>
       <section><h2>What therapists need in one workspace</h2><p>NuviaMy brings together client records, appointment scheduling, clinical notes, treatment plans, billing, documents, intake packets, portal access, reminders, and Google integrations. This matters because therapy practices rarely struggle with one isolated task; they struggle with small handoffs between many sensitive tasks.</p></section>
       <section><h2>Key workflows to evaluate</h2><ul><li>Practice-scoped clients, clinicians, appointments, notes, invoices, and documents.</li><li>Scheduling with recurring sessions, availability settings, and calendar sync.</li><li>Clinical documentation for progress notes, intake notes, diagnoses, goals, objectives, and treatment plan reviews.</li><li>Billing workflows for invoices, superbills, packages, insurance payer settings, and follow-up.</li><li>A client portal that separates client access from internal clinical operations.</li></ul></section>
-      <section><h2>Built around privacy-aware defaults</h2><p>Therapy software should make secure behavior easier. NuviaMy is designed around tenant isolation, client-only portal access, role-aware redirects, and focused server-rendered workflows so practices can review compliance needs with a clear operational foundation.</p></section>
-      <div class="article-cta"><h2>Ready to organize your practice?</h2><p>Start with a focused NuviaMy workspace for scheduling, documentation, billing, intake, and client communication.</p><a class="btn btn-primary" href="{% url 'signup' %}">Create your practice workspace</a></div>
+      <section><h2>Built around privacy-aware defaults</h2><p>Therapy software should make secure behavior easier. NuviaMy is designed around tenant isolation, client-only portal access, staff access controls, and connected workflows so practices can review compliance needs with a clear operational foundation.</p></section>
+  <section><h2>A day in a connected practice</h2><div class="guide-example"><p>Start by checking today’s sessions and outstanding tasks. Open a client record to review the relevant appointment, write a session note, then create an invoice. Intake responses and shared documents remain available alongside the rest of the client’s record.</p></div><h3>What changes when you add a team?</h3><p>Invite clinicians and assign appropriate roles. Each practice has its own workspace; client portal accounts are separate from staff accounts. Review permissions and your practice agreements before inviting people or entering real records.</p></section>{% load static %}<figure class="guide-preview"><img src="{% static 'marketing/product-overview.webp' %}" width="1265" height="712" loading="lazy" alt="NuviaMy dashboard using fictional demonstration records"><figcaption>Actual NuviaMy interface · Fictional demonstration data</figcaption></figure><section class="guide-faq"><h2>Questions before you start</h2><details><summary>Does the trial use a separate demo workspace?</summary><p>The 30-day trial is your practice workspace. You can use it for your business after accepting the required agreements and reviewing the service scope. Subscription is optional and no card is needed to start.</p></details><details><summary>What happens after 30 days?</summary><p>Choose a paid subscription to continue creating and updating records. Trial expiry does not automatically charge your card or delete the workspace. Reading and export remain subject to your permissions.</p></details></section><nav class="guide-related" aria-label="Related product guides"><a href="{% url 'therapy_scheduling_software' %}">Scheduling</a><a href="{% url 'clinical_notes_software' %}">Clinical notes</a><a href="{% url 'client_portal_software' %}">Client portal &amp; forms</a><a href="{% url 'mental_health_billing_software' %}">Billing</a><a href="{% url 'pricing' %}">Pricing &amp; free trial</a></nav>    <div class="article-cta"><h2>Ready to organize your practice?</h2><p>Start with a focused NuviaMy workspace for scheduling, documentation, billing, intake, and client communication.</p><p>30 days free. No card required.</p><a class="btn btn-primary" href="{% url 'signup' %}">Create your practice workspace</a></div>
     </article>
   </main>
 {% include 'marketing/partials/footer.html' %}
