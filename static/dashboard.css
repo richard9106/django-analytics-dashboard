@@ -798,7 +798,11 @@ th { color: var(--slate-500); font-size: 12px; text-transform: uppercase; letter
   .proof-photo-card { position: static; }
   .proof-photo-card img { min-height: 360px; max-height: 520px; }
   .pricing-card.featured { transform: none; }
-  .login-card { justify-self: start; }
+  .login-shell { max-width: 660px; justify-items: center; align-content: center; }
+  .login-brand-panel { width: 100%; text-align: center; }
+  .login-brand-panel h1, .login-brand-panel p { margin-inline: auto; }
+  .login-brand-panel .trust-list, .login-brand-panel .hero-actions { justify-content: center; }
+  .login-card { justify-self: center; }
 }
 
 /* Use the same complete navigation on phones and tablets; avoid a clipped icon rail. */
