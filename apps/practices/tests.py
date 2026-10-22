@@ -48,6 +48,17 @@ class IntegrationSettingsTests(TestCase):
         self.assertContains(response, "Google Calendar sync")
         self.assertContains(response, "Dropbox")
 
+    def test_google_disclosure_is_visible_before_authorization_action(self):
+        user, _practice = self.create_practice_user()
+        self.client.force_login(user)
+        response = self.client.get(reverse("practice_settings:integrations"))
+        html = response.content.decode()
+        self.assertContains(response, 'Before you connect Google')
+        self.assertContains(response, reverse('privacy_policy') + '#google-user-data')
+        self.assertContains(response, 'does not revoke')
+        self.assertContains(response, 'myaccount.google.com/connections')
+        self.assertLess(html.index('id="google-privacy-heading"'), html.index('>Connect Google</button>'))
+
     def test_connected_google_actions_are_grouped_in_kebab_menu(self):
         user, practice = self.create_practice_user()
         ExternalIntegration.objects.create(

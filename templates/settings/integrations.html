@@ -31,7 +31,8 @@
                 <div class="field checkbox-field"><label>{{ google_form.file_storage_enabled }} Google Drive file storage</label></div>
               </div>
               <details class="integration-advanced"><summary>Advanced Google settings</summary><div class="field-grid two"><div class="field"><label>Drive folder</label>{{ google_form.default_folder }}</div><div class="field"><label>Notes</label>{{ google_form.notes }}</div></div></details>
-              <div class="form-actions"><button class="btn btn-primary" type="submit" {% if not google_oauth_configured %}disabled{% endif %}>Connect Google</button></div>
+              {% include "settings/partials_google_privacy_notice.html" %}
+              <div class="form-actions"><button class="btn btn-primary" type="submit" aria-describedby="google-privacy-heading" {% if not google_oauth_configured %}disabled{% endif %}>Connect Google</button></div>
           </form>
           {% if not google_oauth_configured %}<p class="empty-state">Google OAuth env vars are not configured yet.</p>{% endif %}
         </article>

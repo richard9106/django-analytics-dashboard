@@ -54,3 +54,15 @@ class LiveCommercialNoticeTests(TestCase):
         self.assertContains(response, 'prices exclude any applicable taxes')
         self.assertContains(response, 'Real client records')
         self.assertNotContains(response, 'Stripe is in test mode')
+
+
+class GooglePrivacyNoticeTests(TestCase):
+    def test_public_google_notice_explains_capabilities_limits_and_deletion(self):
+        response = self.client.get(reverse('privacy_policy'))
+        self.assertEqual(response.status_code, 200)
+        for text in (PRIVACY_VERSION, 'id="google-user-data"', 'Gmail sending', 'Gmail reading',
+                     'Google Calendar', 'Google Drive', 'Limited Use requirements',
+                     'non-personalized', 'Google data deletion',
+                     'does not itself revoke', 'myaccount.google.com/connections',
+                     'Before accessing Google user data for a new purpose'):
+            self.assertContains(response, text)
