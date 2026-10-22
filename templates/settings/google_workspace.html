@@ -17,6 +17,7 @@
       <section class="action-bar"><div class="quick-actions"><a class="btn btn-secondary" href="{% url 'practice_settings:integrations' %}">Back to integrations</a></div>{% include 'partials/trial_toolbar_notice.html' %}<details class="profile-menu"><summary>{{ request.user.first_name|default:request.user.username }}</summary><div class="profile-menu-panel"><a href="{% url 'profile_settings' %}">Profile settings</a>{% if request.user.is_staff %}<a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div></details></section>
       <header class="topbar compact-topbar"><div><p class="eyebrow">Google</p><h1>Workspace</h1><p>{% if google_integration %}Connected as {{ google_integration.account_email }}{% else %}Google is not connected.{% endif %}</p></div></header>
       {% if google_error %}<section class="panel"><p class="form-error">{{ google_error }}</p></section>{% endif %}
+      <p><a class="inline-link" href="{% url 'privacy_policy' %}#google-user-data">Google data use &amp; privacy</a> · <a class="inline-link" href="{% url 'practice_settings:integrations' %}">Manage or disconnect Google</a></p>
       <section class="billing-grid">
         <article class="panel">
           <div class="panel-head"><div><h2>Send email</h2><p>Send a simple Gmail message from the connected Google account.</p></div></div>
