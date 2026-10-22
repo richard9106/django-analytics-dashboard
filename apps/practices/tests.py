@@ -153,6 +153,8 @@ class IntegrationSettingsTests(TestCase):
                 self.assertEqual(response.status_code, 302)
                 scopes = parse_qs(urlsplit(response.url).query)["scope"][0].split()
                 self.assertEqual(set(scopes), {"openid", "email", f"https://www.googleapis.com/auth/{suffix}"})
+                self.assertEqual(parse_qs(urlsplit(response.url).query)["include_granted_scopes"],
+                                 ["false" if suffix.endswith(".owned") else "true"])
 
     @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret", GOOGLE_OAUTH_REDIRECT_URI="https://example.com/settings/integrations/google/callback/")
     def test_google_callback_stores_tokens_and_account_email(self):
