@@ -1,19 +1,13 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Features | NuviaMy Therapy Practice Management Software</title>
-  <meta name="description" content="Explore NuviaMy features for therapists and mental health practices: scheduling, public booking, clinical notes, treatment plans, billing, client portal, documents, reminders, and Google integrations.">
-  <link rel="canonical" href="https://nuviamy.com/features/">
-  <meta property="og:title" content="NuviaMy Features | Therapy Practice Management Software">
-  <meta property="og:description" content="Scheduling, clinical notes, treatment plans, billing, client portal, documents, reminders, public booking, and Google integrations for therapy practices.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://nuviamy.com/features/">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include "marketing/partials/seo.html" with seo_title="Features | NuviaMy Therapy Practice Software" seo_description="See how NuviaMy connects scheduling, clinical notes, intake forms, client portal and billing. Explore the features, then start a 30-day free trial." seo_path="/features/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body id="top" class="marketing-page">
   {% include 'marketing/partials/nav.html' %}
@@ -24,6 +18,7 @@
       <p>NuviaMy brings scheduling, public booking, clinical documentation, treatment planning, billing, documents, reminders, and client portal workflows into one practice-scoped SaaS workspace.</p>
     </section>
 
+    {% include 'marketing/partials/product_tour.html' %}
     <section class="visual-band calm-banner" aria-label="NuviaMy feature workflow">
       <div>
         <p class="eyebrow coral-eyebrow">Connected workflows</p>
@@ -43,7 +38,7 @@
         <article><h3>Treatment plans</h3><p>Build treatment plans with goals, objectives, interventions, target dates, statuses, and review dates that surface when follow-up is due.</p></article>
         <article><h3><a href="{% url 'mental_health_billing_software' %}">Billing and superbills</a></h3><p>Invoices, printable invoices, superbills, service packages, usage tracking, insurance payer settings, and billing follow-up tasks.</p></article>
         <article><h3><a href="{% url 'client_portal_software' %}">Client portal</a></h3><p>Client-only access for appointments, visible documents, invoices, intake packets, service packages, and appointment change requests.</p></article>
-        <article><h3>Documents</h3><p>Upload documents, control client visibility, download/delete files, prepare for R2 production storage, and export selected files to Google Drive.</p></article>
+        <article><h3>Documents</h3><p>Upload documents, control client visibility, download/delete files, export selected files to Google Drive.</p></article>
         <article><h3>Reminders and Gmail</h3><p>Gmail-powered appointment reminders, reminder statuses, error tracking, and scheduled reminder delivery for upcoming sessions.</p></article>
         <article><h3>Google workspace</h3><p>OAuth-based Google connection for Gmail, Calendar, and Drive without storing Google passwords, with encrypted tokens at rest.</p></article>
       </div>
@@ -57,8 +52,8 @@
     <section class="marketing-cta">
       <p class="eyebrow">Explore NuviaMy</p>
       <h2>Give your therapy practice one calmer workspace.</h2>
-      <p>Start with scheduling, documentation, billing, client portal, public booking, documents, reminders, and Google integrations in one server-rendered SaaS app.</p>
-      <a class="btn btn-primary" href="{% url 'signup' %}">Start workspace</a>
+      <p>Start with scheduling, documentation, billing, client portal, public booking, documents, reminders, and Google integrations in one connected workspace.</p>
+      <a class="btn btn-primary" href="{% url 'signup' %}">Start your 30-day free trial</a>
     </section>
   </main>
   <a class="back-to-top" href="#top" aria-label="Back to top">↑ Top</a>

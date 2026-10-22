@@ -1,21 +1,14 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pricing | NuviaMy Therapy Practice Management Software</title>
-  <meta name="description" content="Simple per-user monthly and yearly pricing for NuviaMy therapy practice management software with 10% off annual subscriptions.">
-  <meta name="keywords" content="therapy practice management software pricing, therapist software subscription, mental health practice management pricing, counseling practice software cost, therapy EHR monthly subscription, private practice software pricing">
-  <link rel="canonical" href="https://nuviamy.com/pricing/">
-  <meta property="og:title" content="NuviaMy Pricing | Therapy Practice Management Software">
-  <meta property="og:description" content="Fair per-user subscription pricing for therapists, counselors, psychologists, and mental health practices. Save 10% annually.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://nuviamy.com/pricing/">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include "marketing/partials/seo.html" with seo_title="Pricing | NuviaMy Therapy Practice Management Software" seo_description="One complete plan at $39 per active user per month, or $421 per year. Start a 30-day free trial without a card. Applicable taxes are extra." seo_path="/pricing/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -28,7 +21,8 @@
         "url": "https://nuviamy.com/pricing/",
         "description": "Therapy practice management software with per-user monthly and yearly subscription pricing.",
         "offers": [
-          {"@type": "Offer", "name": "Per-user monthly", "price": "39", "priceCurrency": "USD", "billingDuration": "P1M"}
+          {"@type": "Offer", "name": "Per-user monthly", "price": "39", "priceCurrency": "USD", "billingDuration": "P1M", "url": "https://nuviamy.com/pricing/"},
+          {"@type": "Offer", "name": "Per-user annual", "price": "421", "priceCurrency": "USD", "billingDuration": "P1Y", "url": "https://nuviamy.com/pricing/"}
         ]
       },
       {

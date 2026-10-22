@@ -16,7 +16,7 @@
       <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-primary" type="submit">Sign out</button></form>
     {% else %}
       <a href="{% url 'login' %}">Sign in</a>
-      <a class="btn btn-primary" href="{% url 'signup' %}">Start workspace</a>
+      <a class="btn btn-primary" href="{% url 'signup' %}">Start free trial</a>
     {% endif %}
   </nav>
 </header>

@@ -1,6 +1,6 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Help Center | NuviaMy</title><link rel="stylesheet" href="/static/dashboard.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">{% include "marketing/partials/seo.html" with seo_title="Help Center | NuviaMy" seo_description="Find answers about setting up your NuviaMy practice, scheduling, billing, client forms and Google connections, or contact the support team." seo_path="/help/" %}<link rel="stylesheet" href="{% static 'dashboard.css' %}"></head>
 <body class="marketing-page support-page">
   {% include 'marketing/partials/nav.html' %}
   <main class="support-shell">

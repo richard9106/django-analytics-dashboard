@@ -1,15 +1,13 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mental Health Billing Software | NuviaMy</title>
-  <meta name="description" content="Mental health billing software for therapists and counseling practices with invoices, superbills, session packages, insurance settings, and billing follow-up workflows.">
-  <link rel="canonical" href="https://nuviamy.com/mental-health-billing-software/">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include "marketing/partials/seo.html" with seo_title="Mental Health Billing Software | NuviaMy" seo_description="Manage therapy invoices, superbills, session packages and recorded payments. Explore NuviaMy billing workflows and understand insurance features." seo_path="/mental-health-billing-software/" %}
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
 </head>
 <body id="top" class="marketing-page article-page">
   {% include 'marketing/partials/nav.html' %}
@@ -20,7 +18,7 @@
     <section><h2>Billing workflows therapists need</h2><p>NuviaMy supports invoices, printable invoices, superbills, session packages, package usage, payer settings, reimbursement rates, and dashboard follow-up for invoices that need attention.</p></section>
     <section><h2>Connect billing to the rest of the practice</h2><ul><li>Create client invoices from a practice-scoped billing workspace.</li><li>Track session packages and remaining usage over time.</li><li>Generate superbills for clients who need out-of-network documentation.</li><li>Keep billing context near appointments, clients, notes, and documents.</li></ul></section>
     <section><h2>Built for practical private practice operations</h2><p>Whether a therapist is running a solo practice or a group clinic, clean billing workflows reduce missed follow-up and make revenue operations easier to review.</p></section>
-    <div class="article-cta"><h2>Simplify therapy billing follow-up.</h2><p>Start with a NuviaMy workspace that connects appointments, clients, invoices, superbills, documents, and portal communication.</p><a class="btn btn-primary" href="{% url 'pricing' %}">View pricing</a></div>
+<section><h2>Example: keep an invoice connected to a session</h2><div class="guide-example"><p>Create an invoice for a client or appointment, review the amount and publish it. Record payments as they arrive and review the outstanding balance. Use a superbill when the client needs documentation for an out-of-network reimbursement request.</p></div><h3>Be clear about what insurance features do</h3><p>Configure the payers your practice uses and enter contracted rates by state and service code. Confirm the client responsibility on each insurance invoice. A stored rate is a practice reference, not a live eligibility check or a guarantee of insurer reimbursement.</p></section><section class="guide-faq"><h2>Questions before you start</h2><details><summary>Does NuviaMy submit insurance claims or import ERA?</summary><p>No. Current insurance tools cover payer configuration, rate references, invoice allocation and recorded payments. Electronic claims, eligibility verification and ERA import are not included.</p></details><details><summary>Are online payments required?</summary><p>No. Invoices and manually recorded payments work without Stripe Connect. Connect Stripe only if you want clients to pay supported invoices online.</p></details></section><nav class="guide-related" aria-label="Related product guides"><a href="{% url 'therapy_scheduling_software' %}">Scheduling</a><a href="{% url 'clinical_notes_software' %}">Clinical notes</a><a href="{% url 'client_portal_software' %}">Client portal &amp; forms</a><a href="{% url 'mental_health_billing_software' %}">Billing</a><a href="{% url 'pricing' %}">Pricing &amp; free trial</a></nav>    <div class="article-cta"><h2>Simplify therapy billing follow-up.</h2><p>Start with a NuviaMy workspace that connects appointments, clients, invoices, superbills, documents, and portal communication.</p><p>30 days free. No card required.</p><a class="btn btn-primary" href="{% url 'pricing' %}">View pricing</a></div>
   </article></main>
 {% include 'marketing/partials/footer.html' %}
 {% include 'partials/security_session.html' %}</body>
