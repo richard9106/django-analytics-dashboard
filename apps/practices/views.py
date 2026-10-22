@@ -123,7 +123,7 @@ class IntegrationSettingsView(PracticeContextMixin, TemplateView):
         context['practice'] = practice
         context['google_integration'] = integrations.get(ExternalIntegration.Provider.GOOGLE)
         context['dropbox_integration'] = integrations.get(ExternalIntegration.Provider.DROPBOX)
-        context['google_form'] = GoogleOAuthSelectionForm(instance=context['google_integration'])
+        context['google_form'] = GoogleOAuthSelectionForm(instance=context['google_integration'], practice=practice)
         context['dropbox_form'] = DropboxIntegrationForm(instance=context['dropbox_integration'], practice=practice)
         context['google_oauth_configured'] = bool(settings.GOOGLE_OAUTH_CLIENT_ID and settings.GOOGLE_OAUTH_CLIENT_SECRET)
         return context
@@ -136,7 +136,7 @@ class GoogleOAuthConnectView(PracticeContextMixin, View):
 
         practice = self.get_practice()
         integration = ExternalIntegration.objects.filter(practice=practice, provider=ExternalIntegration.Provider.GOOGLE).first()
-        form = GoogleOAuthSelectionForm(request.POST, instance=integration)
+        form = GoogleOAuthSelectionForm(request.POST, instance=integration, practice=practice)
         if not form.is_valid():
             return redirect('practice_settings:integrations')
 

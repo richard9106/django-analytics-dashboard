@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 
 from .models import ExternalIntegration
 
@@ -26,8 +27,9 @@ class GoogleOAuthSelectionForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, practice=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.practice = practice
         self.instance.provider = ExternalIntegration.Provider.GOOGLE
 
     def clean(self):
@@ -37,7 +39,10 @@ class GoogleOAuthSelectionForm(forms.ModelForm):
         return cleaned_data
 
     def get_enabled_scopes(self):
-        return [scope for field, scope in GOOGLE_SCOPE_MAP.items() if self.cleaned_data.get(field)]
+        scope_map = dict(GOOGLE_SCOPE_MAP)
+        if self.practice and str(self.practice.pk) in settings.GOOGLE_CALENDAR_OWNED_SCOPE_PRACTICE_IDS:
+            scope_map['calendar_enabled'] = 'https://www.googleapis.com/auth/calendar.events.owned'
+        return [scope for field, scope in scope_map.items() if self.cleaned_data.get(field)]
 
 
 class DropboxIntegrationForm(forms.ModelForm):

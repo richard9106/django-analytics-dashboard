@@ -154,6 +154,11 @@ LOGOUT_REDIRECT_URL = 'login'
 GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', '')
+# Pending-verification scope: opt in only explicit demo practices.
+GOOGLE_CALENDAR_OWNED_SCOPE_PRACTICE_IDS = {
+    value.strip() for value in os.getenv('GOOGLE_CALENDAR_OWNED_SCOPE_PRACTICE_IDS', '').split(',')
+    if value.strip()
+}
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY', '')
 
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')

@@ -32,7 +32,10 @@ def build_google_authorization_url(request, scopes, state):
         'access_type': 'offline',
         'prompt': 'consent',
         'state': state,
-        'include_granted_scopes': 'true',
+        # Avoid combining a demo grant with previously granted, broader scopes.
+        'include_granted_scopes': (
+            'false' if 'https://www.googleapis.com/auth/calendar.events.owned' in scopes else 'true'
+        ),
     })
     return f'{GOOGLE_AUTH_URL}?{query}'
 
