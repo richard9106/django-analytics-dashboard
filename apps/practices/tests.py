@@ -143,6 +143,17 @@ class IntegrationSettingsTests(TestCase):
         self.assertTrue(integration.calendar_enabled)
         self.assertIn("https://www.googleapis.com/auth/gmail.send", integration.enabled_scopes)
 
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret")
+    def test_owned_scope_is_limited_to_demo_practice(self):
+        user, practice = self.create_practice_user()
+        self.client.force_login(user)
+        for allowed, suffix in [({str(practice.pk)}, "calendar.events.owned"), (set(), "calendar.events"), ({"other"}, "calendar.events")]:
+            with self.subTest(allowed=allowed), self.settings(GOOGLE_CALENDAR_OWNED_SCOPE_PRACTICE_IDS=allowed):
+                response = self.client.post(reverse("practice_settings:google_connect"), {"calendar_enabled": "on"})
+                self.assertEqual(response.status_code, 302)
+                scopes = parse_qs(urlsplit(response.url).query)["scope"][0].split()
+                self.assertEqual(set(scopes), {"openid", "email", f"https://www.googleapis.com/auth/{suffix}"})
+
     @override_settings(GOOGLE_OAUTH_CLIENT_ID="client-id", GOOGLE_OAUTH_CLIENT_SECRET="client-secret", GOOGLE_OAUTH_REDIRECT_URI="https://example.com/settings/integrations/google/callback/")
     def test_google_callback_stores_tokens_and_account_email(self):
         user, practice = self.create_practice_user()
